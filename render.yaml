@@ -1,0 +1,42 @@
+# render.yaml - Configurazione automatica Render.com
+# Posiziona questo file nella ROOT del repository GitHub
+
+services:
+
+  # ── BACKEND: Web Service Node.js ─────────────────────
+  - type: web
+    name: magazzino-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: FRONTEND_URL
+        # Inserisci l'URL del frontend dopo averlo deployato
+        value: https://magazzino-frontend.onrender.com
+      - key: DB_DIR
+        value: /data
+    # Persistent Disk per SQLite (piano gratuito: non disponibile)
+    # Su piano gratuito il DB si resetta ad ogni deploy → usa un DB esterno
+    # disk:
+    #   name: magazzino-db
+    #   mountPath: /data
+    #   sizeGB: 1
+
+  # ── FRONTEND: Static Site React ──────────────────────
+  - type: web
+    name: magazzino-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        # Inserisci l'URL del backend dopo averlo deployato
+        value: https://magazzino-backend.onrender.com
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

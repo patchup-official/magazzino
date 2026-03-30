@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gray-950 text-gray-100;
+    font-family: 'DM Sans', system-ui, sans-serif;
+  }
+
+  input, select, textarea {
+    @apply bg-gray-800 border border-white/5 rounded-lg px-3 py-2 text-gray-100 text-sm;
+    @apply focus:outline-none focus:border-violet-500 transition-colors;
+    font-family: 'DM Sans', system-ui, sans-serif;
+  }
+
+  select option {
+    @apply bg-gray-800;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin::-webkit-scrollbar { width: 4px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { @apply bg-white/10 rounded-full; }
+
+  @keyframes slide-in {
+    from { transform: translateX(100%); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+  }
+  .animate-slide-in { animation: slide-in 0.28s ease; }
+}
