@@ -1,75 +1,47 @@
-// routes/products.js - CRUD Prodotti
+// routes/products.js
 
 const express = require('express');
 const router = express.Router();
 
-// GET /products
 router.get('/', (req, res) => {
-  const db = req.app.locals.db;
+  const { query, get } = req.app.locals;
   const { categoria, search } = req.query;
-
-  let query = 'SELECT * FROM products';
-  const params = [];
-  const conditions = [];
-
-  if (categoria) {
-    conditions.push('categoria = ?');
-    params.push(categoria);
-  }
-  if (search) {
-    conditions.push('nome LIKE ?');
-    params.push(`%${search}%`);
-  }
-
-  if (conditions.length) query += ' WHERE ' + conditions.join(' AND ');
-  query += ' ORDER BY created_at DESC';
-
-  const products = db.prepare(query).all(...params);
+  let sql = 'SELECT * FROM products';
+  const params = [], conds = [];
+  if (categoria) { conds.push('categoria = ?'); params.push(categoria); }
+  if (search)    { conds.push('nome LIKE ?');   params.push('%'+search+'%'); }
+  if (conds.length) sql += ' WHERE ' + conds.join(' AND ');
+  sql += ' ORDER BY created_at DESC';
+  const products = query(sql, params);
   res.json({ data: products, total: products.length });
 });
 
-// POST /products
 router.post('/', (req, res) => {
-  const db = req.app.locals.db;
-  const uid = req.app.locals.uid;
+  const { run, get, uid } = req.app.locals;
   const { nome, categoria, qty = 0, prezzo_acq = 0, prezzo_vend = 0 } = req.body;
-
-  if (!nome || !categoria) {
-    return res.status(400).json({ error: 'nome e categoria sono obbligatori' });
-  }
-
+  if (!nome || !categoria) return res.status(400).json({ error: 'nome e categoria obbligatori' });
   const id = uid();
-  db.prepare(`
-    INSERT INTO products (id, nome, categoria, qty, prezzo_acq, prezzo_vend)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(id, nome, categoria, qty, prezzo_acq, prezzo_vend);
-
-  const product = db.prepare('SELECT * FROM products WHERE id = ?').get(id);
-  res.status(201).json(product);
+  run(`INSERT INTO products (id, nome, categoria, qty, prezzo_acq, prezzo_vend)
+       VALUES (?, ?, ?, ?, ?, ?)`, [id, nome, categoria, qty, prezzo_acq, prezzo_vend]);
+  res.status(201).json(get('SELECT * FROM products WHERE id = ?', [id]));
 });
 
-// PUT /products/:id
 router.put('/:id', (req, res) => {
-  const db = req.app.locals.db;
+  const { run, get } = req.app.locals;
   const { nome, categoria, qty, prezzo_acq, prezzo_vend } = req.body;
-
-  const existing = db.prepare('SELECT id FROM products WHERE id = ?').get(req.params.id);
-  if (!existing) return res.status(404).json({ error: 'Prodotto non trovato' });
-
-  db.prepare(`
-    UPDATE products SET nome=?, categoria=?, qty=?, prezzo_acq=?, prezzo_vend=?
-    WHERE id=?
-  `).run(nome, categoria, qty, prezzo_acq, prezzo_vend, req.params.id);
-
-  res.json(db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id));
+  if (!get('SELECT id FROM products WHERE id = ?', [req.params.id]))
+    return res.status(404).json({ error: 'Prodotto non trovato' });
+  run(`UPDATE products SET nome=?, categoria=?, qty=?, prezzo_acq=?, prezzo_vend=? WHERE id=?`,
+      [nome, categoria, qty, prezzo_acq, prezzo_vend, req.params.id]);
+  res.json(get('SELECT * FROM products WHERE id = ?', [req.params.id]));
 });
 
-// DELETE /products/:id
 router.delete('/:id', (req, res) => {
-  const db = req.app.locals.db;
-  const result = db.prepare('DELETE FROM products WHERE id = ?').run(req.params.id);
-  if (result.changes === 0) return res.status(404).json({ error: 'Prodotto non trovato' });
-  res.json({ message: 'Prodotto eliminato' });
+  const { run, get } = req.app.locals;
+  if (!get('SELECT id FROM products WHERE id = ?', [req.params.id]))
+    return res.status(404).json({ error: 'Prodotto non trovato' });
+  run('DELETE FROM products WHERE id = ?', [req.params.id]);
+  res.json({ message: 'Eliminato' });
 });
 
 module.exports = router;
