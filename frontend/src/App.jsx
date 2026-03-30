@@ -1,4 +1,4 @@
-// App.jsx - Layout principale con design Figma
+// App.jsx - con routing per pagina firma remota
 
 import { useState, useEffect } from 'react'
 import Sidebar from './components/Sidebar'
@@ -7,6 +7,7 @@ import Magazzino from './pages/Magazzino'
 import AcquistoPlugin from './pages/AcquistoPlugin'
 import Riparazioni from './pages/Riparazioni'
 import Storico from './pages/Storico'
+import FirmaRemota from './pages/FirmaRemota'
 import Toast from './components/Toast'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3001'
@@ -15,6 +16,10 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState('dashboard')
   const [toasts, setToasts] = useState([])
 
+  // Se URL è /firma → mostra pagina firma mobile
+  const isFirma = window.location.pathname === '/firma'
+  if (isFirma) return <FirmaRemota />
+
   const showToast = (msg, type = 'success') => {
     const id = Date.now()
     setToasts(prev => [...prev, { id, msg, type }])
@@ -22,62 +27,55 @@ export default function App() {
   }
 
   const titles = {
-    dashboard: 'Homepage', magazzino: 'Magazzino',
-    acquisto: 'Acquisto dispositivo', riparazioni: 'Riparazioni', storico: 'Storico acquisti'
+    dashboard:'Homepage', magazzino:'Magazzino',
+    acquisto:'Acquisto dispositivo', riparazioni:'Riparazioni', storico:'Storico acquisti'
   }
 
-  const pages = { dashboard: Dashboard, magazzino: Magazzino, acquisto: AcquistoPlugin, riparazioni: Riparazioni, storico: Storico }
+  const pages = {
+    dashboard:Dashboard, magazzino:Magazzino,
+    acquisto:AcquistoPlugin, riparazioni:Riparazioni, storico:Storico
+  }
   const PageComponent = pages[currentPage] || Dashboard
 
   return (
-    <div style={{ display: 'flex', height: '100vh', background: '#080e1f', overflow: 'hidden' }}>
-      <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
-
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {/* Topbar */}
+    <div style={{display:'flex',height:'100vh',background:'#080e1f',overflow:'hidden'}}>
+      <Sidebar currentPage={currentPage} onNavigate={setCurrentPage}/>
+      <main style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
         <div style={{
-          height: 52, borderBottom: '1px solid rgba(255,255,255,0.05)',
-          background: '#090e1e',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '0 24px', flexShrink: 0,
+          height:52,borderBottom:'1px solid rgba(255,255,255,0.05)',
+          background:'#090e1e',display:'flex',alignItems:'center',
+          justifyContent:'space-between',padding:'0 24px',flexShrink:0,
         }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: '#e2e8f0' }}>
-            {titles[currentPage]}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Clock />
-            {/* Store selector - come nel Figma */}
+          <div style={{fontSize:14,fontWeight:600,color:'#e2e8f0'}}>{titles[currentPage]}</div>
+          <div style={{display:'flex',alignItems:'center',gap:12}}>
+            <Clock/>
             <div style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: 8, padding: '5px 12px', cursor: 'pointer',
+              display:'flex',alignItems:'center',gap:8,
+              background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.08)',
+              borderRadius:8,padding:'5px 12px',cursor:'pointer',
             }}>
-              <span style={{ fontSize: 12 }}>▣</span>
-              <span style={{ fontSize: 12.5, color: '#94a3b8' }}>Negozio principale</span>
-              <span style={{ fontSize: 10, color: '#475569' }}>▾</span>
+              <span style={{fontSize:12}}>▣</span>
+              <span style={{fontSize:12.5,color:'#94a3b8'}}>Negozio principale</span>
+              <span style={{fontSize:10,color:'#475569'}}>▾</span>
             </div>
           </div>
         </div>
-
-        {/* Content */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: 24 }} className="custom-scroll">
-          <PageComponent api={API} showToast={showToast} onNavigate={setCurrentPage} />
+        <div style={{flex:1,overflowY:'auto',padding:24}} className="custom-scroll">
+          <PageComponent api={API} showToast={showToast} onNavigate={setCurrentPage}/>
         </div>
       </main>
-
-      {/* Toasts */}
-      <div style={{ position: 'fixed', bottom: 20, right: 20, display: 'flex', flexDirection: 'column', gap: 8, zIndex: 50 }}>
-        {toasts.map(t => <Toast key={t.id} msg={t.msg} type={t.type} />)}
+      <div style={{position:'fixed',bottom:20,right:20,display:'flex',flexDirection:'column',gap:8,zIndex:50}}>
+        {toasts.map(t=><Toast key={t.id} msg={t.msg} type={t.type}/>)}
       </div>
     </div>
   )
 }
 
 function Clock() {
-  const [time, setTime] = useState('')
-  useEffect(() => {
-    const tick = () => setTime(new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }))
-    tick(); const i = setInterval(tick, 1000); return () => clearInterval(i)
-  }, [])
-  return <span style={{ fontSize: 12, color: '#475569', fontFamily: 'monospace' }}>{time}</span>
+  const [time,setTime] = useState('')
+  useEffect(()=>{
+    const tick=()=>setTime(new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}))
+    tick(); const i=setInterval(tick,1000); return ()=>clearInterval(i)
+  },[])
+  return <span style={{fontSize:12,color:'#475569',fontFamily:'monospace'}}>{time}</span>
 }
