@@ -1,5 +1,4 @@
-// App.jsx - Magazzino SaaS Frontend v2
-// VITE_API_URL viene impostato su Render come variabile d'ambiente
+// App.jsx - Layout principale con design Figma
 
 import { useState, useEffect } from 'react'
 import Sidebar from './components/Sidebar'
@@ -10,7 +9,6 @@ import Riparazioni from './pages/Riparazioni'
 import Storico from './pages/Storico'
 import Toast from './components/Toast'
 
-// In locale usa localhost:3001, su Render usa VITE_API_URL
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
 export default function App() {
@@ -23,36 +21,52 @@ export default function App() {
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3500)
   }
 
-  const pages = {
-    dashboard:   Dashboard,
-    magazzino:   Magazzino,
-    acquisto:    AcquistoPlugin,
-    riparazioni: Riparazioni,
-    storico:     Storico,
-  }
-  const PageComponent = pages[currentPage] || Dashboard
-
   const titles = {
-    dashboard: 'Dashboard', magazzino: 'Magazzino',
+    dashboard: 'Homepage', magazzino: 'Magazzino',
     acquisto: 'Acquisto dispositivo', riparazioni: 'Riparazioni', storico: 'Storico acquisti'
   }
 
+  const pages = { dashboard: Dashboard, magazzino: Magazzino, acquisto: AcquistoPlugin, riparazioni: Riparazioni, storico: Storico }
+  const PageComponent = pages[currentPage] || Dashboard
+
   return (
-    <div className="flex h-screen bg-gray-950 text-gray-100 overflow-hidden">
+    <div style={{ display: 'flex', height: '100vh', background: '#080e1f', overflow: 'hidden' }}>
       <Sidebar currentPage={currentPage} onNavigate={setCurrentPage} />
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <div style={{height:'50px'}} className="border-b border-white/5 bg-gray-900 flex items-center px-6 justify-between flex-shrink-0">
-          <span className="text-sm font-medium">{titles[currentPage]}</span>
-          <div className="flex items-center gap-3">
+
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* Topbar */}
+        <div style={{
+          height: 52, borderBottom: '1px solid rgba(255,255,255,0.05)',
+          background: '#090e1e',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '0 24px', flexShrink: 0,
+        }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: '#e2e8f0' }}>
+            {titles[currentPage]}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <Clock />
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center text-xs font-bold">MA</div>
+            {/* Store selector - come nel Figma */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 8, padding: '5px 12px', cursor: 'pointer',
+            }}>
+              <span style={{ fontSize: 12 }}>▣</span>
+              <span style={{ fontSize: 12.5, color: '#94a3b8' }}>Negozio principale</span>
+              <span style={{ fontSize: 10, color: '#475569' }}>▾</span>
+            </div>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto p-6">
-          <PageComponent api={API} showToast={showToast} />
+
+        {/* Content */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: 24 }} className="custom-scroll">
+          <PageComponent api={API} showToast={showToast} onNavigate={setCurrentPage} />
         </div>
       </main>
-      <div className="fixed bottom-5 right-5 flex flex-col gap-2 z-50">
+
+      {/* Toasts */}
+      <div style={{ position: 'fixed', bottom: 20, right: 20, display: 'flex', flexDirection: 'column', gap: 8, zIndex: 50 }}>
         {toasts.map(t => <Toast key={t.id} msg={t.msg} type={t.type} />)}
       </div>
     </div>
@@ -65,5 +79,5 @@ function Clock() {
     const tick = () => setTime(new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }))
     tick(); const i = setInterval(tick, 1000); return () => clearInterval(i)
   }, [])
-  return <span className="text-xs text-gray-500 font-mono">{time}</span>
+  return <span style={{ fontSize: 12, color: '#475569', fontFamily: 'monospace' }}>{time}</span>
 }
