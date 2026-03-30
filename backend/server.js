@@ -1,11 +1,10 @@
 // =============================================
-// MAGAZZINO - Backend Server (Express + SQLite)
-// Pronto per deploy su Render.com
+// MAGAZZINO - Backend Server
+// usa sql.js (SQLite puro JS, nessuna compilazione)
 // =============================================
 
 const express = require('express');
 const cors = require('cors');
-const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -13,7 +12,7 @@ const crypto = require('crypto');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// ── CORS: localhost in dev, URL Render in produzione ──
+// ── CORS ──────────────────────────────────────
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
@@ -27,45 +26,97 @@ app.use(cors({
   },
   credentials: true,
 }));
-
 app.use(express.json());
 
-// ── Database ──────────────────────────────────
-const DB_DIR  = process.env.DB_DIR || path.join(__dirname, 'db');
-const DB_PATH = path.join(DB_DIR, 'magazzino.sqlite');
-const SCHEMA_PATH = path.join(__dirname, 'db', 'schema.sql');
+// ── DATABASE con sql.js ───────────────────────
+let db;
 
-if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR, { recursive: true });
+async function initDB() {
+  const initSqlJs = require('sql.js');
+  const SQL = await initSqlJs();
 
-const db = new Database(DB_PATH);
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
-db.exec(fs.readFileSync(SCHEMA_PATH, 'utf-8'));
+  const DB_DIR = process.env.DB_DIR || path.join(__dirname, 'db');
+  const DB_PATH = path.join(DB_DIR, 'magazzino.sqlite');
 
-app.locals.db = db;
-app.locals.uid = () => crypto.randomBytes(8).toString('hex');
+  if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR, { recursive: true });
 
-console.log('✅ DB:', DB_PATH);
+  // Carica DB esistente o creane uno nuovo
+  if (fs.existsSync(DB_PATH)) {
+    const fileBuffer = fs.readFileSync(DB_PATH);
+    db = new SQL.Database(fileBuffer);
+    console.log('✅ DB caricato:', DB_PATH);
+  } else {
+    db = new SQL.Database();
+    console.log('✅ Nuovo DB creato:', DB_PATH);
+  }
 
-// ── Routes ───────────────────────────────────
-app.use('/products',  require('./routes/products'));
-app.use('/devices',   require('./routes/devices'));
-app.use('/repairs',   require('./routes/repairs'));
-app.use('/purchases', require('./routes/purchases'));
+  // Applica schema
+  const schema = fs.readFileSync(path.join(__dirname, 'db', 'schema.sql'), 'utf-8');
+  db.run(schema);
 
-// ── Health ───────────────────────────────────
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok', version: "2.0.0"',
-    products: db.prepare('SELECT COUNT(*) as n FROM products').get().n,
-    devices:  db.prepare('SELECT COUNT(*) as n FROM devices').get().n,
-    repairs:  db.prepare('SELECT COUNT(*) as n FROM repairs').get().n,
+  // Salva su disco dopo ogni operazione write
+  app.locals.saveDB = () => {
+    const data = db.export();
+    fs.writeFileSync(DB_PATH, Buffer.from(data));
+  };
+
+  // Helper: esegui query e ritorna array di oggetti
+  app.locals.query = (sql, params = []) => {
+    const stmt = db.prepare(sql);
+    stmt.bind(params);
+    const rows = [];
+    while (stmt.step()) {
+      rows.push(stmt.getAsObject());
+    }
+    stmt.free();
+    return rows;
+  };
+
+  // Helper: esegui INSERT/UPDATE/DELETE
+  app.locals.run = (sql, params = []) => {
+    db.run(sql, params);
+    app.locals.saveDB();
+  };
+
+  // Helper: ritorna singola riga
+  app.locals.get = (sql, params = []) => {
+    const rows = app.locals.query(sql, params);
+    return rows[0] || null;
+  };
+
+  app.locals.uid = () => crypto.randomBytes(8).toString('hex');
+
+  return db;
+}
+
+// ── Avvio ─────────────────────────────────────
+initDB().then(() => {
+
+  app.use('/products',  require('./routes/products'));
+  app.use('/devices',   require('./routes/devices'));
+  app.use('/repairs',   require('./routes/repairs'));
+  app.use('/purchases', require('./routes/purchases'));
+
+  app.get('/health', (req, res) => {
+    res.json({
+      status: 'ok',
+      version: '2.0.0',
+      products: app.locals.get('SELECT COUNT(*) as n FROM products')?.n || 0,
+      devices:  app.locals.get('SELECT COUNT(*) as n FROM devices')?.n || 0,
+      repairs:  app.locals.get('SELECT COUNT(*) as n FROM repairs')?.n || 0,
+    });
   });
-});
 
-app.use((err, req, res, next) => {
-  console.error(err.message);
-  res.status(err.status || 500).json({ error: err.message });
-});
+  app.use((err, req, res, next) => {
+    console.error(err.message);
+    res.status(err.status || 500).json({ error: err.message });
+  });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Magazzino API → port ${PORT}`));
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Magazzino API → port ${PORT}`);
+  });
+
+}).catch(err => {
+  console.error('Errore avvio DB:', err);
+  process.exit(1);
+});
