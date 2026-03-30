@@ -12,13 +12,15 @@ import Toast from './components/Toast'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
+// Controlla il path PRIMA di tutto
+const IS_FIRMA = window.location.pathname.startsWith('/firma')
+
 export default function App() {
   const [currentPage, setCurrentPage] = useState('dashboard')
   const [toasts, setToasts] = useState([])
 
-  // Se URL è /firma → mostra pagina firma mobile
-  const isFirma = window.location.pathname === '/firma'
-  if (isFirma) return <FirmaRemota />
+  // Se siamo su /firma → solo la pagina firma, niente sidebar
+  if (IS_FIRMA) return <FirmaRemota />
 
   const showToast = (msg, type = 'success') => {
     const id = Date.now()
