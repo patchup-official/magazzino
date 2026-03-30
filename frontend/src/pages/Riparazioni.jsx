@@ -1,211 +1,177 @@
-// pages/Riparazioni.jsx
+// Riparazioni.jsx - Design Figma
 
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 
-const PRIOR_BADGE = {
-  normale: 'bg-gray-500/15 text-gray-400',
-  alta:    'bg-amber-500/15 text-amber-400',
-  urgente: 'bg-red-500/15 text-red-400'
-}
+const PRIOR = { normale:'rgba(100,116,139,0.15)|#94a3b8', alta:'rgba(234,179,8,0.15)|#facc15', urgente:'rgba(239,68,68,0.15)|#f87171' }
 
 export default function Riparazioni({ api, showToast }) {
   const [repairs, setRepairs] = useState([])
   const [filter, setFilter] = useState('aperta')
   const [modal, setModal] = useState(false)
-  const [form, setForm] = useState({
-    cliente:'', tel:'', brand:'Apple', modello:'',
-    problema:'', priorita:'normale', costo:0, data_stimata:'', note:''
-  })
+  const [form, setForm] = useState({ cliente:'', tel:'', brand:'Apple', modello:'', problema:'', priorita:'normale', costo:0, data_stimata:'', note:'' })
 
-  useEffect(() => { fetchRepairs() }, [])
+  useEffect(() => { fetch() }, [])
 
-  const fetchRepairs = async () => {
-    try {
-      const { data } = await axios.get(`${api}/repairs`)
-      setRepairs(data.data)
-    } catch {
-      setRepairs(JSON.parse(localStorage.getItem('ew_rep') || '[]'))
-    }
+  const fetch = async () => {
+    try { const { data } = await axios.get(`${api}/repairs`); setRepairs(data.data||[]) }
+    catch { setRepairs(JSON.parse(localStorage.getItem('mag_rep')||'[]')) }
   }
 
-  const addRepair = async () => {
-    if (!form.cliente || !form.modello) { showToast('Cliente e modello obbligatori', 'error'); return }
-    const newR = { ...form, id: Date.now().toString(), stato: 'aperta', progress: 0, at: new Date().toISOString() }
-    try {
-      const { data } = await axios.post(`${api}/repairs`, form)
-      setRepairs(prev => [data, ...prev])
-    } catch {
-      const saved = JSON.parse(localStorage.getItem('ew_rep') || '[]')
-      saved.push(newR)
-      localStorage.setItem('ew_rep', JSON.stringify(saved))
-      setRepairs(prev => [newR, ...prev])
-    }
+  const add = async () => {
+    if (!form.cliente||!form.modello) { showToast('Cliente e modello obbligatori','error'); return }
+    const nr = {...form, id:Date.now().toString(), stato:'aperta', progress:0, at:new Date().toISOString()}
+    try { const {data} = await axios.post(`${api}/repairs`, form); setRepairs(p=>[data,...p]) }
+    catch { setRepairs(p=>[nr,...p]) }
     setModal(false)
     setForm({ cliente:'', tel:'', brand:'Apple', modello:'', problema:'', priorita:'normale', costo:0, data_stimata:'', note:'' })
     showToast('✓ Riparazione creata')
   }
 
-  const updateProgress = (id, val) => {
-    setRepairs(prev => prev.map(r => r.id === id ? { ...r, progress: val } : r))
-    try { axios.put(`${api}/repairs/${id}/progress`, { progress: val }) } catch {}
+  const upd = (id, v) => {
+    setRepairs(p => p.map(r => r.id===id ? {...r, progress:v} : r))
+    try { axios.put(`${api}/repairs/${id}/progress`, {progress:v}) } catch {}
   }
 
   const complete = async (id) => {
-    setRepairs(prev => prev.map(r => r.id === id ? { ...r, stato: 'completata', progress: 100 } : r))
+    setRepairs(p => p.map(r => r.id===id ? {...r, stato:'completata', progress:100} : r))
     try { await axios.put(`${api}/repairs/${id}/complete`) } catch {}
-    showToast('✓ Riparazione completata')
+    showToast('✓ Completata')
   }
 
-  const remove = async (id) => {
-    setRepairs(prev => prev.filter(r => r.id !== id))
+  const del = async (id) => {
+    setRepairs(p => p.filter(r => r.id!==id))
     try { await axios.delete(`${api}/repairs/${id}`) } catch {}
-    showToast('Riparazione eliminata')
+    showToast('Eliminata')
   }
 
-  const filtered = repairs.filter(r =>
-    filter === 'all' ? true : r.stato === filter
-  )
+  const filtered = repairs.filter(r => filter==='all' ? true : r.stato===filter)
+
+  const priorStyle = (p) => {
+    const [bg,color] = (PRIOR[p]||PRIOR.normale).split('|')
+    return { background:bg, color }
+  }
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
+    <div className="animate-fade-in">
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:24 }}>
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Riparazioni</h1>
-          <p className="text-gray-400 text-sm mt-1">Gestisci i lavori in corso</p>
+          <div style={{ fontSize:20, fontWeight:700, marginBottom:3 }}>Riparazioni</div>
+          <div style={{ fontSize:13, color:'#64748b' }}>Gestisci i lavori in corso</div>
         </div>
-        <button onClick={() => setModal(true)} className="bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium px-3.5 py-2 rounded-lg transition-colors">
-          + Nuova riparazione
-        </button>
+        <button onClick={()=>setModal(true)} className="btn-blue">+ Nuova riparazione</button>
       </div>
 
       {/* Filter tabs */}
-      <div className="flex gap-0.5 bg-gray-800/60 rounded-xl p-1 mb-5 w-fit">
+      <div style={{ display:'flex', gap:3, background:'rgba(255,255,255,0.04)', borderRadius:10, padding:3, width:'fit-content', marginBottom:20 }}>
         {[['aperta','In corso'],['completata','Completate'],['all','Tutte']].map(([v,l]) => (
-          <button key={v} onClick={() => setFilter(v)}
-            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all
-              ${filter === v ? 'bg-gray-700 text-gray-100 shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}>
-            {l}
-          </button>
+          <button key={v} onClick={()=>setFilter(v)} style={{
+            padding:'7px 18px', borderRadius:8, fontSize:13, fontWeight:500, cursor:'pointer', border:'none', fontFamily:'Inter,sans-serif',
+            background: filter===v ? '#1e3a6e' : 'transparent',
+            color: filter===v ? '#60a5fa' : '#64748b',
+          }}>{l}</button>
         ))}
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(290px,1fr))', gap:14 }}>
         {filtered.length === 0 ? (
-          <div className="col-span-3 text-center py-16 text-gray-500">
-            <div className="text-3xl mb-3 opacity-40">⚙</div>
-            <div className="text-sm font-medium text-gray-400 mb-1">
-              {filter === 'aperta' ? 'Nessuna riparazione aperta' : 'Nessuna riparazione trovata'}
-            </div>
-            <div className="text-xs">Crea una nuova riparazione per iniziare</div>
+          <div style={{ gridColumn:'1/-1', textAlign:'center', padding:'60px 0', color:'#475569' }}>
+            <div style={{ fontSize:32, marginBottom:12, opacity:0.4 }}>⚙</div>
+            <div style={{ fontSize:14, color:'#64748b' }}>Nessuna riparazione {filter==='aperta'?'aperta':'trovata'}</div>
           </div>
         ) : filtered.map(r => (
-          <div key={r.id} className="bg-gray-900 border border-white/5 rounded-xl p-4 hover:border-white/10 transition-colors">
-            <div className="flex items-start justify-between mb-3">
+          <div key={r.id} style={{ background:'linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))', border:'1px solid rgba(255,255,255,0.07)', borderRadius:14, padding:18 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:12 }}>
               <div>
-                <div className="font-medium text-sm">{r.cliente}</div>
-                <div className="text-xs text-gray-500 mt-0.5">{r.brand} {r.modello}</div>
+                <div style={{ fontWeight:600, fontSize:14, marginBottom:3 }}>{r.cliente}</div>
+                <div style={{ fontSize:12, color:'#64748b' }}>{r.brand} {r.modello}</div>
               </div>
-              <div className="flex flex-col items-end gap-1.5">
-                <span className={`text-xs px-2 py-0.5 rounded-full ${PRIOR_BADGE[r.priorita]||'bg-gray-500/15 text-gray-400'}`}>
-                  {r.priorita}
-                </span>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${r.stato==='aperta' ? 'bg-blue-500/15 text-blue-400' : 'bg-emerald-500/15 text-emerald-400'}`}>
-                  {r.stato}
-                </span>
+              <div style={{ display:'flex', flexDirection:'column', gap:5, alignItems:'flex-end' }}>
+                <span style={{ ...priorStyle(r.priorita), padding:'2px 8px', borderRadius:20, fontSize:11, fontWeight:500 }}>{r.priorita}</span>
+                <span style={{ background: r.stato==='aperta'?'rgba(37,99,235,0.15)':'rgba(22,163,74,0.15)', color: r.stato==='aperta'?'#60a5fa':'#4ade80', padding:'2px 8px', borderRadius:20, fontSize:11, fontWeight:500 }}>{r.stato}</span>
               </div>
             </div>
 
             {r.problema && (
-              <div className="text-xs text-gray-400 border-l-2 border-gray-700 pl-2.5 mb-3 leading-relaxed">
-                {r.problema}
-              </div>
+              <div style={{ fontSize:12, color:'#64748b', borderLeft:'2px solid rgba(255,255,255,0.1)', paddingLeft:10, marginBottom:12, lineHeight:1.5 }}>{r.problema}</div>
             )}
 
-            {r.stato === 'aperta' && (
-              <div className="mb-3">
-                <div className="flex justify-between text-xs text-gray-500 mb-1.5">
-                  <span>Progresso</span><span>{r.progress || 0}%</span>
+            {r.stato==='aperta' && (
+              <div style={{ marginBottom:12 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', fontSize:11, color:'#475569', marginBottom:6 }}>
+                  <span>Progresso</span><span>{r.progress||0}%</span>
                 </div>
-                <input type="range" min="0" max="100" value={r.progress || 0}
-                  onChange={e => updateProgress(r.id, +e.target.value)}
-                  className="w-full h-1 accent-violet-500" />
-                <div className="h-1 bg-gray-800 rounded-full mt-1 overflow-hidden">
-                  <div className="h-full bg-violet-600 rounded-full transition-all" style={{ width: `${r.progress || 0}%` }} />
+                <input type="range" min="0" max="100" value={r.progress||0}
+                  onChange={e=>upd(r.id,+e.target.value)}
+                  style={{ width:'100%', accentColor:'#2563eb' }} />
+                <div style={{ height:4, background:'rgba(255,255,255,0.06)', borderRadius:4, overflow:'hidden', marginTop:4 }}>
+                  <div style={{ width:`${r.progress||0}%`, height:'100%', background:'#2563eb', borderRadius:4 }} />
                 </div>
               </div>
             )}
 
-            <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
-              <span>{r.data_stimata ? `Consegna: ${r.data_stimata}` : r.tel || ''}</span>
-              <span className="font-mono">€{r.costo}</span>
+            <div style={{ display:'flex', justifyContent:'space-between', fontSize:11, color:'#475569', marginBottom:12 }}>
+              <span>{r.data_stimata||r.tel||''}</span>
+              <span style={{ fontFamily:'monospace', fontWeight:600 }}>€{r.costo}</span>
             </div>
 
-            <div className="flex gap-2">
-              {r.stato === 'aperta' && (
-                <button onClick={() => complete(r.id)} className="flex-1 bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 text-xs font-medium py-1.5 rounded-lg hover:bg-emerald-500/25 transition-colors">
-                  ✓ Completata
-                </button>
+            <div style={{ display:'flex', gap:8 }}>
+              {r.stato==='aperta' && (
+                <button onClick={()=>complete(r.id)} style={{ flex:1, background:'rgba(22,163,74,0.15)', border:'1px solid rgba(22,163,74,0.25)', color:'#4ade80', borderRadius:8, padding:'7px 0', fontSize:12, fontWeight:500, cursor:'pointer', fontFamily:'Inter,sans-serif' }}>✓ Completata</button>
               )}
-              <button onClick={() => remove(r.id)} className="bg-red-500/10 text-red-400 border border-red-500/15 text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-red-500/20 transition-colors">
-                Elimina
-              </button>
+              <button onClick={()=>del(r.id)} style={{ background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.2)', color:'#f87171', borderRadius:8, padding:'7px 12px', fontSize:12, cursor:'pointer', fontFamily:'Inter,sans-serif' }}>Elimina</button>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Modal */}
       {modal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-lg max-h-[85vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-5">
-              <span className="text-base font-semibold">Nuova riparazione</span>
-              <button onClick={() => setModal(false)} className="text-gray-500 hover:text-gray-200 text-lg">✕</button>
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.75)', backdropFilter:'blur(6px)', zIndex:100, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
+          <div style={{ background:'#0d1529', border:'1px solid rgba(255,255,255,0.1)', borderRadius:16, padding:24, width:'100%', maxWidth:500, maxHeight:'85vh', overflowY:'auto' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', marginBottom:20 }}>
+              <span style={{ fontSize:16, fontWeight:700 }}>Nuova riparazione</span>
+              <button onClick={()=>setModal(false)} style={{ background:'none', border:'none', color:'#475569', fontSize:18, cursor:'pointer' }}>✕</button>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                {label:'Cliente',key:'cliente',placeholder:'Mario Rossi',full:false},
-                {label:'Telefono',key:'tel',placeholder:'+39 333...',full:false},
-              ].map(f => (
-                <div key={f.key} className={`flex flex-col gap-1 ${f.full?'col-span-2':''}`}>
-                  <label className="text-xs text-gray-400">{f.label}</label>
-                  <input placeholder={f.placeholder} value={form[f.key]} onChange={e => setForm({...form,[f.key]:e.target.value})} />
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:13 }}>
+              {[['Cliente','cliente','Mario Rossi'],['Telefono','tel','+39 333...']].map(([l,k,ph])=>(
+                <div key={k} style={{ gridColumn:'1/-1', display:'flex', flexDirection:'column', gap:5 }}>
+                  <label style={{ fontSize:11.5, color:'#64748b' }}>{l}</label>
+                  <input placeholder={ph} value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})} />
                 </div>
               ))}
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-gray-400">Brand</label>
-                <select value={form.brand} onChange={e=>setForm({...form,brand:e.target.value})}>
+              <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+                <label style={{ fontSize:11.5, color:'#64748b' }}>Brand</label>
+                <select value={form.brand} onChange={e=>setForm({...form,brand:e.target.value})} style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, padding:'8px 10px', color:'#e2e8f0' }}>
                   {['Apple','Samsung','Google','Xiaomi','OnePlus','Huawei'].map(b=><option key={b}>{b}</option>)}
                 </select>
               </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-gray-400">Modello</label>
+              <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+                <label style={{ fontSize:11.5, color:'#64748b' }}>Modello</label>
                 <input placeholder="iPhone 14" value={form.modello} onChange={e=>setForm({...form,modello:e.target.value})} />
               </div>
-              <div className="flex flex-col gap-1 col-span-2">
-                <label className="text-xs text-gray-400">Problema</label>
-                <textarea placeholder="Schermo rotto, non si accende..." value={form.problema} onChange={e=>setForm({...form,problema:e.target.value})} className="min-h-[70px]" />
+              <div style={{ gridColumn:'1/-1', display:'flex', flexDirection:'column', gap:5 }}>
+                <label style={{ fontSize:11.5, color:'#64748b' }}>Problema</label>
+                <textarea placeholder="Schermo rotto, non si accende..." value={form.problema} onChange={e=>setForm({...form,problema:e.target.value})} style={{ minHeight:70 }} />
               </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-gray-400">Priorità</label>
-                <select value={form.priorita} onChange={e=>setForm({...form,priorita:e.target.value})}>
+              <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+                <label style={{ fontSize:11.5, color:'#64748b' }}>Priorità</label>
+                <select value={form.priorita} onChange={e=>setForm({...form,priorita:e.target.value})} style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, padding:'8px 10px', color:'#e2e8f0' }}>
                   <option value="normale">Normale</option><option value="alta">Alta</option><option value="urgente">Urgente</option>
                 </select>
               </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-gray-400">Costo preventivato €</label>
+              <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+                <label style={{ fontSize:11.5, color:'#64748b' }}>Costo €</label>
                 <input type="number" value={form.costo} onChange={e=>setForm({...form,costo:+e.target.value})} />
               </div>
-              <div className="flex flex-col gap-1 col-span-2">
-                <label className="text-xs text-gray-400">Data consegna stimata</label>
+              <div style={{ gridColumn:'1/-1', display:'flex', flexDirection:'column', gap:5 }}>
+                <label style={{ fontSize:11.5, color:'#64748b' }}>Data consegna stimata</label>
                 <input type="date" value={form.data_stimata} onChange={e=>setForm({...form,data_stimata:e.target.value})} />
               </div>
             </div>
-            <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-white/5">
-              <button onClick={() => setModal(false)} className="bg-white/5 text-gray-300 text-sm px-4 py-2 rounded-lg border border-white/5">Annulla</button>
-              <button onClick={addRepair} className="bg-violet-600 hover:bg-violet-500 text-white text-sm px-4 py-2 rounded-lg">Crea riparazione</button>
+            <div style={{ display:'flex', justifyContent:'flex-end', gap:10, marginTop:20, paddingTop:16, borderTop:'1px solid rgba(255,255,255,0.06)' }}>
+              <button onClick={()=>setModal(false)} className="btn-outline">Annulla</button>
+              <button onClick={add} className="btn-blue">Crea riparazione</button>
             </div>
           </div>
         </div>
