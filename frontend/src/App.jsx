@@ -1,5 +1,3 @@
-// App.jsx - con routing per pagina firma remota
-
 import { useState, useEffect } from 'react'
 import Sidebar from './components/Sidebar'
 import Dashboard from './pages/Dashboard'
@@ -12,15 +10,17 @@ import Toast from './components/Toast'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
-// Controlla il path PRIMA di tutto
-const IS_FIRMA = window.location.pathname.startsWith('/firma')
+// Legge il path salvato da index.html PRIMA di React
+const INIT_PATH = window.__INIT_PATH__ || window.location.pathname
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('dashboard')
   const [toasts, setToasts] = useState([])
 
-  // Se siamo su /firma → solo la pagina firma, niente sidebar
-  if (IS_FIRMA) return <FirmaRemota />
+  // Se path è /firma → mostra SOLO pagina firma
+  if (INIT_PATH.startsWith('/firma')) {
+    return <FirmaRemota />
+  }
 
   const showToast = (msg, type = 'success') => {
     const id = Date.now()
