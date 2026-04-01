@@ -116,7 +116,8 @@ function calcolaPrezzo({ brand, modello, storage, condizioni, permuta_fascia }) 
 
   if (condizioni) {
     for (const [chiave, valore] of Object.entries(condizioni)) {
-      if (valore && PENALI[chiave]) {
+      // Applica penale SOLO se valore è esplicitamente true
+      if (valore === true && PENALI[chiave]) {
         const penale = PENALI[chiave];
         moltiplicatoriPenali += penale.valore;
         penaliApplicate.push({
