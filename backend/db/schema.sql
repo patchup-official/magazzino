@@ -70,3 +70,52 @@ CREATE TABLE IF NOT EXISTS devices (
 CREATE INDEX IF NOT EXISTS idx_devices_brand ON devices(brand);
 CREATE INDEX IF NOT EXISTS idx_devices_stato ON devices(stato);
 CREATE INDEX IF NOT EXISTS idx_devices_provenienza ON devices(provenienza);
+
+-- ── FORNITORI ────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS fornitori (
+  id          TEXT PRIMARY KEY,
+  nome        TEXT NOT NULL,
+  contatto    TEXT,
+  email       TEXT,
+  telefono    TEXT,
+  piva        TEXT,
+  indirizzo   TEXT,
+  note        TEXT,
+  created_at  TEXT DEFAULT (datetime('now'))
+);
+
+-- ── PRODOTTI (aggiornata con barcode e fornitore) ─────────────────────────
+-- La tabella products esistente viene estesa con ALTER TABLE
+-- (aggiungiamo le colonne mancanti se non esistono)
+
+-- ── INTERVENTI DISPOSITIVO ───────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS interventi (
+  id           TEXT PRIMARY KEY,
+  device_id    TEXT NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+  tipo         TEXT NOT NULL,  -- sostituzione_batteria, sostituzione_schermo, ecc.
+  descrizione  TEXT,
+  costo        REAL DEFAULT 0,
+  fornitore_id TEXT REFERENCES fornitori(id),
+  eseguito_da  TEXT,          -- interno / fornitore esterno
+  data         TEXT DEFAULT (datetime('now')),
+  note         TEXT,
+  created_at   TEXT DEFAULT (datetime('now'))
+);
+
+-- ── RICAMBI (uso interno, non vendita) ──────────────────────────────────
+CREATE TABLE IF NOT EXISTS ricambi (
+  id           TEXT PRIMARY KEY,
+  nome         TEXT NOT NULL,
+  categoria    TEXT,          -- batteria, schermo, scocca, ecc.
+  compatibile  TEXT,          -- es. "iPhone 13, iPhone 14"
+  fornitore_id TEXT REFERENCES fornitori(id),
+  qty          INTEGER DEFAULT 0,
+  qty_minima   INTEGER DEFAULT 1,  -- alert se sotto questa soglia
+  prezzo_acq   REAL DEFAULT 0,
+  barcode      TEXT UNIQUE,
+  note         TEXT,
+  created_at   TEXT DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_interventi_device ON interventi(device_id);
+CREATE INDEX IF NOT EXISTS idx_ricambi_categoria ON ricambi(categoria);
