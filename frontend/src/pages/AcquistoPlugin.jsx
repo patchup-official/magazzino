@@ -320,7 +320,11 @@ export default function AcquistoPlugin({ api, showToast }) {
   }
 
   const toggleCondizione = (chiave, valore) => {
-    upd({ condizioni: { ...s.condizioni, [chiave]: valore } })
+    // Per domande "invertite" (si accende, iCloud libero, fotocamera funziona)
+    // Sì=true nel frontend ma la penale è "non_si_accende" nel backend → invertiamo
+    const domanda = DOMANDE_CONDIZIONI.find(d => d.chiave === chiave)
+    const valoreBackend = domanda?.inverti ? !valore : valore
+    upd({ condizioni: { ...s.condizioni, [chiave]: valoreBackend } })
   }
 
   const confirm = async () => {
@@ -463,8 +467,12 @@ export default function AcquistoPlugin({ api, showToast }) {
           </div>
 
           {DOMANDE_CONDIZIONI.map(d => {
-            const val = s.condizioni[d.chiave]
-            const penaleAttiva = d.inverti ? val === false : val === true
+            // val è il valore UI (true=Sì, false=No)
+            // valBackend è quello salvato in condizioni (già invertito se necessario)
+            const valBackend = s.condizioni[d.chiave]
+            // Ricostruiamo il val UI per mostrare i pulsanti correttamente
+            const val = d.inverti ? (valBackend === undefined ? undefined : !valBackend) : valBackend
+            const penaleAttiva = valBackend === true // penale attiva quando backend dice true
             return (
               <div key={d.chiave} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
