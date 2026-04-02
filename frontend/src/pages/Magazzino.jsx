@@ -253,8 +253,8 @@ function WizardFornitore({ api, onDone, onClose, editing }) {
 // ══════════════════════════════════════════════
 // WIZARD DISPOSITIVO
 // ══════════════════════════════════════════════
-function WizardDispositivo({ api, onDone, onClose }) {
-  const [f, setF] = useState({brand:'Apple',modello:'',storage:'128GB',colore:'',imei:'',condizione:'B',stato:'in_stock',provenienza:'fornitore',prezzo_acq:'',prezzo_vend:''})
+function WizardDispositivo({ api, fornitori, onDone, onClose }) {
+  const [f, setF] = useState({brand:'Apple',modello:'',storage:'128GB',colore:'',imei:'',condizione:'B',stato:'in_stock',provenienza:'fornitore',prezzo_acq:'',prezzo_vend:'',fornitore_id:''})
   const upd = c => setF(p=>({...p,...c}))
 
   const BRANDS = ['Apple','Samsung','Google','Xiaomi','OnePlus','Huawei']
@@ -347,6 +347,12 @@ function WizardDispositivo({ api, onDone, onClose }) {
               </div>
             </WizField>
           </div>
+          <WizField label="Fornitore" hint="Da chi hai acquistato questo dispositivo?">
+            <select value={f.fornitore_id||''} onChange={e=>upd({fornitore_id:e.target.value})} style={{...wizSel,width:'100%',boxSizing:'border-box'}}>
+              <option value="">— Nessun fornitore —</option>
+              {fornitori.map(fo=><option key={fo.id} value={fo.id}>{fo.nome}</option>)}
+            </select>
+          </WizField>
           <WizField label="Stato iniziale">
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
               {[{val:'in_stock',icon:'✅',label:'In stock'},{val:'da_testare',icon:'🔬',label:'Da testare'},{val:'in_riparazione',icon:'🔧',label:'In riparazione'},{val:'venduto',icon:'💰',label:'Venduto'}].map(s=>(
@@ -371,6 +377,7 @@ function WizardDispositivo({ api, onDone, onClose }) {
           {label:'Provenienza',   val:f.provenienza},
           {label:'Prezzo acquisto',val:f.prezzo_acq?`€${f.prezzo_acq}`:''},
           {label:'Prezzo vendita', val:f.prezzo_vend?`€${f.prezzo_vend}`:'Non impostato'},
+          {label:'Fornitore',      val:fornitori.find(fo=>fo.id===f.fornitore_id)?.nome||'Nessuno'},
           {label:'Stato',          val:STATO_DEVICE[f.stato]},
         ]}/>
       )
@@ -378,7 +385,7 @@ function WizardDispositivo({ api, onDone, onClose }) {
   ]
 
   const complete = async () => {
-    const payload = {brand:f.brand,modello:f.modello.trim(),storage:f.storage,colore:f.colore||undefined,imei:f.imei||undefined,condizione:f.condizione,stato:f.stato,provenienza:f.provenienza,prezzo_acq:+f.prezzo_acq,prezzo_vend:f.prezzo_vend?+f.prezzo_vend:0}
+    const payload = {brand:f.brand,modello:f.modello.trim(),storage:f.storage,colore:f.colore||undefined,imei:f.imei||undefined,condizione:f.condizione,stato:f.stato,provenienza:f.provenienza,prezzo_acq:+f.prezzo_acq,prezzo_vend:f.prezzo_vend?+f.prezzo_vend:0,fornitore_id:f.fornitore_id||undefined}
     try { const {data}=await axios.post(`${api}/devices`,payload); onDone(data,'add') }
     catch { onDone({...payload,id:Date.now().toString()},'add') }
     onClose()
@@ -893,7 +900,7 @@ function TabDispositivi({ api, showToast }) {
         </div>
       )}
 
-      {wizard==='add_device'&&<WizardDispositivo api={api} onDone={handleDev} onClose={()=>setWizard(null)}/>}
+      {wizard==='add_device'&&<WizardDispositivo api={api} fornitori={fornitori} onDone={handleDev} onClose={()=>setWizard(null)}/>}
       {wizard==='add_intervento'&&selectedDev&&(
         <WizardIntervento api={api} device={selectedDev} fornitori={fornitori} editing={editingInt}
           onDone={handleInt} onClose={()=>setWizard('device_detail')}/>
