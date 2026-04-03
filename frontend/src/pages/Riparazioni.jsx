@@ -1,14 +1,24 @@
 // Riparazioni.jsx - Design Figma
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
 
 const PRIOR = { normale:'rgba(100,116,139,0.15)|#94a3b8', alta:'rgba(234,179,8,0.15)|#facc15', urgente:'rgba(239,68,68,0.15)|#f87171' }
 
-export default function Riparazioni({ api, showToast }) {
+export default function Riparazioni({ api, showToast, autoAction, onAutoActionDone }) {
   const [repairs, setRepairs] = useState([])
   const [filter, setFilter] = useState('aperta')
   const [modal, setModal] = useState(false)
+
+  // Apri wizard automaticamente se richiesto da "Crea nuovo"
+  const autoActionHandled = useRef(false)
+  useEffect(() => {
+    if (autoAction === 'nuova_riparazione' && !autoActionHandled.current) {
+      autoActionHandled.current = true
+      setModal(true)
+      onAutoActionDone?.()
+    }
+  }, [autoAction])
   const [form, setForm] = useState({ cliente:'', tel:'', brand:'Apple', modello:'', problema:'', priorita:'normale', costo:0, data_stimata:'', note:'' })
 
   useEffect(() => { fetch() }, [])
@@ -62,7 +72,6 @@ export default function Riparazioni({ api, showToast }) {
         <button onClick={()=>setModal(true)} className="btn-blue">+ Nuova riparazione</button>
       </div>
 
-      {/* Filter tabs */}
       <div style={{ display:'flex', gap:3, background:'rgba(255,255,255,0.04)', borderRadius:10, padding:3, width:'fit-content', marginBottom:20 }}>
         {[['aperta','In corso'],['completata','Completate'],['all','Tutte']].map(([v,l]) => (
           <button key={v} onClick={()=>setFilter(v)} style={{
@@ -73,7 +82,6 @@ export default function Riparazioni({ api, showToast }) {
         ))}
       </div>
 
-      {/* Grid */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(290px,1fr))', gap:14 }}>
         {filtered.length === 0 ? (
           <div style={{ gridColumn:'1/-1', textAlign:'center', padding:'60px 0', color:'#475569' }}>
@@ -92,11 +100,9 @@ export default function Riparazioni({ api, showToast }) {
                 <span style={{ background: r.stato==='aperta'?'rgba(37,99,235,0.15)':'rgba(22,163,74,0.15)', color: r.stato==='aperta'?'#60a5fa':'#4ade80', padding:'2px 8px', borderRadius:20, fontSize:11, fontWeight:500 }}>{r.stato}</span>
               </div>
             </div>
-
             {r.problema && (
               <div style={{ fontSize:12, color:'#64748b', borderLeft:'2px solid rgba(255,255,255,0.1)', paddingLeft:10, marginBottom:12, lineHeight:1.5 }}>{r.problema}</div>
             )}
-
             {r.stato==='aperta' && (
               <div style={{ marginBottom:12 }}>
                 <div style={{ display:'flex', justifyContent:'space-between', fontSize:11, color:'#475569', marginBottom:6 }}>
@@ -110,12 +116,10 @@ export default function Riparazioni({ api, showToast }) {
                 </div>
               </div>
             )}
-
             <div style={{ display:'flex', justifyContent:'space-between', fontSize:11, color:'#475569', marginBottom:12 }}>
               <span>{r.data_stimata||r.tel||''}</span>
               <span style={{ fontFamily:'monospace', fontWeight:600 }}>€{r.costo}</span>
             </div>
-
             <div style={{ display:'flex', gap:8 }}>
               {r.stato==='aperta' && (
                 <button onClick={()=>complete(r.id)} style={{ flex:1, background:'rgba(22,163,74,0.15)', border:'1px solid rgba(22,163,74,0.25)', color:'#4ade80', borderRadius:8, padding:'7px 0', fontSize:12, fontWeight:500, cursor:'pointer', fontFamily:'Inter,sans-serif' }}>✓ Completata</button>
@@ -178,4 +182,4 @@ export default function Riparazioni({ api, showToast }) {
       )}
     </div>
   )
-}
+            }
