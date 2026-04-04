@@ -595,7 +595,7 @@ function WizardRicambio({ api, fornitori, onDone, onClose, editing }) {
 // ══════════════════════════════════════════════
 // TAB PRODOTTI
 // ══════════════════════════════════════════════
-function TabProdotti({ api, showToast }) {
+function TabProdotti({ api, showToast, autoOpen }) {
   const [products, setProducts] = useState([])
   const [fornitori, setFornitori] = useState([])
   const [wizard, setWizard] = useState(null) // null | 'add' | 'edit' | 'fornitore' | 'edit_fornitore'
@@ -604,6 +604,7 @@ function TabProdotti({ api, showToast }) {
   const [showFornitori, setShowFornitori] = useState(false)
 
   useEffect(() => { fetchAll() }, [])
+  useEffect(() => { if (autoOpen) { setEditing(null); setWizard('prodotto') } }, [autoOpen])
 
   const fetchAll = async () => {
     try {
@@ -724,7 +725,7 @@ function TabProdotti({ api, showToast }) {
 // ══════════════════════════════════════════════
 // TAB DISPOSITIVI
 // ══════════════════════════════════════════════
-function TabDispositivi({ api, showToast }) {
+function TabDispositivi({ api, showToast, autoOpen }) {
   const [devices, setDevices] = useState([])
   const [fornitori, setFornitori] = useState([])
   const [filters, setFilters] = useState({brand:'',stato:'',cond:''})
@@ -734,6 +735,7 @@ function TabDispositivi({ api, showToast }) {
   const [editingInt, setEditingInt] = useState(null)
 
   useEffect(() => { fetchAll() }, [])
+  useEffect(() => { if (autoOpen) setWizard('add_device') }, [autoOpen])
 
   const fetchAll = async () => {
     try {
@@ -912,7 +914,7 @@ function TabDispositivi({ api, showToast }) {
 // ══════════════════════════════════════════════
 // TAB RICAMBI
 // ══════════════════════════════════════════════
-function TabRicambi({ api, showToast }) {
+function TabRicambi({ api, showToast, autoOpen }) {
   const [ricambi, setRicambi] = useState([])
   const [fornitori, setFornitori] = useState([])
   const [alerts, setAlerts] = useState([])
@@ -921,6 +923,7 @@ function TabRicambi({ api, showToast }) {
   const [search, setSearch] = useState('')
 
   useEffect(() => { fetchAll() }, [])
+  useEffect(() => { if (autoOpen) { setEditing(null); setWizard('ricambio') } }, [autoOpen])
 
   const fetchAll = async () => {
     try {
@@ -1019,8 +1022,17 @@ function TabRicambi({ api, showToast }) {
 // ══════════════════════════════════════════════
 // COMPONENTE PRINCIPALE
 // ══════════════════════════════════════════════
-export default function Magazzino({ api, showToast }) {
+export default function Magazzino({ api, showToast, autoAction, onAutoActionDone }) {
   const [tab, setTab] = useState('prodotti')
+
+  // Gestione azioni automatiche da "Crea nuovo" nella sidebar
+  useEffect(() => {
+    if (!autoAction) return
+    if (autoAction === 'nuovo_prodotto')    { setTab('prodotti');    }
+    if (autoAction === 'nuovo_ricambio')    { setTab('ricambi');     }
+    if (autoAction === 'nuovo_dispositivo') { setTab('dispositivi'); }
+    onAutoActionDone && onAutoActionDone()
+  }, [autoAction])
 
   return (
     <div className="animate-fade-in">
@@ -1035,9 +1047,9 @@ export default function Magazzino({ api, showToast }) {
         ))}
       </div>
 
-      {tab==='prodotti'    && <TabProdotti    api={api} showToast={showToast}/>}
-      {tab==='dispositivi' && <TabDispositivi api={api} showToast={showToast}/>}
-      {tab==='ricambi'     && <TabRicambi     api={api} showToast={showToast}/>}
+      {tab==='prodotti'    && <TabProdotti    api={api} showToast={showToast} autoOpen={autoAction==='nuovo_prodotto'}/>}
+      {tab==='dispositivi' && <TabDispositivi api={api} showToast={showToast} autoOpen={autoAction==='nuovo_dispositivo'}/>}
+      {tab==='ricambi'     && <TabRicambi     api={api} showToast={showToast} autoOpen={autoAction==='nuovo_ricambio'}/>}
     </div>
   )
 }
