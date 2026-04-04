@@ -51,6 +51,32 @@ let SQL, db;
         }
 
         console.log('Database inizializzato');
+
+        // Migration sicura — aggiunge tabelle mancanti senza toccare i dati esistenti
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS servizi (
+                id                     TEXT PRIMARY KEY,
+                cliente                TEXT NOT NULL,
+                telefono               TEXT,
+                dispositivo            TEXT NOT NULL,
+                tipo_servizio          TEXT NOT NULL,
+                nome_servizio          TEXT NOT NULL,
+                descrizione            TEXT,
+                priorita               TEXT DEFAULT 'normale',
+                prezzo                 REAL NOT NULL,
+                note                   TEXT,
+                data_richiesta         TEXT DEFAULT (date('now')),
+                data_consegna_prevista TEXT,
+                stato                  TEXT DEFAULT 'in_corso',
+                created_at             TEXT DEFAULT (datetime('now'))
+            );
+            CREATE INDEX IF NOT EXISTS idx_servizi_cliente ON servizi(cliente);
+            CREATE INDEX IF NOT EXISTS idx_servizi_stato ON servizi(stato);
+            CREATE INDEX IF NOT EXISTS idx_servizi_tipo ON servizi(tipo_servizio);
+        `);
+        saveDB();
+        console.log('Migration completata');
+
     } catch (err) {
         console.error('Errore database:', err);
     }
