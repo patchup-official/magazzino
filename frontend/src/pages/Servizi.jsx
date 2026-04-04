@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
 import Wizard, { OptionCard, WizField, Summary } from '../components/Wizard'
+import ClienteSelector from '../components/ClienteSelector'
 
 const PRIORITA = { normale:'rgba(100,116,139,0.15)|#94a3b8', alta:'rgba(234,179,8,0.15)|#facc15', urgente:'rgba(239,68,68,0.15)|#f87171' }
 
@@ -31,14 +32,13 @@ const GBtn = ({children, onClick, small}) => (
 
 function WizardServizio({ api, editing, onDone, onClose }) {
   const [f, setF] = useState(editing || {
-    cliente:'', telefono:'', dispositivo:'', tipo_servizio:'sblocco', 
+    cliente:'', telefono:'', dispositivo:'', tipo_servizio:'sblocco',
     descrizione:'', priorita:'normale', prezzo:'', note:'',
     data_richiesta: new Date().toISOString().slice(0,10),
     data_consegna_prevista: ''
   })
   const upd = c => setF(p=>({...p,...c}))
 
-  // Auto-set prezzo quando cambia tipo servizio
   useEffect(() => {
     if (!editing) {
       const tipo = TIPI_SERVIZIO.find(t => t.id === f.tipo_servizio)
@@ -51,16 +51,21 @@ function WizardServizio({ api, editing, onDone, onClose }) {
       label: 'Cliente e dispositivo',
       heading: '👤 Cliente e dispositivo',
       subtitle: 'Chi è il cliente e su quale dispositivo lavoriamo?',
-      validate: () => { 
+      validate: () => {
         if (!f.cliente.trim()) return 'Inserisci il nome del cliente'
         if (!f.dispositivo.trim()) return 'Inserisci il dispositivo'
       },
       content: (
         <div>
-          <WizField label="Nome cliente">
-            <input value={f.cliente} onChange={e=>upd({cliente:e.target.value})} placeholder="Mario Rossi" style={{background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,padding:'9px 12px',color:'#e2e8f0',fontSize:13,width:'100%',boxSizing:'border-box',fontFamily:'Inter,sans-serif'}}/>
+          <WizField label="Cliente">
+            <ClienteSelector
+              api={api}
+              value={f.cliente}
+              onChange={val => upd({ cliente: val })}
+              onTelChange={tel => upd({ telefono: tel })}
+            />
           </WizField>
-          <WizField label="Telefono" hint="Per contattare il cliente">
+          <WizField label="Telefono" hint="Si compila automaticamente dall'archivio">
             <input value={f.telefono} onChange={e=>upd({telefono:e.target.value})} placeholder="+39 333 123456" style={{background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,padding:'9px 12px',color:'#e2e8f0',fontSize:13,width:'100%',boxSizing:'border-box',fontFamily:'Inter,sans-serif'}}/>
           </WizField>
           <WizField label="Dispositivo">
@@ -78,9 +83,9 @@ function WizardServizio({ api, editing, onDone, onClose }) {
           <WizField label="Servizio richiesto">
             <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:10}}>
               {TIPI_SERVIZIO.map(tipo => (
-                <OptionCard 
+                <OptionCard
                   key={tipo.id}
-                  icon={tipo.icon} 
+                  icon={tipo.icon}
                   label={tipo.nome}
                   sublabel={`€${tipo.prezzo_base}`}
                   selected={f.tipo_servizio === tipo.id}
@@ -99,7 +104,7 @@ function WizardServizio({ api, editing, onDone, onClose }) {
       label: 'Priorità e prezzo',
       heading: '💰 Priorità e tariffazione',
       subtitle: 'Imposta priorità, prezzo e tempistiche.',
-      validate: () => { 
+      validate: () => {
         if (!f.prezzo || isNaN(+f.prezzo) || +f.prezzo <= 0) return 'Inserisci un prezzo valido'
       },
       content: (
@@ -166,12 +171,11 @@ function WizardServizio({ api, editing, onDone, onClose }) {
       data_consegna_prevista: f.data_consegna_prevista || null,
       stato: 'in_corso'
     }
-    
-    try { 
+    try {
       const {data} = await axios.post(`${api}/servizi`, payload)
-      onDone(data, 'add') 
-    } catch { 
-      onDone({...payload, id:Date.now().toString()}, 'add') 
+      onDone(data, 'add')
+    } catch {
+      onDone({...payload, id:Date.now().toString()}, 'add')
     }
     onClose()
   }
@@ -185,7 +189,6 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState(null)
 
-  // Apri wizard automaticamente se richiesto da "Crea nuovo"
   const autoActionHandled = useRef(false)
   useEffect(() => {
     if (autoAction === 'nuovo_servizio' && !autoActionHandled.current) {
@@ -253,7 +256,6 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
         <PBtn onClick={() => { setEditing(null); setModal(true) }}>+ Nuovo servizio</PBtn>
       </div>
 
-      {/* Filter tabs */}
       <div style={{ display:'flex', gap:3, background:'rgba(255,255,255,0.04)', borderRadius:10, padding:3, width:'fit-content', marginBottom:20 }}>
         {[['in_corso','In corso'],['completato','Completati'],['all','Tutti']].map(([v,l]) => (
           <button key={v} onClick={() => setFilter(v)} style={{
@@ -264,7 +266,6 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
         ))}
       </div>
 
-      {/* Grid */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(320px,1fr))', gap:14 }}>
         {filtered.length === 0 ? (
           <div style={{ gridColumn:'1/-1', textAlign:'center', padding:'60px 0', color:'#475569' }}>
@@ -315,12 +316,11 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
               <GBtn small onClick={() => deleteServizio(s.id)}>🗑️</GBtn>
             </div>
           </div>
-        ))
-      }
+        ))}
       </div>
 
       {modal && (
-        <WizardServizio 
+        <WizardServizio
           api={api}
           editing={editing}
           onDone={handleServizio}
