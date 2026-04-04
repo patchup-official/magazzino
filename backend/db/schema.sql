@@ -119,3 +119,26 @@ CREATE TABLE IF NOT EXISTS ricambi (
 
 CREATE INDEX IF NOT EXISTS idx_interventi_device ON interventi(device_id);
 CREATE INDEX IF NOT EXISTS idx_ricambi_categoria ON ricambi(categoria);
+
+
+-- ── SERVIZI DEL NEGOZIO ──────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS servizi (
+  id                     TEXT PRIMARY KEY,
+  cliente                TEXT NOT NULL,
+  telefono               TEXT,
+  dispositivo            TEXT NOT NULL,
+  tipo_servizio          TEXT NOT NULL,  -- sblocco, diagnostica, aggiornamento, backup, pellicola, pulizia, configurazione, altro
+  nome_servizio          TEXT NOT NULL,  -- nome leggibile del servizio
+  descrizione            TEXT,
+  priorita               TEXT DEFAULT 'normale',  -- normale, alta, urgente
+  prezzo                 REAL NOT NULL,
+  note                   TEXT,
+  data_richiesta         TEXT DEFAULT (date('now')),
+  data_consegna_prevista TEXT,
+  stato                  TEXT DEFAULT 'in_corso',  -- in_corso, completato, annullato
+  created_at             TEXT DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_servizi_cliente ON servizi(cliente);
+CREATE INDEX IF NOT EXISTS idx_servizi_stato ON servizi(stato);
+CREATE INDEX IF NOT EXISTS idx_servizi_tipo ON servizi(tipo_servizio);
