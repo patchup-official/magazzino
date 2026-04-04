@@ -176,7 +176,7 @@ function WizardServizio({ api, editing, onDone, onClose }) {
     onClose()
   }
 
-  return <Wizard.Component steps={steps} onComplete={complete} onCancel={onClose} title={editing ? 'Modifica servizio' : 'Nuovo servizio'}/>
+  return <Wizard steps={steps} onComplete={complete} onClose={onClose} title={editing ? 'Modifica servizio' : 'Nuovo servizio'}/>
 }
 
 export default function Servizi({ api, showToast, autoAction, onAutoActionDone }) {
