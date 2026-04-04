@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
+import ClienteSelector from '../components/ClienteSelector'
 
 const PRIOR = { normale:'rgba(100,116,139,0.15)|#94a3b8', alta:'rgba(234,179,8,0.15)|#facc15', urgente:'rgba(239,68,68,0.15)|#f87171' }
 
@@ -9,8 +10,8 @@ export default function Riparazioni({ api, showToast, autoAction, onAutoActionDo
   const [repairs, setRepairs] = useState([])
   const [filter, setFilter] = useState('aperta')
   const [modal, setModal] = useState(false)
+  const [form, setForm] = useState({ cliente:'', tel:'', brand:'Apple', modello:'', problema:'', priorita:'normale', costo:0, data_stimata:'', note:'' })
 
-  // Apri wizard automaticamente se richiesto da "Crea nuovo"
   const autoActionHandled = useRef(false)
   useEffect(() => {
     if (autoAction === 'nuova_riparazione' && !autoActionHandled.current) {
@@ -19,11 +20,10 @@ export default function Riparazioni({ api, showToast, autoAction, onAutoActionDo
       onAutoActionDone?.()
     }
   }, [autoAction])
-  const [form, setForm] = useState({ cliente:'', tel:'', brand:'Apple', modello:'', problema:'', priorita:'normale', costo:0, data_stimata:'', note:'' })
 
-  useEffect(() => { fetch() }, [])
+  useEffect(() => { fetchRepairs() }, [])
 
-  const fetch = async () => {
+  const fetchRepairs = async () => {
     try { const { data } = await axios.get(`${api}/repairs`); setRepairs(data.data||[]) }
     catch { setRepairs(JSON.parse(localStorage.getItem('mag_rep')||'[]')) }
   }
@@ -137,42 +137,59 @@ export default function Riparazioni({ api, showToast, autoAction, onAutoActionDo
               <span style={{ fontSize:16, fontWeight:700 }}>Nuova riparazione</span>
               <button onClick={()=>setModal(false)} style={{ background:'none', border:'none', color:'#475569', fontSize:18, cursor:'pointer' }}>✕</button>
             </div>
+
+            {/* Cliente con selettore archivio */}
+            <div style={{ marginBottom:14 }}>
+              <label style={{ fontSize:11.5, color:'#64748b', display:'block', marginBottom:6 }}>Cliente</label>
+              <ClienteSelector
+                api={api}
+                value={form.cliente}
+                onChange={val => setForm(p => ({ ...p, cliente: val }))}
+                onTelChange={tel => setForm(p => ({ ...p, tel }))}
+              />
+            </div>
+
+            <div style={{ marginBottom:14 }}>
+              <label style={{ fontSize:11.5, color:'#64748b', display:'block', marginBottom:6 }}>Telefono</label>
+              <input placeholder="+39 333..." value={form.tel} onChange={e=>setForm({...form,tel:e.target.value})}
+                style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, padding:'8px 10px', color:'#e2e8f0', width:'100%', boxSizing:'border-box', fontFamily:'Inter,sans-serif', fontSize:13 }} />
+            </div>
+
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:13 }}>
-              {[['Cliente','cliente','Mario Rossi'],['Telefono','tel','+39 333...']].map(([l,k,ph])=>(
-                <div key={k} style={{ gridColumn:'1/-1', display:'flex', flexDirection:'column', gap:5 }}>
-                  <label style={{ fontSize:11.5, color:'#64748b' }}>{l}</label>
-                  <input placeholder={ph} value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})} />
-                </div>
-              ))}
               <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
                 <label style={{ fontSize:11.5, color:'#64748b' }}>Brand</label>
-                <select value={form.brand} onChange={e=>setForm({...form,brand:e.target.value})} style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, padding:'8px 10px', color:'#e2e8f0' }}>
+                <select value={form.brand} onChange={e=>setForm({...form,brand:e.target.value})} style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, padding:'8px 10px', color:'#e2e8f0', fontFamily:'Inter,sans-serif' }}>
                   {['Apple','Samsung','Google','Xiaomi','OnePlus','Huawei'].map(b=><option key={b}>{b}</option>)}
                 </select>
               </div>
               <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
                 <label style={{ fontSize:11.5, color:'#64748b' }}>Modello</label>
-                <input placeholder="iPhone 14" value={form.modello} onChange={e=>setForm({...form,modello:e.target.value})} />
+                <input placeholder="iPhone 14" value={form.modello} onChange={e=>setForm({...form,modello:e.target.value})}
+                  style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, padding:'8px 10px', color:'#e2e8f0', fontFamily:'Inter,sans-serif', fontSize:13 }} />
               </div>
               <div style={{ gridColumn:'1/-1', display:'flex', flexDirection:'column', gap:5 }}>
                 <label style={{ fontSize:11.5, color:'#64748b' }}>Problema</label>
-                <textarea placeholder="Schermo rotto, non si accende..." value={form.problema} onChange={e=>setForm({...form,problema:e.target.value})} style={{ minHeight:70 }} />
+                <textarea placeholder="Schermo rotto, non si accende..." value={form.problema} onChange={e=>setForm({...form,problema:e.target.value})}
+                  style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, padding:'8px 10px', color:'#e2e8f0', minHeight:70, resize:'vertical', fontFamily:'Inter,sans-serif', fontSize:13 }} />
               </div>
               <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
                 <label style={{ fontSize:11.5, color:'#64748b' }}>Priorità</label>
-                <select value={form.priorita} onChange={e=>setForm({...form,priorita:e.target.value})} style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, padding:'8px 10px', color:'#e2e8f0' }}>
+                <select value={form.priorita} onChange={e=>setForm({...form,priorita:e.target.value})} style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, padding:'8px 10px', color:'#e2e8f0', fontFamily:'Inter,sans-serif' }}>
                   <option value="normale">Normale</option><option value="alta">Alta</option><option value="urgente">Urgente</option>
                 </select>
               </div>
               <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
                 <label style={{ fontSize:11.5, color:'#64748b' }}>Costo €</label>
-                <input type="number" value={form.costo} onChange={e=>setForm({...form,costo:+e.target.value})} />
+                <input type="number" value={form.costo} onChange={e=>setForm({...form,costo:+e.target.value})}
+                  style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, padding:'8px 10px', color:'#e2e8f0', fontFamily:'Inter,sans-serif', fontSize:13 }} />
               </div>
               <div style={{ gridColumn:'1/-1', display:'flex', flexDirection:'column', gap:5 }}>
                 <label style={{ fontSize:11.5, color:'#64748b' }}>Data consegna stimata</label>
-                <input type="date" value={form.data_stimata} onChange={e=>setForm({...form,data_stimata:e.target.value})} />
+                <input type="date" value={form.data_stimata} onChange={e=>setForm({...form,data_stimata:e.target.value})}
+                  style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, padding:'8px 10px', color:'#e2e8f0', fontFamily:'Inter,sans-serif', fontSize:13, width:'100%' }} />
               </div>
             </div>
+
             <div style={{ display:'flex', justifyContent:'flex-end', gap:10, marginTop:20, paddingTop:16, borderTop:'1px solid rgba(255,255,255,0.06)' }}>
               <button onClick={()=>setModal(false)} className="btn-outline">Annulla</button>
               <button onClick={add} className="btn-blue">Crea riparazione</button>
@@ -182,4 +199,4 @@ export default function Riparazioni({ api, showToast, autoAction, onAutoActionDo
       )}
     </div>
   )
-            }
+}
