@@ -7,6 +7,7 @@ export default function Sidebar({ currentPage, onNavigate, onCreaNuovo }) {
     { id:'dashboard',   icon:'⌂', label:'Homepage' },
     { id:'magazzino',   icon:'▣', label:'Magazzino' },
     { id:'riparazioni', icon:'✂', label:'Riparazioni' },
+    { id:'servizi',     icon:'🛠', label:'Servizi' },
     { id:'storico',     icon:'☰', label:'Storico acquisti' },
   ]
   const navPlugin = [
@@ -22,6 +23,7 @@ export default function Sidebar({ currentPage, onNavigate, onCreaNuovo }) {
       <button
         onClick={() => !item.disabled && onNavigate(item.id)}
         disabled={item.disabled}
+        className={isActive ? '' : ''}
         style={{
           width:'100%', display:'flex', alignItems:'center', gap:9,
           padding:'7.5px 10px', borderRadius: isActive ? 0 : 9,
