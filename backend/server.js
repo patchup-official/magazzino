@@ -52,28 +52,34 @@ let SQL, db;
 
         console.log('Database inizializzato');
 
-        // Migration sicura — aggiunge tabelle mancanti senza toccare i dati esistenti
+        // Migration sicura — tabella servizi
         db.exec(`
             CREATE TABLE IF NOT EXISTS servizi (
-                id                     TEXT PRIMARY KEY,
-                cliente                TEXT NOT NULL,
-                telefono               TEXT,
-                dispositivo            TEXT NOT NULL,
-                tipo_servizio          TEXT NOT NULL,
-                nome_servizio          TEXT NOT NULL,
-                descrizione            TEXT,
-                priorita               TEXT DEFAULT 'normale',
-                prezzo                 REAL NOT NULL,
-                note                   TEXT,
-                data_richiesta         TEXT DEFAULT (date('now')),
-                data_consegna_prevista TEXT,
-                stato                  TEXT DEFAULT 'in_corso',
-                created_at             TEXT DEFAULT (datetime('now'))
+                id TEXT PRIMARY KEY, cliente TEXT NOT NULL, telefono TEXT,
+                dispositivo TEXT NOT NULL, tipo_servizio TEXT NOT NULL, nome_servizio TEXT NOT NULL,
+                descrizione TEXT, priorita TEXT DEFAULT 'normale', prezzo REAL NOT NULL,
+                note TEXT, data_richiesta TEXT DEFAULT (date('now')),
+                data_consegna_prevista TEXT, stato TEXT DEFAULT 'in_corso',
+                created_at TEXT DEFAULT (datetime('now'))
             );
             CREATE INDEX IF NOT EXISTS idx_servizi_cliente ON servizi(cliente);
             CREATE INDEX IF NOT EXISTS idx_servizi_stato ON servizi(stato);
             CREATE INDEX IF NOT EXISTS idx_servizi_tipo ON servizi(tipo_servizio);
         `);
+
+        // Migration sicura — tabella clienti
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS clienti (
+                id TEXT PRIMARY KEY, tipo TEXT NOT NULL DEFAULT 'persona_fisica',
+                nome TEXT NOT NULL, cognome TEXT, ragione_soc TEXT,
+                codice_fisc TEXT, piva TEXT, telefono TEXT, email TEXT,
+                indirizzo TEXT, cap TEXT, citta TEXT, note TEXT,
+                created_at TEXT DEFAULT (datetime('now'))
+            );
+            CREATE INDEX IF NOT EXISTS idx_clienti_nome ON clienti(nome);
+            CREATE INDEX IF NOT EXISTS idx_clienti_tel ON clienti(telefono);
+        `);
+
         saveDB();
         console.log('Migration completata');
 
@@ -106,6 +112,7 @@ app.use('/api/products', require('./routes/products'));
 app.use('/api/devices', require('./routes/devices'));
 app.use('/api/fornitori', require('./routes/fornitori'));
 app.use('/api/servizi', require('./routes/servizi'));
+app.use('/api/clienti', require('./routes/clienti'));
 
 // Health endpoint
 app.get('/health', (req, res) => {
@@ -115,6 +122,7 @@ app.get('/health', (req, res) => {
         const repairsStmt = db.prepare('SELECT COUNT(*) as count FROM repairs');
         const fornitoriStmt = db.prepare('SELECT COUNT(*) as count FROM fornitori');
         const serviziStmt = db.prepare('SELECT COUNT(*) as count FROM servizi');
+        const clientiStmt = db.prepare('SELECT COUNT(*) as count FROM clienti');
 
         res.json({
             status: 'ok',
@@ -123,7 +131,8 @@ app.get('/health', (req, res) => {
             devices: devicesStmt.get().count,
             repairs: repairsStmt.get().count,
             fornitori: fornitoriStmt.get().count,
-            servizi: serviziStmt.get().count
+            servizi: serviziStmt.get().count,
+            clienti: clientiStmt.get().count
         });
     } catch (err) {
         res.status(500).json({
@@ -152,9 +161,7 @@ app.get('/imei/:imei', async (req, res) => {
             timeout: 5000
         });
 
-        if (!response.ok) {
-            throw new Error(`API Error: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`API Error: ${response.status}`);
 
         const data = await response.json();
         res.json(data);
