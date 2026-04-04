@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard'
 import Magazzino from './pages/Magazzino'
 import AcquistoPlugin from './pages/AcquistoPlugin'
 import Riparazioni from './pages/Riparazioni'
+import Servizi from './pages/Servizi'
 import Storico from './pages/Storico'
 import FirmaRemota from './pages/FirmaRemota'
 import Toast from './components/Toast'
@@ -16,6 +17,7 @@ const API = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 export default function App() {
   const [currentPage, setCurrentPage] = useState('dashboard')
   const [toasts, setToasts] = useState([])
+  // Stato per apertura diretta di wizard da "Crea nuovo"
   const [creaNuovoAction, setCreaNuovoAction] = useState(null)
 
   if (INIT_PATH.startsWith('/firma')) return <FirmaRemota />
@@ -26,6 +28,7 @@ export default function App() {
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3500)
   }
 
+  // Gestione azioni "Crea nuovo"
   const handleCreaNuovo = (id) => {
     switch(id) {
       case 'riparazione':
@@ -33,7 +36,8 @@ export default function App() {
         setCreaNuovoAction('nuova_riparazione')
         break
       case 'servizio':
-        showToast('Sezione Servizi in arrivo presto!', 'success')
+        setCurrentPage('servizi')
+        setCreaNuovoAction('nuovo_servizio')
         break
       case 'cliente':
         showToast('Sezione Clienti in arrivo presto!', 'success')
@@ -58,12 +62,12 @@ export default function App() {
   }
 
   const titles = {
-    dashboard:'Homepage', magazzino:'Magazzino',
+    dashboard:'Homepage', magazzino:'Magazzino', servizi:'Servizi',
     acquisto:'Acquisto dispositivo', riparazioni:'Riparazioni', storico:'Storico acquisti'
   }
 
   const pages = {
-    dashboard: Dashboard, magazzino: Magazzino,
+    dashboard: Dashboard, magazzino: Magazzino, servizi: Servizi,
     acquisto: AcquistoPlugin, riparazioni: Riparazioni, storico: Storico
   }
   const PageComponent = pages[currentPage] || Dashboard
@@ -76,6 +80,7 @@ export default function App() {
         onCreaNuovo={handleCreaNuovo}
       />
       <main style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
+        {/* Topbar */}
         <div style={{
           height:52, borderBottom:'1px solid rgba(255,255,255,0.05)',
           background:'#090e1e', display:'flex', alignItems:'center',
@@ -98,17 +103,20 @@ export default function App() {
           </div>
         </div>
 
+        {/* Content */}
         <div style={{ flex:1, overflowY:'auto', padding:24 }} className="custom-scroll">
           <PageComponent
             api={API}
             showToast={showToast}
             onNavigate={(page) => { setCurrentPage(page); setCreaNuovoAction(null) }}
+            // Passa l'azione di apertura automatica del wizard
             autoAction={creaNuovoAction}
             onAutoActionDone={() => setCreaNuovoAction(null)}
           />
         </div>
       </main>
 
+      {/* Toasts */}
       <div style={{ position:'fixed', bottom:20, right:20, display:'flex', flexDirection:'column', gap:8, zIndex:50 }}>
         {toasts.map(t => <Toast key={t.id} msg={t.msg} type={t.type} />)}
       </div>
