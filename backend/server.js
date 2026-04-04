@@ -142,6 +142,14 @@ app.use((req, res, next) => {
     next();
 });
 
+// Routes
+app.use('/api/repairs', require('./routes/repairs'));
+app.use('/api/products', require('./routes/products'));
+app.use('/api/devices', require('./routes/devices'));
+app.use('/api/fornitori', require('./routes/fornitori'));
+app.use('/api/servizi', require('./routes/servizi'));
+});
+
 // 404 handler
 app.use((req, res) => {
     res.status(404).json({ error: 'Endpoint non trovato' });
