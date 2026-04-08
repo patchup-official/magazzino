@@ -7,6 +7,8 @@ import Magazzino from './pages/Magazzino'
 import AcquistoPlugin from './pages/AcquistoPlugin'
 import Riparazioni from './pages/Riparazioni'
 import Servizi from './pages/Servizi'
+import Clienti from './pages/Clienti'
+import ImportExport from './pages/ImportExport'
 import Storico from './pages/Storico'
 import FirmaRemota from './pages/FirmaRemota'
 import Toast from './components/Toast'
@@ -17,7 +19,6 @@ const API = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 export default function App() {
   const [currentPage, setCurrentPage] = useState('dashboard')
   const [toasts, setToasts] = useState([])
-  // Stato per apertura diretta di wizard da "Crea nuovo"
   const [creaNuovoAction, setCreaNuovoAction] = useState(null)
 
   if (INIT_PATH.startsWith('/firma')) return <FirmaRemota />
@@ -28,7 +29,6 @@ export default function App() {
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3500)
   }
 
-  // Gestione azioni "Crea nuovo"
   const handleCreaNuovo = (id) => {
     switch(id) {
       case 'riparazione':
@@ -40,7 +40,8 @@ export default function App() {
         setCreaNuovoAction('nuovo_servizio')
         break
       case 'cliente':
-        showToast('Sezione Clienti in arrivo presto!', 'success')
+        setCurrentPage('clienti')
+        setCreaNuovoAction('nuovo_cliente')
         break
       case 'prodotto':
         setCurrentPage('magazzino')
@@ -62,13 +63,25 @@ export default function App() {
   }
 
   const titles = {
-    dashboard:'Homepage', magazzino:'Magazzino', servizi:'Servizi',
-    acquisto:'Acquisto dispositivo', riparazioni:'Riparazioni', storico:'Storico acquisti'
+    dashboard:    'Homepage',
+    magazzino:    'Magazzino',
+    servizi:      'Servizi',
+    acquisto:     'Acquisto dispositivo',
+    riparazioni:  'Riparazioni',
+    storico:      'Storico acquisti',
+    clienti:      'Clienti',
+    importexport: 'Import / Export',
   }
 
   const pages = {
-    dashboard: Dashboard, magazzino: Magazzino, servizi: Servizi,
-    acquisto: AcquistoPlugin, riparazioni: Riparazioni, storico: Storico
+    dashboard:    Dashboard,
+    magazzino:    Magazzino,
+    servizi:      Servizi,
+    acquisto:     AcquistoPlugin,
+    riparazioni:  Riparazioni,
+    storico:      Storico,
+    clienti:      Clienti,
+    importexport: ImportExport,
   }
   const PageComponent = pages[currentPage] || Dashboard
 
@@ -109,7 +122,6 @@ export default function App() {
             api={API}
             showToast={showToast}
             onNavigate={(page) => { setCurrentPage(page); setCreaNuovoAction(null) }}
-            // Passa l'azione di apertura automatica del wizard
             autoAction={creaNuovoAction}
             onAutoActionDone={() => setCreaNuovoAction(null)}
           />
