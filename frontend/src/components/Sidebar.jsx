@@ -1,4 +1,4 @@
-// Sidebar.jsx — con CreaNuovo integrato
+⌂▣✂🛠👥☰◈🛡️⇅⚙è// Sidebar.jsx — con CreaNuovo integrato
 
 import CreaNuovo from './CreaNuovo'
 
