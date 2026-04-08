@@ -11,6 +11,7 @@ import Clienti from './pages/Clienti'
 import ImportExport from './pages/ImportExport'
 import Storico from './pages/Storico'
 import Protezione from './pages/Protezione'
+import ValutazioneDisplay from './pages/ValutazioneDisplay'
 import FirmaRemota from './pages/FirmaRemota'
 import Toast from './components/Toast'
 
@@ -43,17 +44,29 @@ export default function App() {
   }
 
   const titles = {
-    dashboard: 'Homepage', magazzino: 'Magazzino', servizi: 'Servizi',
-    acquisto: 'Acquisto dispositivo', riparazioni: 'Riparazioni',
-    storico: 'Storico acquisti', clienti: 'Clienti',
-    importexport: 'Import / Export', protezione: 'Protezione Dispositivo',
+    dashboard:    'Homepage',
+    magazzino:    'Magazzino',
+    servizi:      'Servizi',
+    acquisto:     'Acquisto dispositivo',
+    riparazioni:  'Riparazioni',
+    storico:      'Storico acquisti',
+    clienti:      'Clienti',
+    importexport: 'Import / Export',
+    protezione:   'Protezione Dispositivo',
+    valutazione:  'Valutazione Display',
   }
 
   const pages = {
-    dashboard: Dashboard, magazzino: Magazzino, servizi: Servizi,
-    acquisto: AcquistoPlugin, riparazioni: Riparazioni,
-    storico: Storico, clienti: Clienti,
-    importexport: ImportExport, protezione: Protezione,
+    dashboard:    Dashboard,
+    magazzino:    Magazzino,
+    servizi:      Servizi,
+    acquisto:     AcquistoPlugin,
+    riparazioni:  Riparazioni,
+    storico:      Storico,
+    clienti:      Clienti,
+    importexport: ImportExport,
+    protezione:   Protezione,
+    valutazione:  ValutazioneDisplay,
   }
   const PageComponent = pages[currentPage] || Dashboard
 
@@ -86,7 +99,8 @@ export default function App() {
         </div>
         <div style={{ flex:1, overflowY:'auto', padding:24 }} className="custom-scroll">
           <PageComponent
-            api={API} showToast={showToast}
+            api={API}
+            showToast={showToast}
             onNavigate={(page) => { setCurrentPage(page); setCreaNuovoAction(null) }}
             autoAction={creaNuovoAction}
             onAutoActionDone={() => setCreaNuovoAction(null)}
