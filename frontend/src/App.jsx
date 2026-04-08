@@ -8,6 +8,7 @@ import AcquistoPlugin from './pages/AcquistoPlugin'
 import Riparazioni from './pages/Riparazioni'
 import Servizi from './pages/Servizi'
 import Clienti from './pages/Clienti'
+import ImportExport from './pages/ImportExport'
 import Storico from './pages/Storico'
 import FirmaRemota from './pages/FirmaRemota'
 import Toast from './components/Toast'
@@ -62,15 +63,25 @@ export default function App() {
   }
 
   const titles = {
-    dashboard: 'Homepage', magazzino: 'Magazzino', servizi: 'Servizi',
-    acquisto: 'Acquisto dispositivo', riparazioni: 'Riparazioni',
-    storico: 'Storico acquisti', clienti: 'Clienti'
+    dashboard:    'Homepage',
+    magazzino:    'Magazzino',
+    servizi:      'Servizi',
+    acquisto:     'Acquisto dispositivo',
+    riparazioni:  'Riparazioni',
+    storico:      'Storico acquisti',
+    clienti:      'Clienti',
+    importexport: 'Import / Export',
   }
 
   const pages = {
-    dashboard: Dashboard, magazzino: Magazzino, servizi: Servizi,
-    acquisto: AcquistoPlugin, riparazioni: Riparazioni,
-    storico: Storico, clienti: Clienti
+    dashboard:    Dashboard,
+    magazzino:    Magazzino,
+    servizi:      Servizi,
+    acquisto:     AcquistoPlugin,
+    riparazioni:  Riparazioni,
+    storico:      Storico,
+    clienti:      Clienti,
+    importexport: ImportExport,
   }
   const PageComponent = pages[currentPage] || Dashboard
 
