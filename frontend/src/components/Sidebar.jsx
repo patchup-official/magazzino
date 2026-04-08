@@ -5,7 +5,7 @@ import CreaNuovo from './CreaNuovo'
 export default function Sidebar({ currentPage, onNavigate, onCreaNuovo }) {
   const navMain = [
     { id:'dashboard',   icon:'⌂',  label:'Homepage' },
-    { id:'magazzino',   icon:'▣',  label:'Magazzino' },
+    { id:'magazzino',   icon:'▣',  label:'Magazzhino' },
     { id:'riparazioni', icon:'✂',  label:'Riparazioni' },
     { id:'servizi',     icon:'🛠', label:'Servizi' },
     { id:'clienti',     icon:'👥', label:'Clienti' },
