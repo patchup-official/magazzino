@@ -1,4 +1,4 @@
-// App.jsx — con menu Crea nuovo
+// App.jsx
 
 import { useState, useEffect } from 'react'
 import Sidebar from './components/Sidebar'
@@ -10,6 +10,7 @@ import Servizi from './pages/Servizi'
 import Clienti from './pages/Clienti'
 import ImportExport from './pages/ImportExport'
 import Storico from './pages/Storico'
+import Protezione from './pages/Protezione'
 import FirmaRemota from './pages/FirmaRemota'
 import Toast from './components/Toast'
 
@@ -31,57 +32,28 @@ export default function App() {
 
   const handleCreaNuovo = (id) => {
     switch(id) {
-      case 'riparazione':
-        setCurrentPage('riparazioni')
-        setCreaNuovoAction('nuova_riparazione')
-        break
-      case 'servizio':
-        setCurrentPage('servizi')
-        setCreaNuovoAction('nuovo_servizio')
-        break
-      case 'cliente':
-        setCurrentPage('clienti')
-        setCreaNuovoAction('nuovo_cliente')
-        break
-      case 'prodotto':
-        setCurrentPage('magazzino')
-        setCreaNuovoAction('nuovo_prodotto')
-        break
-      case 'ricambio':
-        setCurrentPage('magazzino')
-        setCreaNuovoAction('nuovo_ricambio')
-        break
-      case 'da_privato':
-        setCurrentPage('acquisto')
-        setCreaNuovoAction(null)
-        break
-      case 'da_fornitore':
-        setCurrentPage('magazzino')
-        setCreaNuovoAction('nuovo_dispositivo')
-        break
+      case 'riparazione': setCurrentPage('riparazioni'); setCreaNuovoAction('nuova_riparazione'); break
+      case 'servizio': setCurrentPage('servizi'); setCreaNuovoAction('nuovo_servizio'); break
+      case 'cliente': setCurrentPage('clienti'); setCreaNuovoAction('nuovo_cliente'); break
+      case 'prodotto': setCurrentPage('magazzino'); setCreaNuovoAction('nuovo_prodotto'); break
+      case 'ricambio': setCurrentPage('magazzino'); setCreaNuovoAction('nuovo_ricambio'); break
+      case 'da_privato': setCurrentPage('acquisto'); setCreaNuovoAction(null); break
+      case 'da_fornitore': setCurrentPage('magazzino'); setCreaNuovoAction('nuovo_dispositivo'); break
     }
   }
 
   const titles = {
-    dashboard:    'Homepage',
-    magazzino:    'Magazzino',
-    servizi:      'Servizi',
-    acquisto:     'Acquisto dispositivo',
-    riparazioni:  'Riparazioni',
-    storico:      'Storico acquisti',
-    clienti:      'Clienti',
-    importexport: 'Import / Export',
+    dashboard: 'Homepage', magazzino: 'Magazzino', servizi: 'Servizi',
+    acquisto: 'Acquisto dispositivo', riparazioni: 'Riparazioni',
+    storico: 'Storico acquisti', clienti: 'Clienti',
+    importexport: 'Import / Export', protezione: 'Protezione Dispositivo',
   }
 
   const pages = {
-    dashboard:    Dashboard,
-    magazzino:    Magazzino,
-    servizi:      Servizi,
-    acquisto:     AcquistoPlugin,
-    riparazioni:  Riparazioni,
-    storico:      Storico,
-    clienti:      Clienti,
-    importexport: ImportExport,
+    dashboard: Dashboard, magazzino: Magazzino, servizi: Servizi,
+    acquisto: AcquistoPlugin, riparazioni: Riparazioni,
+    storico: Storico, clienti: Clienti,
+    importexport: ImportExport, protezione: Protezione,
   }
   const PageComponent = pages[currentPage] || Dashboard
 
@@ -93,15 +65,12 @@ export default function App() {
         onCreaNuovo={handleCreaNuovo}
       />
       <main style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
-        {/* Topbar */}
         <div style={{
           height:52, borderBottom:'1px solid rgba(255,255,255,0.05)',
           background:'#090e1e', display:'flex', alignItems:'center',
           justifyContent:'space-between', padding:'0 24px', flexShrink:0,
         }}>
-          <div style={{ fontSize:14, fontWeight:600, color:'#e2e8f0' }}>
-            {titles[currentPage]}
-          </div>
+          <div style={{ fontSize:14, fontWeight:600, color:'#e2e8f0' }}>{titles[currentPage]}</div>
           <div style={{ display:'flex', alignItems:'center', gap:12 }}>
             <Clock />
             <div style={{
@@ -115,20 +84,15 @@ export default function App() {
             </div>
           </div>
         </div>
-
-        {/* Content */}
         <div style={{ flex:1, overflowY:'auto', padding:24 }} className="custom-scroll">
           <PageComponent
-            api={API}
-            showToast={showToast}
+            api={API} showToast={showToast}
             onNavigate={(page) => { setCurrentPage(page); setCreaNuovoAction(null) }}
             autoAction={creaNuovoAction}
             onAutoActionDone={() => setCreaNuovoAction(null)}
           />
         </div>
       </main>
-
-      {/* Toasts */}
       <div style={{ position:'fixed', bottom:20, right:20, display:'flex', flexDirection:'column', gap:8, zIndex:50 }}>
         {toasts.map(t => <Toast key={t.id} msg={t.msg} type={t.type} />)}
       </div>
