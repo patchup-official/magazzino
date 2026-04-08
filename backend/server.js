@@ -8,184 +8,113 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 const allowedOrigins = [
-    'http://localhost:5173',
-    'http://localhost:3000',
-    process.env.FRONTEND_URL,
+  'http://localhost:5173',
+  'http://localhost:3000',
+  process.env.FRONTEND_URL,
 ].filter(Boolean);
 
 app.use(cors({
-    origin: (origin, cb) => {
-        if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
-        cb(new Error('CORS non consentito: ' + origin));
-    },
-    credentials: true,
+  origin: (origin, cb) => {
+    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    cb(new Error('CORS non consentito: ' + origin));
+  },
+  credentials: true,
 }));
 app.use(express.json());
 
-const DB_DIR = process.env.DB_DIR || path.join(__dirname, 'db');
+const DB_DIR  = process.env.DB_DIR || path.join(__dirname, 'db');
 const DB_PATH = path.join(DB_DIR, 'magazzino.sqlite');
 const SCHEMA_PATH = path.join(__dirname, 'db', 'schema.sql');
 
 if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR, { recursive: true });
 
-const initSqlJs = require('sql.js');
-let SQL, db;
+async function initDB() {
+  const initSqlJs = require('sql.js');
+  const SQL = await initSqlJs();
+  let db;
+  if (fs.existsSync(DB_PATH)) {
+    db = new SQL.Database(fs.readFileSync(DB_PATH));
+  } else {
+    db = new SQL.Database();
+  }
+  db.run(fs.readFileSync(SCHEMA_PATH, 'utf-8'));
 
-(async () => {
-    try {
-        SQL = await initSqlJs({
-            locateFile: file => path.join(__dirname, 'node_modules', 'sql.js', 'dist', file)
-        });
+  // ALTER TABLE sicuro per colonne mancanti
+  try { db.run('ALTER TABLE products ADD COLUMN barcode TEXT'); } catch(e) {}
+  try { db.run('ALTER TABLE products ADD COLUMN fornitore_id TEXT'); } catch(e) {}
+  try { db.run('ALTER TABLE products ADD COLUMN note TEXT'); } catch(e) {}
 
-        if (fs.existsSync(DB_PATH)) {
-            const data = fs.readFileSync(DB_PATH);
-            db = new SQL.Database(data);
-        } else {
-            db = new SQL.Database();
-        }
+  // Migration — tabella servizi
+  try {
+    db.run(`CREATE TABLE IF NOT EXISTS servizi (
+      id TEXT PRIMARY KEY, cliente TEXT NOT NULL, telefono TEXT,
+      dispositivo TEXT NOT NULL, tipo_servizio TEXT NOT NULL, nome_servizio TEXT NOT NULL,
+      descrizione TEXT, priorita TEXT DEFAULT 'normale', prezzo REAL NOT NULL,
+      note TEXT, data_richiesta TEXT DEFAULT (date('now')),
+      data_consegna_prevista TEXT, stato TEXT DEFAULT 'in_corso',
+      created_at TEXT DEFAULT (datetime('now'))
+    )`);
+  } catch(e) {}
 
-        if (fs.existsSync(SCHEMA_PATH)) {
-            const schema = fs.readFileSync(SCHEMA_PATH, 'utf8');
-            db.exec(schema);
-            saveDB();
-        }
+  // Migration — tabella clienti
+  try {
+    db.run(`CREATE TABLE IF NOT EXISTS clienti (
+      id TEXT PRIMARY KEY, tipo TEXT NOT NULL DEFAULT 'persona_fisica',
+      nome TEXT NOT NULL, cognome TEXT, ragione_soc TEXT,
+      codice_fisc TEXT, piva TEXT, telefono TEXT, email TEXT,
+      indirizzo TEXT, cap TEXT, citta TEXT, note TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    )`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_clienti_nome ON clienti(nome)`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_clienti_tel ON clienti(telefono)`);
+  } catch(e) {}
 
-        console.log('Database inizializzato');
+  app.locals.saveDB = () => {
+    fs.writeFileSync(DB_PATH, Buffer.from(db.export()));
+  };
+  app.locals.query = (sql, params=[]) => {
+    const stmt = db.prepare(sql); stmt.bind(params);
+    const rows = []; while(stmt.step()) rows.push(stmt.getAsObject());
+    stmt.free(); return rows;
+  };
+  app.locals.run = (sql, params=[]) => { db.run(sql, params); app.locals.saveDB(); };
+  app.locals.get = (sql, params=[]) => { const r = app.locals.query(sql, params); return r[0]||null; };
+  app.locals.uid = () => crypto.randomBytes(8).toString('hex');
 
-        // Migration sicura — tabella servizi
-        db.exec(`
-            CREATE TABLE IF NOT EXISTS servizi (
-                id TEXT PRIMARY KEY, cliente TEXT NOT NULL, telefono TEXT,
-                dispositivo TEXT NOT NULL, tipo_servizio TEXT NOT NULL, nome_servizio TEXT NOT NULL,
-                descrizione TEXT, priorita TEXT DEFAULT 'normale', prezzo REAL NOT NULL,
-                note TEXT, data_richiesta TEXT DEFAULT (date('now')),
-                data_consegna_prevista TEXT, stato TEXT DEFAULT 'in_corso',
-                created_at TEXT DEFAULT (datetime('now'))
-            );
-            CREATE INDEX IF NOT EXISTS idx_servizi_cliente ON servizi(cliente);
-            CREATE INDEX IF NOT EXISTS idx_servizi_stato ON servizi(stato);
-            CREATE INDEX IF NOT EXISTS idx_servizi_tipo ON servizi(tipo_servizio);
-        `);
-
-        // Migration sicura — tabella clienti
-        db.exec(`
-            CREATE TABLE IF NOT EXISTS clienti (
-                id TEXT PRIMARY KEY, tipo TEXT NOT NULL DEFAULT 'persona_fisica',
-                nome TEXT NOT NULL, cognome TEXT, ragione_soc TEXT,
-                codice_fisc TEXT, piva TEXT, telefono TEXT, email TEXT,
-                indirizzo TEXT, cap TEXT, citta TEXT, note TEXT,
-                created_at TEXT DEFAULT (datetime('now'))
-            );
-            CREATE INDEX IF NOT EXISTS idx_clienti_nome ON clienti(nome);
-            CREATE INDEX IF NOT EXISTS idx_clienti_tel ON clienti(telefono);
-        `);
-
-        saveDB();
-        console.log('Migration completata');
-
-    } catch (err) {
-        console.error('Errore database:', err);
-    }
-})();
-
-function saveDB() {
-    try {
-        if (db) {
-            const data = db.export();
-            fs.writeFileSync(DB_PATH, data);
-        }
-    } catch (err) {
-        console.error('Errore salvataggio DB:', err);
-    }
+  app.locals.saveDB();
+  console.log('✅ DB:', DB_PATH);
 }
 
-// Global DB access — DEVE stare prima delle routes
-app.use((req, res, next) => {
-    req.db = db;
-    req.saveDB = saveDB;
-    next();
-});
+initDB().then(() => {
+  app.use('/products',     require('./routes/products'));
+  app.use('/devices',      require('./routes/devices'));
+  app.use('/repairs',      require('./routes/repairs'));
+  app.use('/purchases',    require('./routes/purchases'));
+  app.use('/imei',         require('./routes/imei'));
+  app.use('/valutazione',  require('./routes/valutazione'));
+  app.use('/fornitori',    require('./routes/fornitori'));
+  app.use('/interventi',   require('./routes/interventi'));
+  app.use('/ricambi',      require('./routes/ricambi'));
+  app.use('/servizi',      require('./routes/servizi'));
+  app.use('/clienti',      require('./routes/clienti'));
+  app.use('/importexport', require('./routes/importexport'));
 
-// Routes
-app.use('/api/repairs', require('./routes/repairs'));
-app.use('/api/products', require('./routes/products'));
-app.use('/api/devices', require('./routes/devices'));
-app.use('/api/fornitori', require('./routes/fornitori'));
-app.use('/api/servizi', require('./routes/servizi'));
-app.use('/api/clienti', require('./routes/clienti'));
+  app.get('/health', (req, res) => {
+    res.json({
+      status: 'ok', version: '2.3.0',
+      products:  app.locals.get('SELECT COUNT(*) as n FROM products')?.n  || 0,
+      devices:   app.locals.get('SELECT COUNT(*) as n FROM devices')?.n   || 0,
+      repairs:   app.locals.get('SELECT COUNT(*) as n FROM repairs')?.n   || 0,
+      fornitori: app.locals.get('SELECT COUNT(*) as n FROM fornitori')?.n || 0,
+      servizi:   app.locals.get('SELECT COUNT(*) as n FROM servizi')?.n   || 0,
+      clienti:   app.locals.get('SELECT COUNT(*) as n FROM clienti')?.n   || 0,
+    });
+  });
 
-// Health endpoint
-app.get('/health', (req, res) => {
-    try {
-        const productsStmt = db.prepare('SELECT COUNT(*) as count FROM products');
-        const devicesStmt = db.prepare('SELECT COUNT(*) as count FROM devices');
-        const repairsStmt = db.prepare('SELECT COUNT(*) as count FROM repairs');
-        const fornitoriStmt = db.prepare('SELECT COUNT(*) as count FROM fornitori');
-        const serviziStmt = db.prepare('SELECT COUNT(*) as count FROM servizi');
-        const clientiStmt = db.prepare('SELECT COUNT(*) as count FROM clienti');
+  app.use((err, req, res, next) => {
+    console.error(err.message);
+    res.status(err.status||500).json({ error: err.message });
+  });
 
-        res.json({
-            status: 'ok',
-            version: '2.2.0',
-            products: productsStmt.get().count,
-            devices: devicesStmt.get().count,
-            repairs: repairsStmt.get().count,
-            fornitori: fornitoriStmt.get().count,
-            servizi: serviziStmt.get().count,
-            clienti: clientiStmt.get().count
-        });
-    } catch (err) {
-        res.status(500).json({
-            status: 'error',
-            version: '2.2.0',
-            message: err.message
-        });
-    }
-});
-
-// IMEI lookup proxy
-app.get('/imei/:imei', async (req, res) => {
-    const { imei } = req.params;
-
-    if (!/^\d{15}$/.test(imei)) {
-        return res.status(400).json({ error: 'IMEI deve essere di 15 cifre' });
-    }
-
-    try {
-        const fetch = (await import('node-fetch')).default;
-        const response = await fetch(`https://imeicheck.com/api/validate/${imei}`, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (compatible; MagazzinoBot/1.0)',
-                'Accept': 'application/json'
-            },
-            timeout: 5000
-        });
-
-        if (!response.ok) throw new Error(`API Error: ${response.status}`);
-
-        const data = await response.json();
-        res.json(data);
-    } catch (error) {
-        res.json({
-            valid: false,
-            info: { error: 'Servizio temporaneamente non disponibile' },
-            brand: 'Sconosciuto',
-            model: 'Sconosciuto'
-        });
-    }
-});
-
-// 404 handler
-app.use((req, res) => {
-    res.status(404).json({ error: 'Endpoint non trovato' });
-});
-
-// Error handler
-app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).json({ error: 'Errore interno del server' });
-});
-
-app.listen(PORT, () => {
-    console.log(`🚀 Magazzino API v2.2 → port ${PORT}`);
-});
+  app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Magazzino API v2.3 → port ${PORT}`));
+}).catch(err => { console.error(err); process.exit(1); });
