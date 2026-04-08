@@ -1,4 +1,4 @@
-// Sidebar.jsx — con CreaNuovo integrato
+// Sidebar.jsx
 
 import CreaNuovo from './CreaNuovo'
 
@@ -12,7 +12,8 @@ export default function Sidebar({ currentPage, onNavigate, onCreaNuovo }) {
     { id:'storico',     icon:'☰',  label:'Storico acquisti' },
   ]
   const navPlugin = [
-    { id:'acquisto', icon:'◈', label:'Acquisto dispositivo' },
+    { id:'acquisto',   icon:'◈',  label:'Acquisto dispositivo' },
+    { id:'protezione', icon:'🛡️', label:'Protezione' },
   ]
   const navSystem = [
     { id:'importexport',  icon:'⇅', label:'Import / Export' },
@@ -47,23 +48,13 @@ export default function Sidebar({ currentPage, onNavigate, onCreaNuovo }) {
   }
 
   const SectionLabel = ({ children }) => (
-    <div style={{
-      padding:'14px 10px 5px',
-      fontSize:9.5, fontWeight:700, color:'rgba(255,255,255,0.2)',
-      letterSpacing:'0.1em', textTransform:'uppercase',
-    }}>
+    <div style={{ padding:'14px 10px 5px', fontSize:9.5, fontWeight:700, color:'rgba(255,255,255,0.2)', letterSpacing:'0.1em', textTransform:'uppercase' }}>
       {children}
     </div>
   )
 
   return (
-    <aside style={{
-      width:210, background:'#090e1e',
-      borderRight:'1px solid rgba(255,255,255,0.05)',
-      display:'flex', flexDirection:'column', flexShrink:0,
-      paddingTop:18,
-    }}>
-      {/* Logo */}
+    <aside style={{ width:210, background:'#090e1e', borderRight:'1px solid rgba(255,255,255,0.05)', display:'flex', flexDirection:'column', flexShrink:0, paddingTop:18 }}>
       <div style={{ padding:'0 18px 18px', borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ fontSize:20, fontWeight:700, letterSpacing:'-0.4px', color:'white' }}>
           è<span style={{ color:'#38bdf8' }}>nown</span>
@@ -74,36 +65,18 @@ export default function Sidebar({ currentPage, onNavigate, onCreaNuovo }) {
           ))}
         </div>
       </div>
-
-      {/* Crea nuovo */}
-      <div style={{ paddingTop:12 }}>
-        <CreaNuovo onSelect={onCreaNuovo} />
-      </div>
-
-      {/* Nav */}
+      <div style={{ paddingTop:12 }}><CreaNuovo onSelect={onCreaNuovo} /></div>
       <nav style={{ padding:'0 8px', flex:1, overflowY:'auto' }}>
         <SectionLabel>Principale</SectionLabel>
         {navMain.map(item => <NavItem key={item.id} item={item} />)}
-
         <SectionLabel>Plugin attivi</SectionLabel>
         {navPlugin.map(item => <NavItem key={item.id} item={item} />)}
-
         <SectionLabel>Sistema</SectionLabel>
         {navSystem.map(item => <NavItem key={item.id} item={item} />)}
       </nav>
-
-      {/* Footer */}
-      <div style={{
-        padding:'12px 14px 16px',
-        borderTop:'1px solid rgba(255,255,255,0.05)',
-      }}>
+      <div style={{ padding:'12px 14px 16px', borderTop:'1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ display:'flex', alignItems:'center', gap:9 }}>
-          <div style={{
-            width:30, height:30, borderRadius:'50%',
-            background:'linear-gradient(135deg,#2563eb,#7c3aed)',
-            display:'flex', alignItems:'center', justifyContent:'center',
-            fontSize:11, fontWeight:700, color:'white', flexShrink:0,
-          }}>A</div>
+          <div style={{ width:30, height:30, borderRadius:'50%', background:'linear-gradient(135deg,#2563eb,#7c3aed)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, color:'white', flexShrink:0 }}>A</div>
           <div>
             <div style={{ fontSize:12, fontWeight:600, color:'#e2e8f0' }}>Admin</div>
             <div style={{ fontSize:10, color:'#334155' }}>admin@negozio.it</div>
