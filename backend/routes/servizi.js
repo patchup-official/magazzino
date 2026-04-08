@@ -3,47 +3,17 @@
 const express = require('express')
 const router = express.Router()
 
-// Helper sql.js - esegue query con params e ritorna array di oggetti
-function dbAll(db, query, params = []) {
-  const stmt = db.prepare(query)
-  const result = stmt.bind(params)
-  const rows = []
-  while (stmt.step()) {
-    rows.push(stmt.getAsObject())
-  }
-  stmt.free()
-  return rows
-}
-
-function dbGet(db, query, params = []) {
-  const rows = dbAll(db, query, params)
-  return rows[0] || null
-}
-
-function dbRun(db, query, params = []) {
-  const stmt = db.prepare(query)
-  stmt.bind(params)
-  stmt.step()
-  stmt.free()
-}
-
-// GET /api/servizi/stats - Statistiche servizi (DEVE stare prima di /:id)
+// GET /servizi/stats
 router.get('/stats', (req, res) => {
+  const { get } = req.app.locals
   try {
-    const db = req.db
-
-    const totali = dbGet(db, 'SELECT COUNT(*) as count FROM servizi').count
-    const in_corso = dbGet(db, 'SELECT COUNT(*) as count FROM servizi WHERE stato = "in_corso"').count
-    const completati = dbGet(db, 'SELECT COUNT(*) as count FROM servizi WHERE stato = "completato"').count
-    const fatturatoRow = dbGet(db, 'SELECT SUM(prezzo) as total FROM servizi WHERE stato = "completato"')
-
     res.json({
       success: true,
       data: {
-        totali,
-        in_corso,
-        completati,
-        fatturato: fatturatoRow?.total || 0
+        totali:     get('SELECT COUNT(*) as n FROM servizi')?.n || 0,
+        in_corso:   get('SELECT COUNT(*) as n FROM servizi WHERE stato = "in_corso"')?.n || 0,
+        completati: get('SELECT COUNT(*) as n FROM servizi WHERE stato = "completato"')?.n || 0,
+        fatturato:  get('SELECT SUM(prezzo) as n FROM servizi WHERE stato = "completato"')?.n || 0,
       }
     })
   } catch (error) {
@@ -51,34 +21,21 @@ router.get('/stats', (req, res) => {
   }
 })
 
-// GET /api/servizi - Lista servizi con filtri
+// GET /servizi
 router.get('/', (req, res) => {
+  const { query } = req.app.locals
   const { stato, cliente, tipo } = req.query
-
   try {
-    const db = req.db
-    let query = 'SELECT * FROM servizi WHERE 1=1'
+    let sql = 'SELECT * FROM servizi WHERE 1=1'
     const params = []
 
-    if (stato && stato !== 'all') {
-      query += ' AND stato = ?'
-      params.push(stato)
-    }
+    if (stato && stato !== 'all') { sql += ' AND stato = ?'; params.push(stato) }
+    if (cliente) { sql += ' AND cliente LIKE ?'; params.push(`%${cliente}%`) }
+    if (tipo) { sql += ' AND tipo_servizio = ?'; params.push(tipo) }
 
-    if (cliente) {
-      query += ' AND cliente LIKE ?'
-      params.push(`%${cliente}%`)
-    }
+    sql += ' ORDER BY created_at DESC'
 
-    if (tipo) {
-      query += ' AND tipo_servizio = ?'
-      params.push(tipo)
-    }
-
-    query += ' ORDER BY created_at DESC'
-
-    const servizi = dbAll(db, query, params)
-
+    const servizi = query(sql, params)
     const stats = {
       totali: servizi.length,
       in_corso: servizi.filter(s => s.stato === 'in_corso').length,
@@ -92,8 +49,9 @@ router.get('/', (req, res) => {
   }
 })
 
-// POST /api/servizi - Nuovo servizio
+// POST /servizi
 router.post('/', (req, res) => {
+  const { run, get, uid } = req.app.locals
   const {
     cliente, telefono, dispositivo, tipo_servizio, nome_servizio,
     descrizione, priorita, prezzo, note, data_richiesta, data_consegna_prevista
@@ -104,100 +62,67 @@ router.post('/', (req, res) => {
   }
 
   try {
-    const db = req.db
-    const id = Date.now().toString()
-
-    dbRun(db, `
-      INSERT INTO servizi (
+    const id = uid()
+    run(`INSERT INTO servizi (
         id, cliente, telefono, dispositivo, tipo_servizio, nome_servizio,
         descrizione, priorita, prezzo, note, data_richiesta, data_consegna_prevista, stato
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'in_corso')
-    `, [
-      id, cliente, telefono || '', dispositivo, tipo_servizio, nome_servizio,
-      descrizione || '', priorita || 'normale', prezzo, note || '',
-      data_richiesta || new Date().toISOString().split('T')[0],
-      data_consegna_prevista || ''
-    ])
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'in_corso')`,
+      [id, cliente, telefono || '', dispositivo, tipo_servizio, nome_servizio,
+       descrizione || '', priorita || 'normale', prezzo, note || '',
+       data_richiesta || new Date().toISOString().split('T')[0],
+       data_consegna_prevista || ''])
 
-    req.saveDB()
-
-    const servizio = dbGet(db, 'SELECT * FROM servizi WHERE id = ?', [id])
+    const servizio = get('SELECT * FROM servizi WHERE id = ?', [id])
     res.json({ success: true, data: servizio })
   } catch (error) {
     res.status(500).json({ success: false, error: error.message })
   }
 })
 
-// PUT /api/servizi/:id - Modifica servizio
+// PUT /servizi/:id/complete
+router.put('/:id/complete', (req, res) => {
+  const { run, get } = req.app.locals
+  try {
+    run('UPDATE servizi SET stato = "completato" WHERE id = ?', [req.params.id])
+    const servizio = get('SELECT * FROM servizi WHERE id = ?', [req.params.id])
+    if (!servizio) return res.status(404).json({ success: false, error: 'Servizio non trovato' })
+    res.json({ success: true, data: servizio })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+// PUT /servizi/:id
 router.put('/:id', (req, res) => {
-  const { id } = req.params
+  const { run, get } = req.app.locals
   const {
     cliente, telefono, dispositivo, tipo_servizio, nome_servizio,
     descrizione, priorita, prezzo, note, data_consegna_prevista, stato
   } = req.body
 
   try {
-    const db = req.db
+    run(`UPDATE servizi SET
+        cliente=?, telefono=?, dispositivo=?, tipo_servizio=?, nome_servizio=?,
+        descrizione=?, priorita=?, prezzo=?, note=?, data_consegna_prevista=?, stato=?
+      WHERE id=?`,
+      [cliente, telefono, dispositivo, tipo_servizio, nome_servizio,
+       descrizione, priorita, prezzo, note, data_consegna_prevista, stato, req.params.id])
 
-    dbRun(db, `
-      UPDATE servizi SET
-        cliente = ?, telefono = ?, dispositivo = ?, tipo_servizio = ?, nome_servizio = ?,
-        descrizione = ?, priorita = ?, prezzo = ?, note = ?, data_consegna_prevista = ?, stato = ?
-      WHERE id = ?
-    `, [
-      cliente, telefono, dispositivo, tipo_servizio, nome_servizio,
-      descrizione, priorita, prezzo, note, data_consegna_prevista, stato, id
-    ])
-
-    req.saveDB()
-
-    const servizio = dbGet(db, 'SELECT * FROM servizi WHERE id = ?', [id])
-    if (!servizio) {
-      return res.status(404).json({ success: false, error: 'Servizio non trovato' })
-    }
-
+    const servizio = get('SELECT * FROM servizi WHERE id = ?', [req.params.id])
+    if (!servizio) return res.status(404).json({ success: false, error: 'Servizio non trovato' })
     res.json({ success: true, data: servizio })
   } catch (error) {
     res.status(500).json({ success: false, error: error.message })
   }
 })
 
-// PUT /api/servizi/:id/complete - Completa servizio
-router.put('/:id/complete', (req, res) => {
-  const { id } = req.params
-
-  try {
-    const db = req.db
-
-    dbRun(db, 'UPDATE servizi SET stato = "completato" WHERE id = ?', [id])
-    req.saveDB()
-
-    const servizio = dbGet(db, 'SELECT * FROM servizi WHERE id = ?', [id])
-    if (!servizio) {
-      return res.status(404).json({ success: false, error: 'Servizio non trovato' })
-    }
-
-    res.json({ success: true, data: servizio })
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message })
-  }
-})
-
-// DELETE /api/servizi/:id - Elimina servizio
+// DELETE /servizi/:id
 router.delete('/:id', (req, res) => {
-  const { id } = req.params
-
+  const { run, get } = req.app.locals
   try {
-    const db = req.db
-
-    const existing = dbGet(db, 'SELECT id FROM servizi WHERE id = ?', [id])
-    if (!existing) {
-      return res.status(404).json({ success: false, error: 'Servizio non trovato' })
-    }
-
-    dbRun(db, 'DELETE FROM servizi WHERE id = ?', [id])
-    req.saveDB()
-
+    const existing = get('SELECT id FROM servizi WHERE id = ?', [req.params.id])
+    if (!existing) return res.status(404).json({ success: false, error: 'Servizio non trovato' })
+    run('DELETE FROM servizi WHERE id = ?', [req.params.id])
     res.json({ success: true })
   } catch (error) {
     res.status(500).json({ success: false, error: error.message })
