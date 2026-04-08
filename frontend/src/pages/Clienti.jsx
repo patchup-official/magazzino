@@ -4,10 +4,12 @@ import { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
 import Wizard, { OptionCard, WizField, Summary } from '../components/Wizard'
 
-const GBtn = ({ children, onClick, small }) => (
+const GBtn = ({ children, onClick, small, active }) => (
   <button onClick={onClick} style={{
-    background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-    color: '#94a3b8', borderRadius: 8, padding: small ? '6px 10px' : '8px 14px',
+    background: active ? '#1e3a6e' : 'rgba(255,255,255,0.05)',
+    border: active ? '1px solid rgba(37,99,235,0.5)' : '1px solid rgba(255,255,255,0.1)',
+    color: active ? '#60a5fa' : '#94a3b8',
+    borderRadius: 8, padding: small ? '6px 10px' : '8px 14px',
     fontSize: small ? 12 : 13, cursor: 'pointer', fontFamily: 'Inter,sans-serif'
   }}>{children}</button>
 )
@@ -45,20 +47,10 @@ function WizardCliente({ api, editing, onDone, onClose }) {
       subtitle: 'Di chi si tratta?',
       content: (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 8 }}>
-          <OptionCard
-            icon="🏢"
-            label="Partita IVA"
-            desc="Azienda o libero professionista"
-            selected={f.tipo === 'partita_iva'}
-            onClick={() => upd({ tipo: 'partita_iva' })}
-          />
-          <OptionCard
-            icon="🙋"
-            label="Persona Fisica"
-            desc="Cliente privato"
-            selected={f.tipo === 'persona_fisica'}
-            onClick={() => upd({ tipo: 'persona_fisica' })}
-          />
+          <OptionCard icon="🏢" label="Partita IVA" desc="Azienda o libero professionista"
+            selected={f.tipo === 'partita_iva'} onClick={() => upd({ tipo: 'partita_iva' })} />
+          <OptionCard icon="🙋" label="Persona Fisica" desc="Cliente privato"
+            selected={f.tipo === 'persona_fisica'} onClick={() => upd({ tipo: 'persona_fisica' })} />
         </div>
       )
     },
@@ -75,27 +67,22 @@ function WizardCliente({ api, editing, onDone, onClose }) {
           {isAzienda ? (
             <>
               <WizField label="Ragione Sociale *">
-                <input value={f.ragione_soc} onChange={e => upd({ ragione_soc: e.target.value })}
-                  placeholder="Acme S.r.l." style={inp} />
+                <input value={f.ragione_soc} onChange={e => upd({ ragione_soc: e.target.value })} placeholder="Acme S.r.l." style={inp} />
               </WizField>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <WizField label="Nome referente *">
-                  <input value={f.nome} onChange={e => upd({ nome: e.target.value })}
-                    placeholder="Mario" style={inp} />
+                  <input value={f.nome} onChange={e => upd({ nome: e.target.value })} placeholder="Mario" style={inp} />
                 </WizField>
                 <WizField label="Cognome referente">
-                  <input value={f.cognome} onChange={e => upd({ cognome: e.target.value })}
-                    placeholder="Rossi" style={inp} />
+                  <input value={f.cognome} onChange={e => upd({ cognome: e.target.value })} placeholder="Rossi" style={inp} />
                 </WizField>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <WizField label="Partita IVA">
-                  <input value={f.piva} onChange={e => upd({ piva: e.target.value })}
-                    placeholder="IT12345678901" style={inp} />
+                  <input value={f.piva} onChange={e => upd({ piva: e.target.value })} placeholder="IT12345678901" style={inp} />
                 </WizField>
                 <WizField label="Codice Fiscale">
-                  <input value={f.codice_fisc} onChange={e => upd({ codice_fisc: e.target.value })}
-                    placeholder="RSSMRA80A01H501Z" style={inp} />
+                  <input value={f.codice_fisc} onChange={e => upd({ codice_fisc: e.target.value })} placeholder="RSSMRA80A01H501Z" style={inp} />
                 </WizField>
               </div>
             </>
@@ -103,28 +90,23 @@ function WizardCliente({ api, editing, onDone, onClose }) {
             <>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <WizField label="Nome *">
-                  <input value={f.nome} onChange={e => upd({ nome: e.target.value })}
-                    placeholder="Mario" style={inp} />
+                  <input value={f.nome} onChange={e => upd({ nome: e.target.value })} placeholder="Mario" style={inp} />
                 </WizField>
                 <WizField label="Cognome">
-                  <input value={f.cognome} onChange={e => upd({ cognome: e.target.value })}
-                    placeholder="Rossi" style={inp} />
+                  <input value={f.cognome} onChange={e => upd({ cognome: e.target.value })} placeholder="Rossi" style={inp} />
                 </WizField>
               </div>
               <WizField label="Codice Fiscale">
-                <input value={f.codice_fisc} onChange={e => upd({ codice_fisc: e.target.value })}
-                  placeholder="RSSMRA80A01H501Z" style={inp} />
+                <input value={f.codice_fisc} onChange={e => upd({ codice_fisc: e.target.value })} placeholder="RSSMRA80A01H501Z" style={inp} />
               </WizField>
             </>
           )}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
             <WizField label="Telefono">
-              <input value={f.telefono} onChange={e => upd({ telefono: e.target.value })}
-                placeholder="+39 333 123456" style={inp} />
+              <input value={f.telefono} onChange={e => upd({ telefono: e.target.value })} placeholder="+39 333 123456" style={inp} />
             </WizField>
             <WizField label="Email">
-              <input value={f.email} onChange={e => upd({ email: e.target.value })}
-                placeholder="mario@email.com" style={inp} />
+              <input value={f.email} onChange={e => upd({ email: e.target.value })} placeholder="mario@email.com" style={inp} />
             </WizField>
           </div>
         </div>
@@ -137,17 +119,14 @@ function WizardCliente({ api, editing, onDone, onClose }) {
       content: (
         <div>
           <WizField label="Indirizzo">
-            <input value={f.indirizzo} onChange={e => upd({ indirizzo: e.target.value })}
-              placeholder="Via Roma 1" style={inp} />
+            <input value={f.indirizzo} onChange={e => upd({ indirizzo: e.target.value })} placeholder="Via Roma 1" style={inp} />
           </WizField>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
             <WizField label="CAP">
-              <input value={f.cap} onChange={e => upd({ cap: e.target.value })}
-                placeholder="20100" style={inp} />
+              <input value={f.cap} onChange={e => upd({ cap: e.target.value })} placeholder="20100" style={inp} />
             </WizField>
             <WizField label="Città">
-              <input value={f.citta} onChange={e => upd({ citta: e.target.value })}
-                placeholder="Milano" style={inp} />
+              <input value={f.citta} onChange={e => upd({ citta: e.target.value })} placeholder="Milano" style={inp} />
             </WizField>
           </div>
           <WizField label="Note" hint="Informazioni aggiuntive sul cliente">
@@ -190,13 +169,94 @@ function WizardCliente({ api, editing, onDone, onClose }) {
     onClose()
   }
 
+  return <Wizard steps={steps} onComplete={complete} onClose={onClose} title={editing ? 'Modifica cliente' : 'Nuovo cliente'} />
+}
+
+// ── Vista Lista ────────────────────────────────────────────────────────────────
+function ListaRow({ c, nomeCompleto, onEdit, onDelete }) {
   return (
-    <Wizard
-      steps={steps}
-      onComplete={complete}
-      onClose={onClose}
-      title={editing ? 'Modifica cliente' : 'Nuovo cliente'}
-    />
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 14,
+      background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)',
+      borderRadius: 10, padding: '12px 16px',
+    }}>
+      {/* Avatar */}
+      <div style={{
+        width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+        background: c.tipo === 'partita_iva' ? 'rgba(124,58,237,0.2)' : 'rgba(37,99,235,0.2)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16
+      }}>
+        {c.tipo === 'partita_iva' ? '🏢' : '🙋'}
+      </div>
+
+      {/* Nome e tipo */}
+      <div style={{ flex: 2, minWidth: 0 }}>
+        <div style={{ fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nomeCompleto(c)}</div>
+        <div style={{ fontSize: 11, color: '#475569' }}>{c.tipo === 'partita_iva' ? 'Partita IVA' : 'Persona Fisica'}</div>
+      </div>
+
+      {/* Telefono */}
+      <div style={{ flex: 1, fontSize: 12, color: '#94a3b8', minWidth: 0 }}>
+        {c.telefono ? `📞 ${c.telefono}` : '—'}
+      </div>
+
+      {/* Email */}
+      <div style={{ flex: 2, fontSize: 12, color: '#94a3b8', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {c.email ? `✉️ ${c.email}` : '—'}
+      </div>
+
+      {/* Città */}
+      <div style={{ flex: 1, fontSize: 12, color: '#64748b', minWidth: 0 }}>
+        {c.citta || '—'}
+      </div>
+
+      {/* Azioni */}
+      <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+        <GBtn small onClick={() => onEdit(c)}>✏️</GBtn>
+        <GBtn small onClick={() => onDelete(c.id)}>🗑️</GBtn>
+      </div>
+    </div>
+  )
+}
+
+// ── Vista Griglia ──────────────────────────────────────────────────────────────
+function GridCard({ c, nomeCompleto, onEdit, onDelete }) {
+  return (
+    <div style={{
+      background: 'linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))',
+      border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, padding: 18
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: 12,
+            background: c.tipo === 'partita_iva' ? 'rgba(124,58,237,0.2)' : 'rgba(37,99,235,0.2)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18
+          }}>
+            {c.tipo === 'partita_iva' ? '🏢' : '🙋'}
+          </div>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>{nomeCompleto(c)}</div>
+            <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
+              {c.tipo === 'partita_iva' ? 'Partita IVA' : 'Persona Fisica'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 14 }}>
+        {c.telefono && <div style={{ fontSize: 12, color: '#94a3b8' }}>📞 {c.telefono}</div>}
+        {c.email && <div style={{ fontSize: 12, color: '#94a3b8' }}>✉️ {c.email}</div>}
+        {c.citta && <div style={{ fontSize: 12, color: '#94a3b8' }}>📍 {[c.indirizzo, c.citta].filter(Boolean).join(', ')}</div>}
+        {c.tipo === 'partita_iva' && c.piva && <div style={{ fontSize: 12, color: '#94a3b8', fontFamily: 'monospace' }}>P.IVA {c.piva}</div>}
+        {c.codice_fisc && <div style={{ fontSize: 12, color: '#64748b', fontFamily: 'monospace' }}>CF {c.codice_fisc}</div>}
+      </div>
+
+      <div style={{ display: 'flex', gap: 8 }}>
+        <GBtn small onClick={() => onEdit(c)}>✏️ Modifica</GBtn>
+        <GBtn small onClick={() => onDelete(c.id)}>🗑️</GBtn>
+      </div>
+    </div>
   )
 }
 
@@ -207,6 +267,7 @@ export default function Clienti({ api, showToast, autoAction, onAutoActionDone }
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [view, setView] = useState('griglia') // 'griglia' | 'lista'
 
   const autoHandled = useRef(false)
   useEffect(() => {
@@ -258,6 +319,8 @@ export default function Clienti({ api, showToast, autoAction, onAutoActionDone }
     ? c.ragione_soc
     : `${c.nome || ''} ${c.cognome || ''}`.trim()
 
+  const handleEdit = (c) => { setEditing(c); setModal(true) }
+
   return (
     <div className="animate-fade-in">
       {/* Header */}
@@ -269,8 +332,8 @@ export default function Clienti({ api, showToast, autoAction, onAutoActionDone }
         <PBtn onClick={() => { setEditing(null); setModal(true) }}>+ Nuovo cliente</PBtn>
       </div>
 
-      {/* Filtri e ricerca */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+      {/* Filtri, ricerca e toggle vista */}
+      <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
@@ -282,6 +345,8 @@ export default function Clienti({ api, showToast, autoAction, onAutoActionDone }
             fontFamily: 'Inter,sans-serif'
           }}
         />
+
+        {/* Filtro tipo */}
         <div style={{ display: 'flex', gap: 3, background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 3 }}>
           {[['all', 'Tutti'], ['persona_fisica', 'Privati'], ['partita_iva', 'Aziende']].map(([v, l]) => (
             <button key={v} onClick={() => setFilter(v)} style={{
@@ -292,9 +357,23 @@ export default function Clienti({ api, showToast, autoAction, onAutoActionDone }
             }}>{l}</button>
           ))}
         </div>
+
+        {/* Toggle griglia/lista */}
+        <div style={{ display: 'flex', gap: 3, background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 3 }}>
+          <button onClick={() => setView('griglia')} title="Vista griglia" style={{
+            padding: '7px 12px', borderRadius: 8, fontSize: 15, cursor: 'pointer', border: 'none',
+            background: view === 'griglia' ? '#1e3a6e' : 'transparent',
+            color: view === 'griglia' ? '#60a5fa' : '#64748b',
+          }}>⊞</button>
+          <button onClick={() => setView('lista')} title="Vista lista" style={{
+            padding: '7px 12px', borderRadius: 8, fontSize: 15, cursor: 'pointer', border: 'none',
+            background: view === 'lista' ? '#1e3a6e' : 'transparent',
+            color: view === 'lista' ? '#60a5fa' : '#64748b',
+          }}>☰</button>
+        </div>
       </div>
 
-      {/* Lista clienti */}
+      {/* Contenuto */}
       {loading ? (
         <div style={{ textAlign: 'center', padding: '60px 0', color: '#475569' }}>Caricamento...</div>
       ) : filtered.length === 0 ? (
@@ -304,54 +383,29 @@ export default function Clienti({ api, showToast, autoAction, onAutoActionDone }
             {search ? 'Nessun risultato per la ricerca' : 'Nessun cliente ancora. Crea il primo!'}
           </div>
         </div>
-      ) : (
+      ) : view === 'griglia' ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(300px,1fr))', gap: 14 }}>
           {filtered.map(c => (
-            <div key={c.id} style={{
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))',
-              border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, padding: 18
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                  <div style={{
-                    width: 40, height: 40, borderRadius: 12,
-                    background: c.tipo === 'partita_iva' ? 'rgba(124,58,237,0.2)' : 'rgba(37,99,235,0.2)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18
-                  }}>
-                    {c.tipo === 'partita_iva' ? '🏢' : '🙋'}
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>{nomeCompleto(c)}</div>
-                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
-                      {c.tipo === 'partita_iva' ? 'Partita IVA' : 'Persona Fisica'}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 14 }}>
-                {c.telefono && (
-                  <div style={{ fontSize: 12, color: '#94a3b8' }}>📞 {c.telefono}</div>
-                )}
-                {c.email && (
-                  <div style={{ fontSize: 12, color: '#94a3b8' }}>✉️ {c.email}</div>
-                )}
-                {c.citta && (
-                  <div style={{ fontSize: 12, color: '#94a3b8' }}>📍 {[c.indirizzo, c.citta].filter(Boolean).join(', ')}</div>
-                )}
-                {c.tipo === 'partita_iva' && c.piva && (
-                  <div style={{ fontSize: 12, color: '#94a3b8', fontFamily: 'monospace' }}>P.IVA {c.piva}</div>
-                )}
-                {c.codice_fisc && (
-                  <div style={{ fontSize: 12, color: '#64748b', fontFamily: 'monospace' }}>CF {c.codice_fisc}</div>
-                )}
-              </div>
-
-              <div style={{ display: 'flex', gap: 8 }}>
-                <GBtn small onClick={() => { setEditing(c); setModal(true) }}>✏️ Modifica</GBtn>
-                <GBtn small onClick={() => deleteCliente(c.id)}>🗑️</GBtn>
-              </div>
-            </div>
+            <GridCard key={c.id} c={c} nomeCompleto={nomeCompleto} onEdit={handleEdit} onDelete={deleteCliente} />
+          ))}
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {/* Header lista */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 14,
+            padding: '6px 16px', fontSize: 10, fontWeight: 700,
+            color: 'rgba(255,255,255,0.2)', textTransform: 'uppercase', letterSpacing: '0.08em'
+          }}>
+            <div style={{ width: 36, flexShrink: 0 }} />
+            <div style={{ flex: 2 }}>Nome</div>
+            <div style={{ flex: 1 }}>Telefono</div>
+            <div style={{ flex: 2 }}>Email</div>
+            <div style={{ flex: 1 }}>Città</div>
+            <div style={{ width: 80 }} />
+          </div>
+          {filtered.map(c => (
+            <ListaRow key={c.id} c={c} nomeCompleto={nomeCompleto} onEdit={handleEdit} onDelete={deleteCliente} />
           ))}
         </div>
       )}
