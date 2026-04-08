@@ -4,18 +4,19 @@ import CreaNuovo from './CreaNuovo'
 
 export default function Sidebar({ currentPage, onNavigate, onCreaNuovo }) {
   const navMain = [
-    { id:'dashboard',   icon:'⌂', label:'Homepage' },
-    { id:'magazzino',   icon:'▣', label:'Magazzino' },
-    { id:'riparazioni', icon:'✂', label:'Riparazioni' },
+    { id:'dashboard',   icon:'⌂',  label:'Homepage' },
+    { id:'magazzino',   icon:'▣',  label:'Magazzino' },
+    { id:'riparazioni', icon:'✂',  label:'Riparazioni' },
     { id:'servizi',     icon:'🛠', label:'Servizi' },
     { id:'clienti',     icon:'👥', label:'Clienti' },
-    { id:'storico',     icon:'☰', label:'Storico acquisti' },
+    { id:'storico',     icon:'☰',  label:'Storico acquisti' },
   ]
   const navPlugin = [
     { id:'acquisto', icon:'◈', label:'Acquisto dispositivo' },
   ]
   const navSystem = [
-    { id:'impostazioni', icon:'⚙', label:'Impostazioni', disabled:true },
+    { id:'importexport',  icon:'⇅', label:'Import / Export' },
+    { id:'impostazioni',  icon:'⚙', label:'Impostazioni', disabled:true },
   ]
 
   const NavItem = ({ item }) => {
