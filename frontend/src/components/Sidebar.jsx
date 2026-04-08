@@ -1,4 +1,5 @@
 // Sidebar.jsx
+{ id:'valutazione', icon:'search', label:'Valutazione Display' },
 
 import CreaNuovo from './CreaNuovo'
 
