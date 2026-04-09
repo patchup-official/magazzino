@@ -56,7 +56,7 @@ function TabRicerca({ api }) {
           {[
             { label: 'Display in listino', val: stats.totale, emoji: '📱', color: 'rgba(59,130,246,0.12)' },
             { label: 'Brand disponibili',  val: stats.brands, emoji: '🏷️', color: 'rgba(168,85,247,0.12)' },
-            { label: 'Margine applicato',  val: margine != null ? `${margine}%` : (stats.totale > 0 ? '...' : '—'), emoji: '💰', color: 'rgba(34,197,94,0.12)' },
+            { label: 'Tuo margine',  val: margine != null ? `${margine}%` : (stats.totale > 0 ? '...' : '—'), emoji: '💰', color: 'rgba(34,197,94,0.12)' },
           ].map(s => (
             <div key={s.label} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
               <div style={{ width: 36, height: 36, borderRadius: 10, background: s.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{s.emoji}</div>
@@ -106,9 +106,9 @@ function TabRicerca({ api }) {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 12, padding: '6px 14px', fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.2)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
             <div>Modello</div>
-            <div style={{ textAlign: 'right' }}>Prezzo acquisto</div>
-            <div style={{ textAlign: 'right' }}>Prezzo vendita</div>
-            <div style={{ textAlign: 'right' }}>Margine (€)</div>
+            <div style={{ textAlign: "right" }}>Valore fornitore</div>
+            <div style={{ textAlign: "right" }}>Offri al cliente</div>
+            <div style={{ textAlign: "right" }}>Tuo guadagno</div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {results.map(r => (
@@ -126,8 +126,8 @@ function TabRicerca({ api }) {
                   {r.note && <div style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>{r.note}</div>}
                 </div>
                 <div style={{ textAlign: 'right', fontSize: 13, color: '#94a3b8' }}>€{r.prezzo_acquisto.toFixed(2)}</div>
-                <div style={{ textAlign: 'right', fontSize: 15, fontWeight: 700, color: '#60a5fa' }}>€{r.prezzo_vendita.toFixed(2)}</div>
-                <div style={{ textAlign: 'right', fontSize: 13, color: '#4ade80' }}>+€{(r.prezzo_vendita - r.prezzo_acquisto).toFixed(2)}</div>
+                <div style={{ textAlign: 'right', fontSize: 15, fontWeight: 700, color: '#60a5fa' }}>€{r.prezzo_offerta.toFixed(2)}</div>
+                <div style={{ textAlign: 'right', fontSize: 13, color: '#4ade80' }}>+€{(r.guadagno).toFixed(2)}</div>
               </div>
             ))}
           </div>
@@ -213,8 +213,8 @@ function TabAdmin({ api, showToast }) {
 
         {/* Margine */}
         <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, padding: 20 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>💰 Margine di vendita</div>
-          <div style={{ fontSize: 12, color: '#64748b', marginBottom: 16 }}>Percentuale applicata al prezzo di acquisto per calcolare il prezzo di vendita.</div>
+          <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>💰 Margine (tuo guadagno)</div>
+          <div style={{ fontSize: 12, color: '#64748b', marginBottom: 16 }}>Percentuale sottratta dal valore del fornitore. Quello che rimane è quello che offri al cliente — la differenza è il tuo guadagno.</div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
             <div style={{ flex: 1 }}>
               <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 6 }}>Margine (%)</label>
@@ -223,7 +223,7 @@ function TabAdmin({ api, showToast }) {
             <button onClick={saveMargine} style={{ background: '#3b82f6', border: 'none', color: '#fff', borderRadius: 8, padding: '9px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>Salva</button>
           </div>
           <div style={{ marginTop: 10, fontSize: 12, color: '#475569' }}>
-            Esempio: acquisto <strong style={{ color: '#e2e8f0' }}>€50</strong> → vendita <strong style={{ color: '#60a5fa' }}>€{(50 * (1 + parseFloat(margine || 0) / 100)).toFixed(2)}</strong>
+            Esempio: fornitore paga <strong style={{ color: '#e2e8f0' }}>€50</strong> → tu offri al cliente <strong style={{ color: '#60a5fa' }}>€{(50 * (1 - parseFloat(margine || 0) / 100)).toFixed(2)}</strong> · guadagni <strong style={{ color: '#4ade80' }}>€{(50 * parseFloat(margine || 0) / 100).toFixed(2)}</strong>
           </div>
         </div>
 
