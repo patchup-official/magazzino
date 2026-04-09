@@ -226,7 +226,8 @@ router.get('/search', (req, res) => {
     const rows = req.app.locals.query(sql, params)
     const result = rows.map(r => ({
       ...r,
-      prezzo_vendita: parseFloat((r.prezzo_acquisto * (1 + margine)).toFixed(2)),
+      prezzo_offerta: parseFloat((r.prezzo_acquisto * (1 - margine)).toFixed(2)),
+      guadagno: parseFloat((r.prezzo_acquisto * margine).toFixed(2)),
       margine_applicato: margine * 100,
     }))
 
