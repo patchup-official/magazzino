@@ -12,7 +12,7 @@ const allowedOrigins = [
   'http://localhost:3000',
   process.env.FRONTEND_URL,
 ].filter(Boolean);
-
+h
 app.use(cors({
   origin: (origin, cb) => {
     if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
@@ -158,7 +158,7 @@ initDB().then(() => {
   app.use('/piani',               require('./routes/piani'));
 
   // Valutazione Display — router estratto dal modulo
-  const valDisplay = require('./routes/valutazione_display');
+  const valDisplay = require('./routes/valutazione_display_route');
   app.use('/valutazione-display', valDisplay.router);
 
   app.get('/health', (req, res) => {
