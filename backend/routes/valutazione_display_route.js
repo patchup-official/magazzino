@@ -128,11 +128,22 @@ async function parseFile(filepath) {
 function normalizeRow(row, isFornitore = false) {
   // Mappa colonne possibili
   const brand = row['marca'] || row['brand'] || row['marchio'] || ''
-  const modello = row['modello'] || row['model'] || row['nome'] || ''
 
-  // Prezzo: formato fornitore = "prezzo ivato/price", formato interno = "prezzo acquisto"
-  let prezzoRaw = row['prezzo acquisto'] || row['prezzo'] || row['price']
-    || row['prezzo ivato/price'] || row['prezzo ivato'] || row['costo'] || '0'
+  // Colonna modello: cerca chiave esatta o qualsiasi chiave che contiene 'modell' o 'buyback'
+  let modello = row['modello'] || row['model'] || row['nome'] || ''
+  if (!modello) {
+    const modelKey = Object.keys(row).find(k => k.includes('modell') || k.includes('buyback') || k.includes('recent'))
+    if (modelKey) modello = row[modelKey] || ''
+  }
+
+  // Prezzo: cerca chiave esatta o qualsiasi chiave che contiene 'prezzo' o 'price'
+  let prezzoRaw = row['prezzo acquisto'] || row['prezzo ivato/price'] || row['prezzo ivato']
+    || row['prezzo'] || row['price'] || row['costo'] || ''
+  if (!prezzoRaw) {
+    const priceKey = Object.keys(row).find(k => k.includes('prezzo') || (k.includes('price') && !k.includes('pezzi')))
+    if (priceKey) prezzoRaw = row[priceKey] || '0'
+  }
+  if (!prezzoRaw) prezzoRaw = '0'
 
   // Rimuovi simboli valuta e normalizza separatore decimale
   prezzoRaw = String(prezzoRaw).replace(/[€$£\s]/g, '').replace(',', '.')
