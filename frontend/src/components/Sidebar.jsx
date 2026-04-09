@@ -1,12 +1,11 @@
 // Sidebar.jsx
-{ id:'valutazione', icon:'search', label:'Valutazione Display' },
 
 import CreaNuovo from './CreaNuovo'
 
 export default function Sidebar({ currentPage, onNavigate, onCreaNuovo }) {
   const navMain = [
     { id:'dashboard',   icon:'⌂',  label:'Homepage' },
-    { id:'magazzino',   icon:'▣',  label:'Magazzhino' },
+    { id:'magazzino',   icon:'▣',  label:'Magazzino' },
     { id:'riparazioni', icon:'✂',  label:'Riparazioni' },
     { id:'servizi',     icon:'🛠', label:'Servizi' },
     { id:'clienti',     icon:'👥', label:'Clienti' },
@@ -15,6 +14,7 @@ export default function Sidebar({ currentPage, onNavigate, onCreaNuovo }) {
   const navPlugin = [
     { id:'acquisto',   icon:'◈',  label:'Acquisto dispositivo' },
     { id:'protezione', icon:'🛡️', label:'Protezione' },
+    { id:'valutazione', icon:'🔍', label:'Valutazione Display' },
   ]
   const navSystem = [
     { id:'importexport',  icon:'⇅', label:'Import / Export' },
