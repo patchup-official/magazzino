@@ -101,6 +101,24 @@ async function initDB() {
     db.run(`CREATE INDEX IF NOT EXISTS idx_protezioni_stato ON protezioni(stato)`);
   } catch(e) {}
 
+  // Display Ordini (buyback)
+  try {
+    db.run(`CREATE TABLE IF NOT EXISTS display_ordini (
+      id TEXT PRIMARY KEY, numero TEXT UNIQUE NOT NULL,
+      fornitore_id TEXT, fornitore_nome TEXT, fornitore_email TEXT, fornitore_tel TEXT,
+      stato TEXT DEFAULT 'aperto', totale REAL DEFAULT 0, note TEXT,
+      pdf_generato_at TEXT, inviato_at TEXT, pagato_at TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    )`)
+    db.run(`CREATE TABLE IF NOT EXISTS display_ordini_items (
+      id TEXT PRIMARY KEY, ordine_id TEXT NOT NULL,
+      brand TEXT NOT NULL, modello TEXT NOT NULL,
+      quantita INTEGER DEFAULT 1, prezzo_unitario REAL NOT NULL, prezzo_offerta REAL NOT NULL,
+      note TEXT, created_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(ordine_id, brand, modello)
+    )`)
+  } catch(e) {}
+
   // Valutazione Display
   try {
     db.run(`CREATE TABLE IF NOT EXISTS display_listino (
@@ -158,12 +176,16 @@ initDB().then(() => {
   app.use('/piani',               require('./routes/piani'));
 
   // Valutazione Display — router estratto dal modulo
-  const valDisplay = require('./routes/valutazione_display_route');
+  const valDisplay = require('./routes/valutazione_display');
   app.use('/valutazione-display', valDisplay.router);
+
+  // Display Ordini Buyback
+  const displayOrdini = require('./routes/display_ordini_route');
+  app.use('/display-ordini', displayOrdini.router);
 
   app.get('/health', (req, res) => {
     res.json({
-      status: 'ok', version: '2.5.0',
+      status: 'ok', version: '2.6.0',
       products:   app.locals.get('SELECT COUNT(*) as n FROM products')?.n   || 0,
       devices:    app.locals.get('SELECT COUNT(*) as n FROM devices')?.n    || 0,
       repairs:    app.locals.get('SELECT COUNT(*) as n FROM repairs')?.n    || 0,
@@ -178,5 +200,5 @@ initDB().then(() => {
     res.status(err.status||500).json({ error: err.message });
   });
 
-  app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Magazzino API v2.5 → port ${PORT}`));
+  app.listen(PORT, '0.0.0.0', () => console.log(`🚀 Magazzino API v2.6 → port ${PORT}`));
 }).catch(err => { console.error(err); process.exit(1); });
