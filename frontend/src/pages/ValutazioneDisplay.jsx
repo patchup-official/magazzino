@@ -192,24 +192,6 @@ function TabRicerca({ api, showToast }) {
           <div style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 14, padding: '24px', marginBottom: 16, textAlign: 'center' }}>
             <div style={{ color: '#22c55e', fontSize: 13, fontWeight: 600, marginBottom: 8 }}>💰 Prezzo che puoi offrire al cliente</div>
             <div style={{ color: '#22c55e', fontSize: 52, fontWeight: 800, letterSpacing: -1 }}>{fmtNum(priceData.my_price)} <span style={{ fontSize: 28 }}>€</span></div>
-            <div style={{ color: '#64748b', fontSize: 13, marginTop: 8 }}>Offri questo importo — ci guadagni {fmt(priceData.gain)}</div>
-          </div>
-          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '16px', marginBottom: 16 }}>
-            <div style={{ color: '#64748b', fontSize: 11, fontWeight: 600, letterSpacing: 1, marginBottom: 12 }}>📊 DETTAGLIO MARGINE (VISIBILE SOLO A TE)</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#94a3b8', fontSize: 14 }}>Il fornitore ti paga</span>
-                <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{fmt(priceData.purchase_price)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#94a3b8', fontSize: 14 }}>Margine applicato</span>
-                <span style={{ color: '#f59e0b', fontWeight: 600 }}>− {priceData.margin_type === 'fixed' ? fmt(priceData.margin_value) : `${priceData.margin_value}%`}</span>
-              </div>
-              <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 8, display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#e2e8f0', fontSize: 14, fontWeight: 600 }}>Tu guadagni</span>
-                <span style={{ color: '#22c55e', fontWeight: 700 }}>{fmt(priceData.gain)}</span>
-              </div>
-            </div>
           </div>
           <div style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, color: '#94a3b8', fontSize: 13 }}>
             🖥️ {priceData.brand} {priceData.model}
