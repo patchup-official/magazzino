@@ -15,6 +15,7 @@ export default function Sidebar({ currentPage, onNavigate, onCreaNuovo }) {
     { id:'acquisto',   icon:'◈',  label:'Acquisto dispositivo' },
     { id:'protezione', icon:'🛡️', label:'Protezione' },
     { id:'valutazione', icon:'🔍', label:'Valutazione Display' },
+    { id:'noleggio', icon:'📦', label:'Noleggio', badge:'Subbyx' },
   ]
   const navSystem = [
     { id:'importexport',  icon:'⇅', label:'Import / Export' },
