@@ -11,6 +11,7 @@ import Clienti from './pages/Clienti'
 import ImportExport from './pages/ImportExport'
 import Storico from './pages/Storico'
 import ValutazioneDisplay from './pages/ValutazioneDisplay'
+import Noleggio from './pages/Noleggio'
 import Protezione from './pages/Protezione'
 import FirmaRemota from './pages/FirmaRemota'
 import Toast from './components/Toast'
@@ -49,6 +50,7 @@ export default function App() {
     storico: 'Storico acquisti', clienti: 'Clienti',
     importexport: 'Import / Export', protezione: 'Protezione Dispositivo',
     valutazione: 'Valutazione Display',
+    noleggio: 'Noleggio Subbyx',
   }
 
   const pages = {
@@ -57,6 +59,7 @@ export default function App() {
     storico: Storico, clienti: Clienti,
     importexport: ImportExport, protezione: Protezione,
     valutazione: ValutazioneDisplay,
+    noleggio: Noleggio,
   }
   const PageComponent = pages[currentPage] || Dashboard
 
