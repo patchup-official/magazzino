@@ -18,7 +18,7 @@ export default function Sidebar({ currentPage, onNavigate, onCreaNuovo }) {
     { id:'noleggio', icon:'📦', label:'Noleggio', badge:'Subbyx' },
   ]
   const navAdmin = [
-    { id:'cassa', icon:'💰', label:'Chiusura Cassa' },
+    { id:'Chiusura Cassa', icon:'💰', label:'Chiusura Cassa' },
   ]
   const navSystem = [
     { id:'importexport',  icon:'⇅', label:'Import / Export' },
