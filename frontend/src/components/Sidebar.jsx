@@ -17,6 +17,9 @@ export default function Sidebar({ currentPage, onNavigate, onCreaNuovo }) {
     { id:'valutazione', icon:'🔍', label:'Valutazione Display' },
     { id:'noleggio', icon:'📦', label:'Noleggio', badge:'Subbyx' },
   ]
+  const navAdmin = [
+    { id:'cassa', icon:'💰', label:'Cassa' },
+  ]
   const navSystem = [
     { id:'importexport',  icon:'⇅', label:'Import / Export' },
     { id:'impostazioni',  icon:'⚙', label:'Impostazioni', disabled:true },
@@ -73,6 +76,8 @@ export default function Sidebar({ currentPage, onNavigate, onCreaNuovo }) {
         {navMain.map(item => <NavItem key={item.id} item={item} />)}
         <SectionLabel>Plugin attivi</SectionLabel>
         {navPlugin.map(item => <NavItem key={item.id} item={item} />)}
+        <SectionLabel>Amministrazione</SectionLabel>
+        {navAdmin.map(item => <NavItem key={item.id} item={item} />)}
         <SectionLabel>Sistema</SectionLabel>
         {navSystem.map(item => <NavItem key={item.id} item={item} />)}
       </nav>
