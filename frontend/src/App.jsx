@@ -52,7 +52,7 @@ export default function App() {
     importexport: 'Import / Export', protezione: 'Protezione Dispositivo',
     valutazione: 'Valutazione Display',
     noleggio: 'Noleggio Subbyx',
-    cassa: 'Cassa',
+    cassa: 'Chiusura Cassa',
   }
 
   const pages = {
