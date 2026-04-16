@@ -12,6 +12,7 @@ import ImportExport from './pages/ImportExport'
 import Storico from './pages/Storico'
 import ValutazioneDisplay from './pages/ValutazioneDisplay'
 import Noleggio from './pages/Noleggio'
+import Cassa from './pages/Cassa'
 import Protezione from './pages/Protezione'
 import FirmaRemota from './pages/FirmaRemota'
 import Toast from './components/Toast'
@@ -51,6 +52,7 @@ export default function App() {
     importexport: 'Import / Export', protezione: 'Protezione Dispositivo',
     valutazione: 'Valutazione Display',
     noleggio: 'Noleggio Subbyx',
+    cassa: 'Cassa',
   }
 
   const pages = {
@@ -60,6 +62,7 @@ export default function App() {
     importexport: ImportExport, protezione: Protezione,
     valutazione: ValutazioneDisplay,
     noleggio: Noleggio,
+    cassa: Cassa,
   }
   const PageComponent = pages[currentPage] || Dashboard
 
