@@ -201,7 +201,7 @@ function WizardChiusura({ showToast, onComplete }) {
               </div>
             )}
           </div>
-          <Nav canNext={nv(form.chiusura_fiscale)>0||nv(form.fatturato)>0||nv(form.fatturato_art36)>0}/>
+          <Nav/>
         </div>
       )}
 
@@ -549,10 +549,10 @@ export default function Cassa({ showToast }) {
     <div style={{padding:'24px 28px',maxWidth:1200,margin:'0 auto'}}>
       <div style={{marginBottom:24}}>
         <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:4}}>
-          <h2 style={{margin:0,fontSize:22,fontWeight:700,color:'#e2e8f0'}}>💰 Cassa</h2>
+          <h2 style={{margin:0,fontSize:22,fontWeight:700,color:'#e2e8f0'}}>💰 Chiusura Cassa</h2>
           <div style={{padding:'3px 10px',borderRadius:20,background:'rgba(99,102,241,0.12)',border:'1px solid rgba(99,102,241,0.3)',fontSize:11,fontWeight:700,color:'#a5b4fc'}}>AMMINISTRAZIONE</div>
         </div>
-        <p style={{margin:0,color:'#64748b',fontSize:13}}>Inserimento guidato · Riepilogo IVA · Contante da versare · Bonifici agenzie</p>
+        <p style={{margin:0,color:'#64748b',fontSize:13}}>Chiusura giornaliera · Riepilogo IVA · Contante da versare · Bonifici agenzie</p>
       </div>
       <div style={{display:'flex',gap:0,marginBottom:28,borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
         {TABS.map(t=><button key={t.key} onClick={()=>setTab(t.key)} style={{padding:'10px 22px',background:'none',border:'none',cursor:'pointer',color:tab===t.key?'#a5b4fc':'#64748b',borderBottom:tab===t.key?'2px solid #6366f1':'2px solid transparent',fontSize:14,fontWeight:tab===t.key?600:400,marginBottom:-1}}>{t.label}</button>)}
