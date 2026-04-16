@@ -181,7 +181,9 @@ initDB().then(() => {
 
   // Display Ordini Buyback
   const displayOrdini = require('./routes/display_ordini_route');
+const cassaRoute = require('./routes/cassa_route');
   app.use('/display-ordini', displayOrdini.router);
+  app.use('/cassa', cassaRoute.router);
 
   app.get('/health', (req, res) => {
     res.json({
