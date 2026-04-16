@@ -1,579 +1,784 @@
-// pages/Cassa.jsx v3 — Wizard inserimento + Riepilogo contabile IVA + Storico
-// Plugin: Chiusura Cassa giornaliera
+// pages/Cassa.jsx v4 — Chiusura Cassa
+// Fix: wizard sempre navigabile, riepilogo giorno/mese/anno, storico espandibile,
+//      fondo cassa visibile, contante da versare con destinazione, confronto anno prec
 import { useState, useEffect, useCallback } from 'react';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const IVA = 0.22;
-const MESI = ['','Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
-const fmt = (n) => Number(n||0).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2});
-const fmtE = (n) => '€ ' + fmt(n);
-function nv(v) { return parseFloat(v)||0; }
-function scorporaIva(l) { return l/(1+IVA); }
-function ivaLordo(l) { return l-scorporaIva(l); }
+const MESI = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+const fmt  = n => Number(n||0).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtE = n => '€ ' + fmt(n);
+function nv(x){ return parseFloat(x)||0; }
+function scorporaIva(lordo){ return lordo / (1+IVA); }
+function ivaLordo(lordo){ return lordo - scorporaIva(lordo); }
 
-const TAGLIE = [
-  {key:'fc_100',label:'€ 100',val:100},{key:'fc_50',label:'€ 50',val:50},
-  {key:'fc_20',label:'€ 20',val:20},{key:'fc_10',label:'€ 10',val:10},
-  {key:'fc_5',label:'€ 5',val:5},{key:'fc_2',label:'€ 2',val:2},
-  {key:'fc_1',label:'€ 1',val:1},{key:'fc_050',label:'50ct',val:0.5},
-  {key:'fc_020',label:'20ct',val:0.2},{key:'fc_010',label:'10ct',val:0.1},
-  {key:'fc_005',label:'5ct',val:0.05},{key:'fc_002',label:'2ct',val:0.02},
-  {key:'fc_001',label:'1ct',val:0.01},
+const TAGLIE_FC = [
+  {key:'fc_100',label:'€ 100'},{key:'fc_50',label:'€ 50'},{key:'fc_20',label:'€ 20'},
+  {key:'fc_10',label:'€ 10'},{key:'fc_5',label:'€ 5'},{key:'fc_2',label:'€ 2'},
+  {key:'fc_1',label:'€ 1'},{key:'fc_050',label:'50ct',val:0.5},{key:'fc_020',label:'20ct',val:0.2},
+  {key:'fc_010',label:'10ct',val:0.1},{key:'fc_005',label:'5ct',val:0.05},
+  {key:'fc_002',label:'2ct',val:0.02},{key:'fc_001',label:'1ct',val:0.01},
 ];
 
-const EMPTY = {
-  chiusura_fiscale:'',fatturato:'',fatturato_art36:'',
-  contanti:'',pos:'',satispay:'',assegni:'',bonifico:'',compass:'',stripe:'',enwon_pay:'',
-  uscita_contante:'',uscita_tipo:'contante',versamento_contante:'',fattura_sifar:'',acquisto_privati:'',spostamento_contante:'',
-  note_credito:'',fc_100:'',fc_50:'',fc_20:'',fc_10:'',fc_5:'',fc_2:'',fc_1:'',
-  fc_050:'',fc_020:'',fc_010:'',fc_005:'',fc_002:'',fc_001:'',contante_da_versare:'',note:'',operatore:''
-};
+const EMPTY = () => ({
+  data: new Date().toISOString().slice(0,10),
+  chiusura_fiscale:'', fatturato:'', fatturato_art36:'',
+  contanti:'', pos:'', satispay:'', assegni:'', bonifico:'', compass:'', stripe:'', enwon_pay:'',
+  note_credito:'',
+  uscite_contante:'', uscite_bonifico:'', uscite_pos:'',
+  destinazione_contante:'banca',
+  fondo_cassa:'', operatore:'', note:'',
+  ...Object.fromEntries(TAGLIE_FC.map(t=>[t.key,''])),
+});
 
-// ─── COMPONENTI UI BASE ────────────────────────────────────────────────────────
-function Campo({ label, k, form, onChange, highlight, type='number', placeholder='0,00', suffix }) {
+// ── UI atoms ──────────────────────────────────────────────────────────────────
+function Campo({label,value,onChange,type='number',disabled,hint,prefix='€'}){
   return (
-    <div style={{display:'flex',flexDirection:'column',gap:4}}>
-      <label style={{fontSize:11,color:'#64748b',fontWeight:600,letterSpacing:0.5}}>{label}</label>
-      <div style={{position:'relative'}}>
-        <input type={type} min={type==='number'?'0':undefined} step={type==='number'?'0.01':undefined}
-          value={form[k]} placeholder={placeholder} onChange={e => onChange(k, e.target.value)}
-          style={{width:'100%',padding:suffix?'8px 32px 8px 10px':'8px 10px',borderRadius:8,
-            background:highlight?'rgba(99,102,241,0.08)':'rgba(255,255,255,0.05)',
-            border:`1px solid ${highlight?'rgba(99,102,241,0.3)':'rgba(255,255,255,0.1)'}`,
-            color:'#e2e8f0',fontSize:14,outline:'none',boxSizing:'border-box'}} />
-        {suffix && <span style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',color:'#475569',fontSize:12}}>{suffix}</span>}
+    <div style={{marginBottom:12}}>
+      <div style={{fontSize:11,color:'#64748b',marginBottom:4,textTransform:'uppercase',letterSpacing:.5}}>{label}</div>
+      <div style={{display:'flex',alignItems:'center',background:'rgba(255,255,255,0.04)',
+        border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,overflow:'hidden'}}>
+        {prefix&&<span style={{padding:'8px 10px',color:'#475569',fontSize:13,borderRight:'1px solid rgba(255,255,255,0.06)'}}>{prefix}</span>}
+        <input type={type} value={value} onChange={e=>onChange(e.target.value)} disabled={disabled}
+          style={{flex:1,background:'transparent',border:'none',outline:'none',color:'#e2e8f0',
+            padding:'8px 12px',fontSize:14,width:'100%'}}/>
       </div>
+      {hint&&<div style={{fontSize:11,color:'#475569',marginTop:3}}>{hint}</div>}
     </div>
   );
 }
 
-function Riga({ label, valore, color='#e2e8f0', bold, small, indent, highlight }) {
+function Riga({label,valore,bold,accent,small}){
   return (
     <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',
-      padding:small?'4px 12px':'8px 12px',background:highlight?'rgba(99,102,241,0.06)':'transparent',
-      borderRadius:highlight?8:0,paddingLeft:indent?24:12}}>
-      <span style={{color:small?'#64748b':'#94a3b8',fontSize:small?11:13,fontStyle:indent?'italic':'normal'}}>{label}</span>
-      <span style={{color,fontWeight:bold?700:400,fontSize:small?11:14}}>{fmtE(valore)}</span>
+      padding:'6px 0',borderBottom:'1px solid rgba(255,255,255,0.04)',
+      opacity:small?.5:1}}>
+      <span style={{fontSize:small?11:13,color:bold?'#e2e8f0':'#94a3b8',fontWeight:bold?600:400}}>{label}</span>
+      <span style={{fontSize:small?11:14,color:accent||'#e2e8f0',fontWeight:bold?700:500,fontFamily:'monospace'}}>{fmtE(valore)}</span>
     </div>
   );
 }
 
-function Sezione({ titolo, children, color='#6366f1', collapsible, defaultOpen=true }) {
-  const [open, setOpen] = useState(defaultOpen);
+function Sezione({title,children,color='#3b82f6'}){
   return (
-    <div style={{background:'rgba(15,23,42,0.8)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:14,marginBottom:14,overflow:'hidden'}}>
-      <div onClick={collapsible?()=>setOpen(o=>!o):undefined}
-        style={{display:'flex',alignItems:'center',gap:10,padding:'14px 18px',
-          borderBottom:open?'1px solid rgba(255,255,255,0.06)':'none',
-          cursor:collapsible?'pointer':'default',background:`linear-gradient(90deg, ${color}18, transparent)`}}>
-        <div style={{width:3,height:18,borderRadius:2,background:color,flexShrink:0}}/>
-        <span style={{fontSize:13,fontWeight:700,color:'#e2e8f0',flex:1}}>{titolo}</span>
-        {collapsible && <span style={{color:'#475569',fontSize:12}}>{open?'▾':'▸'}</span>}
-      </div>
-      {open && <div style={{padding:'14px 18px'}}>{children}</div>}
+    <div style={{background:'rgba(255,255,255,0.02)',border:`1px solid ${color}22`,borderRadius:10,padding:16,marginBottom:16}}>
+      <div style={{fontSize:11,fontWeight:700,color,textTransform:'uppercase',letterSpacing:1,marginBottom:12}}>{title}</div>
+      {children}
     </div>
   );
 }
 
-function StepBar({ step, labels }) {
+function StepBar({step,total=6,labels}){
   return (
-    <div style={{display:'flex',alignItems:'center',gap:0,marginBottom:28}}>
-      {labels.map((l,i) => (
-        <div key={i} style={{display:'flex',alignItems:'center',flex:i<labels.length-1?1:'auto'}}>
-          <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
-            <div style={{width:32,height:32,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',
-              background:i<step?'#22c55e':i===step?'#6366f1':'rgba(255,255,255,0.06)',
-              border:`2px solid ${i<step?'#22c55e':i===step?'#6366f1':'rgba(255,255,255,0.1)'}`,
-              color:i<=step?'#fff':'#475569',fontSize:12,fontWeight:700,flexShrink:0}}>
-              {i<step?'✓':i+1}
-            </div>
-            <span style={{fontSize:10,color:i===step?'#a5b4fc':i<step?'#22c55e':'#475569',fontWeight:i===step?700:400,whiteSpace:'nowrap'}}>{l}</span>
-          </div>
-          {i<labels.length-1 && <div style={{flex:1,height:2,background:i<step?'#22c55e':'rgba(255,255,255,0.08)',margin:'0 4px',marginBottom:20}}/>}
+    <div style={{display:'flex',gap:6,marginBottom:20}}>
+      {Array.from({length:total},(_,i)=>(
+        <div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
+          <div style={{height:4,borderRadius:2,width:'100%',
+            background:i<step?'#3b82f6':i===step?'#60a5fa':'rgba(255,255,255,0.1)',
+            transition:'background .3s'}}/>
+          {labels&&<span style={{fontSize:9,color:i===step?'#93c5fd':'#475569',fontWeight:i===step?700:400,textAlign:'center'}}>
+            {labels[i]}
+          </span>}
         </div>
       ))}
     </div>
   );
 }
 
-// ─── WIZARD DI INSERIMENTO ─────────────────────────────────────────────────────
-function WizardChiusura({ showToast, onComplete }) {
-  const today = new Date().toISOString().slice(0,10);
-  const [step, setStep] = useState(0);
-  const [form, setForm] = useState({...EMPTY});
-  const [saving, setSaving] = useState(false);
-  const [esistente, setEsistente] = useState(false);
-  const [dataSelezionata, setDataSelezionata] = useState(today);
-  const [configMese, setConfigMese] = useState(null);
-  const onChange = useCallback((k,v) => setForm(p=>({...p,[k]:v})),[]);
-
-  useEffect(() => {
-    const d = new Date(dataSelezionata);
-    const mese = d.getMonth()+1, anno = d.getFullYear();
-    fetch(API+'/cassa/'+dataSelezionata).then(r=>r.json()).then(data => {
-      if (data) { setEsistente(true); const f={...EMPTY}; Object.keys(f).forEach(k=>{f[k]=data[k]!==undefined&&data[k]!==null?String(data[k]):''}); setForm(f); }
-      else { setEsistente(false); setForm({...EMPTY}); }
-    }).catch(()=>{});
-    fetch(API+'/cassa/config/'+anno+'/'+mese).then(r=>r.json()).then(setConfigMese).catch(()=>{});
-  }, [dataSelezionata]);
-
-  const chiusuraTot = nv(form.chiusura_fiscale)+nv(form.fatturato)+nv(form.fatturato_art36);
-  const totIncassato = nv(form.contanti)+nv(form.pos)+nv(form.satispay)+nv(form.assegni)+nv(form.bonifico)+nv(form.compass)+nv(form.stripe)+nv(form.enwon_pay);
-  const diff = totIncassato - chiusuraTot;
-  const totUscite = nv(form.uscita_contante)+nv(form.versamento_contante)+nv(form.fattura_sifar)+nv(form.acquisto_privati)+nv(form.spostamento_contante);
-  const fondo = TAGLIE.reduce((s,t)=>s+(nv(form[t.key])*t.val),0);
-  const accantonato = configMese?.accantonato||0;
-  const contanteDaVersare = Math.max(0, nv(form.contanti) - totUscite - accantonato);
-
-  async function salva() {
-    setSaving(true);
-    try {
-      const payload = {...form, data: dataSelezionata};
-      Object.keys(EMPTY).forEach(k=>{ if(k!=='uscita_tipo'&&k!=='note'&&k!=='operatore') payload[k]=nv(payload[k])||0; });
-      const r = await fetch(API+'/cassa',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-      if (r.ok) { showToast('Chiusura salvata!','success'); onComplete && onComplete(); }
-      else { const e=await r.json(); showToast(e.error||'Errore','error'); }
-    } catch { showToast('Errore di rete','error'); }
-    setSaving(false);
-  }
-
-  const STEPS = ['Data','Vendite','Incassi','Uscite','Fondo Cassa','Riepilogo'];
-  const btnNext = () => setStep(s=>Math.min(s+1,STEPS.length-1));
-  const btnBack = () => setStep(s=>Math.max(s-1,0));
-
-  const Nav = ({canNext=true,nextLabel='Avanti →'}) => (
-    <div style={{display:'flex',gap:10,marginTop:24}}>
-      {step>0 && <button onClick={btnBack} style={{padding:'11px 24px',borderRadius:10,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',color:'#94a3b8',cursor:'pointer',fontSize:14}}>← Indietro</button>}
-      <button onClick={step<STEPS.length-1?btnNext:salva} disabled={saving}
-        style={{flex:1,padding:'13px',borderRadius:10,border:'none',
-          background:step<STEPS.length-1?'#6366f1':'#22c55e',
-          color:'#fff',fontSize:15,fontWeight:700,cursor:'pointer',
-          boxShadow:'0 4px 16px rgba(99,102,241,0.3)'}}>
-        {saving?'⏳ Salvataggio...':(step<STEPS.length-1?nextLabel:(esistente?'💾 Aggiorna chiusura':'💾 Salva chiusura'))}
-      </button>
+function KpiCard({label,value,color='#3b82f6',sub}){
+  return (
+    <div style={{background:'rgba(255,255,255,0.03)',border:`1px solid ${color}33`,borderRadius:10,padding:14,flex:1,minWidth:0}}>
+      <div style={{fontSize:10,color:'#64748b',textTransform:'uppercase',letterSpacing:.5,marginBottom:6}}>{label}</div>
+      <div style={{fontSize:20,fontWeight:700,color,fontFamily:'monospace'}}>{fmtE(value)}</div>
+      {sub&&<div style={{fontSize:11,color:'#475569',marginTop:4}}>{sub}</div>}
     </div>
   );
+}
+
+// ── Nav step buttons ──────────────────────────────────────────────────────────
+function Nav({step,setStep,total=6,onSave,saving,canSave=true}){
+  return (
+    <div style={{display:'flex',justifyContent:'space-between',marginTop:20}}>
+      {step>0
+        ? <button onClick={()=>setStep(s=>s-1)}
+            style={{padding:'8px 20px',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',
+              borderRadius:8,color:'#94a3b8',cursor:'pointer',fontSize:13}}>← Indietro</button>
+        : <div/>}
+      {step<total-1
+        ? <button onClick={()=>setStep(s=>s+1)}
+            style={{padding:'8px 24px',background:'#2563eb',border:'none',borderRadius:8,
+              color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600}}>Avanti →</button>
+        : <button onClick={onSave} disabled={saving||!canSave}
+            style={{padding:'8px 24px',background:saving||!canSave?'#1e3a5f':'#16a34a',border:'none',
+              borderRadius:8,color:'#fff',cursor:saving||!canSave?'not-allowed':'pointer',fontSize:13,fontWeight:700}}>
+            {saving?'Salvataggio…':'💾 Salva Chiusura'}
+          </button>}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WIZARD
+// ─────────────────────────────────────────────────────────────────────────────
+function WizardChiusura({showToast,onComplete}){
+  const [step,setStep]=useState(0);
+  const [form,setForm]=useState(EMPTY());
+  const [saving,setSaving]=useState(false);
+  const [esistente,setEsistente]=useState(null);
+  const [accantonato,setAccantonato]=useState(0);
+
+  const set=(k,v)=>setForm(f=>({...f,[k]:v}));
+
+  // Carica accantonato del mese quando cambia data
+  useEffect(()=>{
+    if(!form.data) return;
+    const [y,m]=form.data.split('-');
+    fetch(`${API}/cassa/config/${y}/${m}`)
+      .then(r=>r.ok?r.json():null)
+      .then(d=>{ if(d) setAccantonato(d.accantonato||0); })
+      .catch(()=>{});
+    // Verifica se esiste già una chiusura per questa data
+    fetch(`${API}/cassa/${form.data}`)
+      .then(r=>r.ok?r.json():null)
+      .then(d=>setEsistente(d))
+      .catch(()=>setEsistente(null));
+  },[form.data]);
+
+  // Calcoli real-time
+  const totIncassi = nv(form.contanti)+nv(form.pos)+nv(form.satispay)+nv(form.assegni)
+                   + nv(form.bonifico)+nv(form.compass)+nv(form.stripe)+nv(form.enwon_pay)
+                   - nv(form.note_credito);
+  const totChiusura = nv(form.chiusura_fiscale)+nv(form.fatturato)+nv(form.fatturato_art36);
+  const diff = totIncassi - totChiusura;
+  const diffOk = Math.abs(diff)<0.01;
+
+  const totUscite = nv(form.uscite_contante)+nv(form.uscite_bonifico)+nv(form.uscite_pos);
+  const contanteDaVersare = Math.max(0, nv(form.contanti)-nv(form.uscite_contante)-accantonato);
+
+  const fondoCassa = TAGLIE_FC.reduce((acc,t)=>{
+    const val = t.val || parseInt(t.key.replace('fc_',''));
+    return acc + nv(form[t.key])*val;
+  },0);
+
+  const stepLabels=['Data','Vendite','Incassi','Uscite','Fondo Cassa','Riepilogo'];
+
+  async function salva(){
+    setSaving(true);
+    try{
+      const body={...form, accantonato, fondo_cassa_calcolato: fondoCassa};
+      const r=await fetch(`${API}/cassa`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      if(!r.ok) throw new Error(await r.text());
+      showToast('Chiusura salvata ✓','success');
+      onComplete();
+    }catch(e){ showToast('Errore: '+e.message,'error'); }
+    finally{ setSaving(false); }
+  }
 
   return (
-    <div style={{maxWidth:780,margin:'0 auto'}}>
-      <StepBar step={step} labels={STEPS} />
+    <div>
+      <StepBar step={step} total={6} labels={stepLabels}/>
 
-      {step===0 && (
-        <div>
-          <div style={{background:'rgba(15,23,42,0.8)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:14,padding:28}}>
-            <div style={{fontSize:18,fontWeight:700,color:'#e2e8f0',marginBottom:6}}>Per quale data stai inserendo la chiusura?</div>
-            <div style={{color:'#64748b',fontSize:13,marginBottom:24}}>Seleziona la data. Se esiste già una chiusura verrà aggiornata.</div>
-            <input type="date" value={dataSelezionata} onChange={e=>setDataSelezionata(e.target.value)}
-              style={{padding:'12px 16px',borderRadius:10,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.15)',color:'#e2e8f0',fontSize:16,outline:'none',width:'100%',boxSizing:'border-box'}}/>
-            {esistente && <div style={{marginTop:14,padding:'10px 14px',background:'rgba(245,158,11,0.08)',border:'1px solid rgba(245,158,11,0.2)',borderRadius:8,color:'#f59e0b',fontSize:13}}>⚠️ Esiste già una chiusura per questa data. Continuando la aggiornerai.</div>}
-            {configMese ? <div style={{marginTop:14,padding:'10px 14px',background:'rgba(34,197,94,0.06)',border:'1px solid rgba(34,197,94,0.15)',borderRadius:8,fontSize:13,color:'#94a3b8'}}>✓ Accantonato mensile: <strong style={{color:'#22c55e'}}>{fmtE(configMese.accantonato)}</strong></div>
-            : <div style={{marginTop:14,padding:'10px 14px',background:'rgba(99,102,241,0.06)',border:'1px solid rgba(99,102,241,0.15)',borderRadius:8,fontSize:13,color:'#a5b4fc'}}>ℹ️ Accantonato non configurato. Impostalo nel tab Riepilogo.</div>}
-          </div>
-          <Nav nextLabel="Inizia inserimento →"/>
-        </div>
+      {/* STEP 0 — Data */}
+      {step===0&&(
+        <Sezione title="📅 Data chiusura" color="#6366f1">
+          <Campo label="Data" value={form.data} onChange={v=>set('data',v)} type="date" prefix=""/>
+          {accantonato>0&&<div style={{marginTop:8,padding:'8px 12px',background:'rgba(99,102,241,0.1)',
+            borderRadius:8,fontSize:12,color:'#818cf8'}}>
+            💰 Accantonato del mese: {fmtE(accantonato)}
+          </div>}
+          {esistente&&<div style={{marginTop:8,padding:'8px 12px',background:'rgba(234,179,8,0.1)',
+            borderRadius:8,fontSize:12,color:'#facc15'}}>
+            ⚠️ Esiste già una chiusura per questa data — verrà sovrascritta
+          </div>}
+          <Nav step={step} setStep={setStep} total={6}/>
+        </Sezione>
       )}
 
-      {step===1 && (
-        <div>
-          <div style={{background:'rgba(15,23,42,0.8)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:14,padding:28}}>
-            <div style={{fontSize:18,fontWeight:700,color:'#e2e8f0',marginBottom:4}}>Quant'è stato il fatturato di oggi?</div>
-            <div style={{color:'#64748b',fontSize:13,marginBottom:24}}>Inserisci i totali dalla chiusura fiscale del registratore di cassa.</div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:16}}>
-              <div><Campo label="CHIUSURA FISCALE *" k="chiusura_fiscale" form={form} onChange={onChange} highlight suffix="€"/><div style={{fontSize:11,color:'#475569',marginTop:4}}>Totale scontrini emessi</div></div>
-              <div><Campo label="FATTURATO" k="fatturato" form={form} onChange={onChange} suffix="€"/><div style={{fontSize:11,color:'#475569',marginTop:4}}>Fatture emesse</div></div>
-              <div><Campo label="FATTURATO ART. 36 (usato)" k="fatturato_art36" form={form} onChange={onChange} suffix="€"/><div style={{fontSize:11,color:'#475569',marginTop:4}}>Vendita dispositivi usati</div></div>
-            </div>
-            {nv(form.fatturato_art36)>0 && (
-              <div style={{marginTop:16,padding:'14px 16px',background:'rgba(245,158,11,0.07)',border:'1px solid rgba(245,158,11,0.2)',borderRadius:10}}>
-                <div style={{fontSize:12,color:'#f59e0b',fontWeight:600,marginBottom:10}}>📋 ART.36 — IVA solo sul margine (vendita - costo acquisto)</div>
-                <Campo label="ACQUISTO DA PRIVATI (costo d'acquisto dispositivi art.36)" k="acquisto_privati" form={form} onChange={onChange} suffix="€"/>
-                <div style={{fontSize:11,color:'#64748b',marginTop:6}}>IVA calcolata su: ({fmtE(nv(form.fatturato_art36))} − {fmtE(nv(form.acquisto_privati))}) × 22%</div>
-                {nv(form.acquisto_privati)>0 && (
-                  <div style={{marginTop:8,display:'flex',gap:20,fontSize:12}}>
-                    <span style={{color:'#94a3b8'}}>Margine: <strong style={{color:'#e2e8f0'}}>{fmtE(Math.max(0,nv(form.fatturato_art36)-nv(form.acquisto_privati)))}</strong></span>
-                    <span style={{color:'#94a3b8'}}>IVA art.36: <strong style={{color:'#f59e0b'}}>{fmtE(ivaLordo(Math.max(0,nv(form.fatturato_art36)-nv(form.acquisto_privati))))}</strong></span>
-                  </div>
-                )}
-              </div>
-            )}
-            <div style={{marginTop:16,padding:'10px 14px',background:'rgba(99,102,241,0.06)',borderRadius:8,display:'flex',justifyContent:'space-between'}}>
-              <span style={{color:'#64748b',fontSize:13}}>Totale chiusura</span>
-              <span style={{color:'#a5b4fc',fontWeight:700,fontSize:16}}>{fmtE(chiusuraTot)}</span>
-            </div>
-            {nv(form.chiusura_fiscale)>0 && (
-              <div style={{marginTop:6,display:'flex',gap:16,flexWrap:'wrap'}}>
-                <span style={{fontSize:11,color:'#475569'}}>Netto IVA: <strong style={{color:'#e2e8f0'}}>{fmtE(scorporaIva(nv(form.chiusura_fiscale)))}</strong></span>
-                <span style={{fontSize:11,color:'#475569'}}>IVA 22%: <strong style={{color:'#6366f1'}}>{fmtE(ivaLordo(nv(form.chiusura_fiscale)))}</strong></span>
-              </div>
-            )}
-          </div>
-          <Nav/>
-        </div>
+      {/* STEP 1 — Vendite */}
+      {step===1&&(
+        <Sezione title="🧾 Vendite del giorno" color="#8b5cf6">
+          <Campo label="Chiusura fiscale (scontrini)" value={form.chiusura_fiscale} onChange={v=>set('chiusura_fiscale',v)}/>
+          <Campo label="Fatturato (fatture emesse)" value={form.fatturato} onChange={v=>set('fatturato',v)}/>
+          <Campo label="Vendite Art. 36 (usato da privati)" value={form.fatturato_art36} onChange={v=>set('fatturato_art36',v)}
+            hint="Margine = vendita − costo acquisto privato"/>
+          {totChiusura>0&&<div style={{marginTop:8,padding:'8px 12px',background:'rgba(139,92,246,0.1)',
+            borderRadius:8,fontSize:13,color:'#a78bfa',fontWeight:600}}>
+            Totale dichiarato: {fmtE(totChiusura)}
+          </div>}
+          <Nav step={step} setStep={setStep} total={6}/>
+        </Sezione>
       )}
 
-      {step===2 && (
-        <div>
-          <div style={{background:'rgba(15,23,42,0.8)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:14,padding:28}}>
-            <div style={{fontSize:18,fontWeight:700,color:'#e2e8f0',marginBottom:4}}>Come è stato incassato?</div>
-            <div style={{color:'#64748b',fontSize:13,marginBottom:24}}>Inserisci gli importi per ogni metodo. Il totale deve corrispondere alla chiusura.</div>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:14}}>
-              <Campo label="CONTANTI" k="contanti" form={form} onChange={onChange} highlight suffix="€"/>
-              <Campo label="POS" k="pos" form={form} onChange={onChange} suffix="€"/>
-              <Campo label="SATISPAY" k="satispay" form={form} onChange={onChange} suffix="€"/>
-              <Campo label="ASSEGNI" k="assegni" form={form} onChange={onChange} suffix="€"/>
-              <Campo label="BONIFICO BANCARIO" k="bonifico" form={form} onChange={onChange} suffix="€"/>
-              <Campo label="COMPASS" k="compass" form={form} onChange={onChange} suffix="€"/>
-              <Campo label="STRIPE" k="stripe" form={form} onChange={onChange} suffix="€"/>
-              <Campo label="ENWON PAY" k="enwon_pay" form={form} onChange={onChange} suffix="€"/>
-            </div>
-            <Campo label="NOTE DI CREDITO (storni/rimborsi)" k="note_credito" form={form} onChange={onChange} suffix="€"/>
-            <div style={{marginTop:14,padding:'12px 16px',borderRadius:10,
-              background:Math.abs(diff)<0.01?'rgba(34,197,94,0.07)':'rgba(239,68,68,0.07)',
-              border:`1px solid ${Math.abs(diff)<0.01?'rgba(34,197,94,0.2)':'rgba(239,68,68,0.2)'}`,
-              display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-              <span style={{color:'#94a3b8',fontSize:13}}>Incassato {fmtE(totIncassato)} vs Chiusura {fmtE(chiusuraTot)}</span>
-              <span style={{fontWeight:700,color:Math.abs(diff)<0.01?'#22c55e':'#ef4444',fontSize:15}}>{diff>=0?'+':''}{fmtE(diff)} {Math.abs(diff)<0.01?'✓':'⚠️'}</span>
-            </div>
-            {(nv(form.compass)+nv(form.stripe)+nv(form.enwon_pay))>0 && (
-              <div style={{marginTop:10,padding:'8px 14px',background:'rgba(99,102,241,0.06)',borderRadius:8,fontSize:12,color:'#a5b4fc'}}>
-                💳 Bonifici da incassare da agenzie: <strong>{fmtE(nv(form.compass)+nv(form.stripe)+nv(form.enwon_pay))}</strong>
-                <span style={{color:'#475569',marginLeft:8}}>Compass {fmtE(nv(form.compass))} · Stripe {fmtE(nv(form.stripe))} · Enwon {fmtE(nv(form.enwon_pay))}</span>
-              </div>
-            )}
+      {/* STEP 2 — Incassi */}
+      {step===2&&(
+        <Sezione title="💳 Come è stato incassato?" color="#0ea5e9">
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0 16px'}}>
+            <Campo label="Contanti" value={form.contanti} onChange={v=>set('contanti',v)}/>
+            <Campo label="POS / Carte" value={form.pos} onChange={v=>set('pos',v)}/>
+            <Campo label="Satispay" value={form.satispay} onChange={v=>set('satispay',v)}/>
+            <Campo label="Assegni" value={form.assegni} onChange={v=>set('assegni',v)}/>
+            <Campo label="Bonifico" value={form.bonifico} onChange={v=>set('bonifico',v)}/>
+            <Campo label="Compass (agenzia)" value={form.compass} onChange={v=>set('compass',v)}/>
+            <Campo label="Stripe (online)" value={form.stripe} onChange={v=>set('stripe',v)}/>
+            <Campo label="Enwon Pay" value={form.enwon_pay} onChange={v=>set('enwon_pay',v)}/>
           </div>
-          <Nav/>
-        </div>
+          <Campo label="Note credito / Resi (sottratti)" value={form.note_credito} onChange={v=>set('note_credito',v)}/>
+          <div style={{padding:'10px 14px',borderRadius:8,marginTop:8,
+            background:diffOk?'rgba(22,163,74,0.1)':'rgba(239,68,68,0.1)',
+            border:`1px solid ${diffOk?'#16a34a':'#ef4444'}33`}}>
+            <div style={{fontSize:12,color:'#94a3b8'}}>Incassato {fmtE(totIncassi)} vs Chiusura {fmtE(totChiusura)}</div>
+            <div style={{fontSize:16,fontWeight:700,color:diffOk?'#4ade80':'#f87171',fontFamily:'monospace'}}>
+              {diff>=0?'+':''}{fmtE(diff)} {diffOk?'✓':'⚠️'}
+            </div>
+            {!diffOk&&<div style={{fontSize:11,color:'#f87171',marginTop:4}}>
+              Differenza da verificare — puoi procedere comunque
+            </div>}
+          </div>
+          <Nav step={step} setStep={setStep} total={6}/>
+        </Sezione>
       )}
 
-      {step===3 && (
-        <div>
-          <div style={{background:'rgba(15,23,42,0.8)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:14,padding:28}}>
-            <div style={{fontSize:18,fontWeight:700,color:'#e2e8f0',marginBottom:4}}>Ci sono uscite di contante?</div>
-            <div style={{color:'#64748b',fontSize:13,marginBottom:24}}>Specifica il tipo di pagamento per calcolare correttamente il contante da versare.</div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:14}}>
-              <div><Campo label="VERSAMENTO IN BANCA" k="versamento_contante" form={form} onChange={onChange} suffix="€"/><div style={{fontSize:11,color:'#475569',marginTop:4}}>Contante portato in banca</div></div>
-              <div><Campo label="FATTURA SIFAR" k="fattura_sifar" form={form} onChange={onChange} suffix="€"/><div style={{fontSize:11,color:'#475569',marginTop:4}}>Pagamento fornitore</div></div>
-              <div>
-                <div style={{fontSize:11,color:'#64748b',fontWeight:600,marginBottom:6,letterSpacing:0.5}}>USCITA CONTANTE GENERICA</div>
-                <div style={{display:'flex',gap:8}}>
-                  <input type="number" min="0" step="0.01" value={form.uscita_contante} placeholder="0,00" onChange={e=>onChange('uscita_contante',e.target.value)}
-                    style={{flex:1,padding:'8px 10px',borderRadius:8,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',color:'#e2e8f0',fontSize:14,outline:'none'}}/>
-                  <select value={form.uscita_tipo} onChange={e=>onChange('uscita_tipo',e.target.value)}
-                    style={{padding:'8px 10px',borderRadius:8,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',color:'#e2e8f0',fontSize:13,outline:'none'}}>
-                    <option value="contante">In contante</option>
-                    <option value="bonifico">Bonifico</option>
-                    <option value="pos">POS</option>
-                  </select>
-                </div>
-              </div>
-              <div><Campo label="SPOSTAMENTO CONTANTE" k="spostamento_contante" form={form} onChange={onChange} suffix="€"/><div style={{fontSize:11,color:'#475569',marginTop:4}}>Trasferimento tra sedi / fornitore</div></div>
-            </div>
-            {nv(form.fatturato_art36)===0 && <Campo label="ACQUISTO DA PRIVATI" k="acquisto_privati" form={form} onChange={onChange} suffix="€"/>}
-            <div style={{marginTop:14,padding:'10px 14px',background:'rgba(239,68,68,0.06)',border:'1px solid rgba(239,68,68,0.15)',borderRadius:8,display:'flex',justifyContent:'space-between'}}>
-              <span style={{color:'#94a3b8',fontSize:13}}>Totale uscite contante</span>
-              <span style={{color:'#ef4444',fontWeight:700}}>{fmtE(totUscite)}</span>
-            </div>
-            <div style={{marginTop:10,padding:'12px 14px',background:'rgba(245,158,11,0.06)',border:'1px solid rgba(245,158,11,0.15)',borderRadius:8}}>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                <div><div style={{color:'#94a3b8',fontSize:13}}>Contante da versare stimato</div><div style={{fontSize:11,color:'#475569',marginTop:2}}>Contanti {fmtE(nv(form.contanti))} − Uscite {fmtE(totUscite)} − Accantonato {fmtE(accantonato)}</div></div>
-                <span style={{color:'#f59e0b',fontWeight:700,fontSize:16}}>{fmtE(contanteDaVersare)}</span>
-              </div>
-            </div>
+      {/* STEP 3 — Uscite */}
+      {step===3&&(
+        <Sezione title="📤 Uscite del giorno" color="#f59e0b">
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'0 16px'}}>
+            <Campo label="Uscite contante" value={form.uscite_contante} onChange={v=>set('uscite_contante',v)}/>
+            <Campo label="Uscite bonifico" value={form.uscite_bonifico} onChange={v=>set('uscite_bonifico',v)}/>
+            <Campo label="Uscite POS" value={form.uscite_pos} onChange={v=>set('uscite_pos',v)}/>
           </div>
-          <Nav/>
-        </div>
-      )}
+          {totUscite>0&&<Riga label="Totale uscite" valore={totUscite} bold accent="#f59e0b"/>}
 
-      {step===4 && (
-        <div>
-          <div style={{background:'rgba(15,23,42,0.8)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:14,padding:28}}>
-            <div style={{fontSize:18,fontWeight:700,color:'#e2e8f0',marginBottom:4}}>Conta il fondo cassa</div>
-            <div style={{color:'#64748b',fontSize:13,marginBottom:20}}>Conta le banconote/monete rimaste e inserisci le quantità.</div>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,marginBottom:14}}>
-              {TAGLIE.map(t => (
-                <div key={t.key} style={{display:'flex',flexDirection:'column',gap:4}}>
-                  <div style={{display:'flex',justifyContent:'space-between'}}>
-                    <label style={{fontSize:12,color:'#94a3b8',fontWeight:600}}>{t.label}</label>
-                    {nv(form[t.key])>0 && <span style={{fontSize:10,color:'#f59e0b'}}>={fmt(nv(form[t.key])*t.val)}</span>}
-                  </div>
-                  <input type="number" min="0" step="1" value={form[t.key]} placeholder="0" onChange={e=>onChange(t.key,e.target.value)}
-                    style={{padding:'7px 10px',borderRadius:8,background:nv(form[t.key])>0?'rgba(245,158,11,0.08)':'rgba(255,255,255,0.04)',border:`1px solid ${nv(form[t.key])>0?'rgba(245,158,11,0.25)':'rgba(255,255,255,0.08)'}`,color:'#e2e8f0',fontSize:14,outline:'none',width:'100%',boxSizing:'border-box'}}/>
-                </div>
+          {/* CONTANTE DA VERSARE — sezione prominente */}
+          <div style={{marginTop:20,padding:16,background:'rgba(245,158,11,0.08)',
+            border:'2px solid rgba(245,158,11,0.3)',borderRadius:12}}>
+            <div style={{fontSize:13,fontWeight:700,color:'#fbbf24',marginBottom:12}}>
+              💵 CONTANTE DA VERSARE
+            </div>
+            <div style={{fontSize:22,fontWeight:800,color:'#f59e0b',fontFamily:'monospace',marginBottom:12}}>
+              {fmtE(contanteDaVersare)}
+            </div>
+            <div style={{fontSize:11,color:'#94a3b8',marginBottom:12}}>
+              Contanti ({fmtE(nv(form.contanti))}) − Uscite ({fmtE(nv(form.uscite_contante))}) − Accantonato ({fmtE(accantonato)})
+            </div>
+            <div style={{fontSize:12,color:'#94a3b8',marginBottom:8,fontWeight:600,textTransform:'uppercase',letterSpacing:.5}}>
+              Destinazione
+            </div>
+            <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+              {[['banca','🏦 Banca'],['store','🏪 Altro Store'],['fornitore','🤝 Fornitore'],['privato','👤 Acquisto Privato']].map(([v,l])=>(
+                <button key={v} onClick={()=>set('destinazione_contante',v)}
+                  style={{padding:'7px 14px',borderRadius:8,fontSize:12,fontWeight:600,cursor:'pointer',
+                    background:form.destinazione_contante===v?'#f59e0b':'rgba(255,255,255,0.05)',
+                    border:`1px solid ${form.destinazione_contante===v?'#f59e0b':'rgba(255,255,255,0.1)'}`,
+                    color:form.destinazione_contante===v?'#000':'#94a3b8'}}>
+                  {l}
+                </button>
               ))}
             </div>
-            <div style={{padding:'10px 14px',background:'rgba(245,158,11,0.08)',border:'1px solid rgba(245,158,11,0.2)',borderRadius:10,display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
-              <span style={{color:'#94a3b8',fontSize:13}}>Totale fondo cassa</span>
-              <span style={{color:'#f59e0b',fontWeight:800,fontSize:18}}>{fmtE(fondo)}</span>
-            </div>
-            <Campo label="CONTANTE DA VERSARE (conferma)" k="contante_da_versare" form={form} onChange={onChange} suffix="€" placeholder={fmt(contanteDaVersare)}/>
-            <div style={{fontSize:11,color:'#475569',marginTop:4}}>Calcolato: {fmtE(contanteDaVersare)}. Modifica se necessario.</div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginTop:14}}>
-              <div>
-                <div style={{fontSize:11,color:'#64748b',fontWeight:600,marginBottom:6}}>NOTE</div>
-                <textarea value={form.note} onChange={e=>onChange('note',e.target.value)} placeholder="Es. €50 Samsung A16 acquisto privato..." rows={3}
-                  style={{width:'100%',padding:'9px 12px',borderRadius:8,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',color:'#e2e8f0',fontSize:13,outline:'none',resize:'vertical',boxSizing:'border-box',fontFamily:'inherit'}}/>
-              </div>
-              <div>
-                <div style={{fontSize:11,color:'#64748b',fontWeight:600,marginBottom:6}}>OPERATORE</div>
-                <input value={form.operatore} onChange={e=>onChange('operatore',e.target.value)} placeholder="Nome"
-                  style={{width:'100%',padding:'9px 12px',borderRadius:8,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',color:'#e2e8f0',fontSize:14,outline:'none',boxSizing:'border-box'}}/>
-              </div>
-            </div>
           </div>
-          <Nav nextLabel="Vedi riepilogo →"/>
-        </div>
+          <Nav step={step} setStep={setStep} total={6}/>
+        </Sezione>
       )}
 
-      {step===5 && (
-        <div>
-          <div style={{background:'rgba(15,23,42,0.8)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:14,padding:24,marginBottom:14}}>
-            <div style={{fontSize:18,fontWeight:700,color:'#e2e8f0',marginBottom:4}}>Riepilogo chiusura {dataSelezionata.split('-').reverse().join('/')}</div>
-            <div style={{color:'#64748b',fontSize:13,marginBottom:18}}>Verifica i dati prima di salvare.</div>
-            <div style={{marginBottom:12}}>
-              <div style={{fontSize:11,color:'#6366f1',fontWeight:700,letterSpacing:1,marginBottom:6,padding:'0 12px'}}>VENDITE</div>
-              <Riga label="Chiusura Fiscale (lordo)" valore={nv(form.chiusura_fiscale)} highlight/>
-              <Riga label="  → Netto IVA" valore={scorporaIva(nv(form.chiusura_fiscale))} small indent/>
-              <Riga label="  → IVA 22%" valore={ivaLordo(nv(form.chiusura_fiscale))} small indent color="#6366f1"/>
-              {nv(form.fatturato)>0 && <><Riga label="Fatturato" valore={nv(form.fatturato)} highlight/><Riga label="  → Netto IVA" valore={scorporaIva(nv(form.fatturato))} small indent/><Riga label="  → IVA 22%" valore={ivaLordo(nv(form.fatturato))} small indent color="#6366f1"/></>}
-              {nv(form.fatturato_art36)>0 && <><Riga label="Art.36 (lordo)" valore={nv(form.fatturato_art36)} highlight/><Riga label="  Acquisto privati" valore={nv(form.acquisto_privati)} small indent color="#ef4444"/><Riga label="  IVA sul margine" valore={ivaLordo(Math.max(0,nv(form.fatturato_art36)-nv(form.acquisto_privati)))} small indent color="#f59e0b"/></>}
-              <Riga label="TOTALE CHIUSURA" valore={chiusuraTot} color="#a5b4fc" bold highlight/>
-            </div>
-            <div style={{marginBottom:12}}>
-              <div style={{fontSize:11,color:'#22c55e',fontWeight:700,letterSpacing:1,marginBottom:6,padding:'0 12px'}}>INCASSI</div>
-              {nv(form.contanti)>0&&<Riga label="Contanti" valore={nv(form.contanti)} color="#f59e0b"/>}
-              {nv(form.pos)>0&&<Riga label="POS" valore={nv(form.pos)}/>}
-              {nv(form.satispay)>0&&<Riga label="Satispay" valore={nv(form.satispay)}/>}
-              {nv(form.assegni)>0&&<Riga label="Assegni" valore={nv(form.assegni)}/>}
-              {nv(form.bonifico)>0&&<Riga label="Bonifico bancario" valore={nv(form.bonifico)}/>}
-              {nv(form.compass)>0&&<Riga label="Compass (da incassare)" valore={nv(form.compass)} color="#a5b4fc"/>}
-              {nv(form.stripe)>0&&<Riga label="Stripe (da incassare)" valore={nv(form.stripe)} color="#a5b4fc"/>}
-              {nv(form.enwon_pay)>0&&<Riga label="Enwon Pay (da incassare)" valore={nv(form.enwon_pay)} color="#a5b4fc"/>}
-              {nv(form.note_credito)>0&&<Riga label="Note di credito" valore={-nv(form.note_credito)} color="#ef4444"/>}
-              <Riga label="TOTALE INCASSATO" valore={totIncassato} color="#22c55e" bold highlight/>
-              <Riga label={`Differenza ${Math.abs(diff)<0.01?'(✓ ok)':'(⚠️ verifica)'}`} valore={diff} color={Math.abs(diff)<0.01?'#22c55e':'#ef4444'} bold/>
-            </div>
-            <div>
-              <div style={{fontSize:11,color:'#f59e0b',fontWeight:700,letterSpacing:1,marginBottom:6,padding:'0 12px'}}>CONTANTE & USCITE</div>
-              {nv(form.versamento_contante)>0&&<Riga label="Versamento banca" valore={nv(form.versamento_contante)}/>}
-              {nv(form.fattura_sifar)>0&&<Riga label="Fattura Sifar" valore={nv(form.fattura_sifar)}/>}
-              {nv(form.uscita_contante)>0&&<Riga label={'Uscita ('+form.uscita_tipo+')'} valore={nv(form.uscita_contante)}/>}
-              <Riga label="Accantonato mensile" valore={accantonato} color="#f59e0b"/>
-              <Riga label="CONTANTE DA VERSARE" valore={nv(form.contante_da_versare)||contanteDaVersare} color="#f59e0b" bold highlight/>
-              <Riga label="Fondo cassa" valore={fondo} color="#f59e0b"/>
-            </div>
+      {/* STEP 4 — Fondo Cassa */}
+      {step===4&&(
+        <Sezione title="🪙 Fondo Cassa" color="#10b981">
+          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:16}}>
+            {TAGLIE_FC.map(t=>{
+              const val = t.val || parseInt(t.key.replace('fc_',''));
+              return (
+                <div key={t.key} style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.08)',
+                  borderRadius:8,padding:'8px 10px'}}>
+                  <div style={{fontSize:11,color:'#64748b',marginBottom:4}}>{t.label}</div>
+                  <input type="number" value={form[t.key]} min="0"
+                    onChange={e=>set(t.key,e.target.value)}
+                    style={{width:'100%',background:'transparent',border:'none',outline:'none',
+                      color:'#e2e8f0',fontSize:16,fontWeight:700}}/>
+                  {nv(form[t.key])>0&&<div style={{fontSize:10,color:'#10b981',marginTop:2}}>
+                    = {fmtE(nv(form[t.key])*val)}
+                  </div>}
+                </div>
+              );
+            })}
           </div>
-          {form.operatore&&<div style={{textAlign:'right',fontSize:12,color:'#475569',marginBottom:10}}>Operatore: <strong style={{color:'#94a3b8'}}>{form.operatore}</strong></div>}
-          <Nav/>
+          <div style={{padding:'10px 14px',background:'rgba(16,185,129,0.1)',borderRadius:8,marginBottom:16}}>
+            <div style={{fontSize:12,color:'#94a3b8'}}>Totale fondo cassa</div>
+            <div style={{fontSize:22,fontWeight:700,color:'#10b981',fontFamily:'monospace'}}>{fmtE(fondoCassa)}</div>
+          </div>
+          {/* Recap contante da versare anche qui */}
+          {contanteDaVersare>0&&<div style={{padding:'10px 14px',background:'rgba(245,158,11,0.08)',
+            border:'1px solid rgba(245,158,11,0.3)',borderRadius:8,marginBottom:16}}>
+            <div style={{fontSize:12,color:'#fbbf24',fontWeight:600}}>
+              💵 Contante da versare: {fmtE(contanteDaVersare)} → {
+                {banca:'🏦 Banca',store:'🏪 Altro Store',fornitore:'🤝 Fornitore',privato:'👤 Acquisto Privato'}[form.destinazione_contante]
+              }
+            </div>
+          </div>}
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
+            <Campo label="Operatore" value={form.operatore} onChange={v=>set('operatore',v)} type="text" prefix="👤"/>
+            <Campo label="Note" value={form.note} onChange={v=>set('note',v)} type="text" prefix="📝"/>
+          </div>
+          <Nav step={step} setStep={setStep} total={6}/>
+        </Sezione>
+      )}
+
+      {/* STEP 5 — Riepilogo finale */}
+      {step===5&&(
+        <Sezione title="📋 Riepilogo finale" color="#6366f1">
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:16}}>
+            <KpiCard label="Incasso totale" value={totIncassi} color="#3b82f6"/>
+            <KpiCard label="Chiusura fiscale" value={nv(form.chiusura_fiscale)} color="#8b5cf6"/>
+            <KpiCard label="Fatturato" value={nv(form.fatturato)} color="#0ea5e9"/>
+            <KpiCard label="Art. 36" value={nv(form.fatturato_art36)} color="#f59e0b"/>
+          </div>
+          <Sezione title="IVA scorporata" color="#10b981">
+            <Riga label="Fiscale — netto" valore={scorporaIva(nv(form.chiusura_fiscale))} small/>
+            <Riga label="Fiscale — IVA 22%" valore={ivaLordo(nv(form.chiusura_fiscale))} small accent="#10b981"/>
+            <Riga label="Fatturato — netto" valore={scorporaIva(nv(form.fatturato))} small/>
+            <Riga label="Fatturato — IVA 22%" valore={ivaLordo(nv(form.fatturato))} small accent="#10b981"/>
+            <Riga label="Art.36 — IVA solo sul margine" valore={ivaLordo(nv(form.fatturato_art36))} small accent="#f59e0b"/>
+          </Sezione>
+          <Sezione title="Contante" color="#f59e0b">
+            <Riga label="Contanti incassati" valore={nv(form.contanti)}/>
+            <Riga label="Uscite contante" valore={-nv(form.uscite_contante)}/>
+            <Riga label="Accantonato mese" valore={-accantonato}/>
+            <Riga label="Da versare" valore={contanteDaVersare} bold accent="#f59e0b"/>
+            <div style={{fontSize:12,color:'#94a3b8',marginTop:4}}>
+              Destinazione: {{banca:'🏦 Banca',store:'🏪 Altro Store',fornitore:'🤝 Fornitore',privato:'👤 Acquisto Privato'}[form.destinazione_contante]}
+            </div>
+          </Sezione>
+          <Sezione title="Bonifici da incassare (agenzie)" color="#0ea5e9">
+            <Riga label="Compass" valore={nv(form.compass)}/>
+            <Riga label="Stripe" valore={nv(form.stripe)}/>
+            <Riga label="Enwon Pay" valore={nv(form.enwon_pay)}/>
+            <Riga label="Totale bonifici agenzie" valore={nv(form.compass)+nv(form.stripe)+nv(form.enwon_pay)} bold accent="#0ea5e9"/>
+          </Sezione>
+          <Sezione title="Fondo Cassa" color="#10b981">
+            <Riga label="Totale fondo contato" valore={fondoCassa} bold accent="#10b981"/>
+          </Sezione>
+          {!diffOk&&<div style={{padding:'8px 12px',background:'rgba(239,68,68,0.1)',borderRadius:8,marginBottom:12,
+            fontSize:12,color:'#f87171'}}>
+            ⚠️ Differenza di {fmtE(Math.abs(diff))} tra incassi e chiusura — verrà registrata
+          </div>}
+          <div style={{fontSize:12,color:'#475569',marginBottom:8}}>
+            {form.operatore&&`Operatore: ${form.operatore}`} {form.data}
+          </div>
+          <Nav step={step} setStep={setStep} total={6} onSave={salva} saving={saving}/>
+        </Sezione>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TAB RIEPILOGO — giorno / mese / anno con confronto anno precedente
+// ─────────────────────────────────────────────────────────────────────────────
+function TabRiepilogo({showToast}){
+  const oggi = new Date();
+  const [modo,setModo]=useState('mese'); // 'giorno' | 'mese' | 'anno'
+  const [data,setData]=useState(oggi.toISOString().slice(0,10));
+  const [mese,setMese]=useState(oggi.getMonth()+1);
+  const [anno,setAnno]=useState(oggi.getFullYear());
+  const [dati,setDati]=useState(null);
+  const [datiPrecAnno,setDatiPrecAnno]=useState(null);
+  const [accantonato,setAccantonato]=useState(0);
+  const [loading,setLoading]=useState(false);
+
+  const carica = useCallback(async()=>{
+    setLoading(true);
+    try{
+      if(modo==='giorno'){
+        const r=await fetch(`${API}/cassa/${data}`);
+        setDati(r.ok?await r.json():null);
+        // anno prec stesso giorno
+        const dataPrev=data.replace(/^(\d{4})/,y=>parseInt(y)-1);
+        const r2=await fetch(`${API}/cassa/${dataPrev}`);
+        setDatiPrecAnno(r2.ok?await r2.json():null);
+      } else if(modo==='mese'){
+        const r=await fetch(`${API}/cassa/riepilogo/${anno}/${mese}`);
+        const d=r.ok?await r.json():null;
+        setDati(d);
+        const rc=await fetch(`${API}/cassa/config/${anno}/${mese}`);
+        setAccantonato(rc.ok?(await rc.json()).accantonato||0:0);
+        // anno prec
+        const r2=await fetch(`${API}/cassa/riepilogo/${anno-1}/${mese}`);
+        setDatiPrecAnno(r2.ok?await r2.json():null);
+      } else {
+        const r=await fetch(`${API}/cassa/sommario?anno=${anno}`);
+        const rows=r.ok?await r.json():[];
+        const tot={incasso:0,fiscale:0,fatturato:0,art36:0,contanteDaVersare:0};
+        rows.forEach(row=>{
+          tot.incasso+=nv(row.tot_incasso);
+          tot.fiscale+=nv(row.tot_fiscale);
+          tot.fatturato+=nv(row.tot_fatturato);
+          tot.art36+=nv(row.tot_art36);
+          tot.contanteDaVersare+=nv(row.contante_da_versare);
+        });
+        setDati({...tot,mesi:rows.length});
+        // anno prec
+        const r2=await fetch(`${API}/cassa/sommario?anno=${anno-1}`);
+        const rows2=r2.ok?await r2.json():[];
+        const tot2={incasso:0,fiscale:0};
+        rows2.forEach(row=>{tot2.incasso+=nv(row.tot_incasso);tot2.fiscale+=nv(row.tot_fiscale);});
+        setDatiPrecAnno(tot2);
+      }
+    }finally{setLoading(false);}
+  },[modo,data,mese,anno]);
+
+  useEffect(()=>{carica();},[carica]);
+
+  const pct=(curr,prev)=>{
+    if(!prev||prev===0) return null;
+    const d=((curr-prev)/prev*100);
+    return {val:d,pos:d>=0};
+  };
+
+  const incassoAttuale = nv(dati?.incasso||dati?.tot_incasso||dati?.chiusura_fiscale);
+  const incassoPrev = nv(datiPrecAnno?.incasso||datiPrecAnno?.tot_incasso||datiPrecAnno?.chiusura_fiscale);
+  const delta = pct(incassoAttuale,incassoPrev);
+
+  const labelPeriodo = modo==='giorno'?`stesso giorno ${anno-1}`:modo==='mese'?`${MESI[mese-1]} ${anno-1}`:`anno ${anno-1}`;
+
+  return (
+    <div>
+      {/* Selettore modo */}
+      <div style={{display:'flex',gap:8,marginBottom:16}}>
+        {[['giorno','📅 Giorno'],['mese','📆 Mese'],['anno','🗓️ Anno']].map(([k,l])=>(
+          <button key={k} onClick={()=>setModo(k)}
+            style={{padding:'7px 16px',borderRadius:8,fontSize:13,fontWeight:600,cursor:'pointer',
+              background:modo===k?'#2563eb':'rgba(255,255,255,0.05)',
+              border:`1px solid ${modo===k?'#3b82f6':'rgba(255,255,255,0.1)'}`,
+              color:modo===k?'#fff':'#94a3b8'}}>
+            {l}
+          </button>
+        ))}
+      </div>
+
+      {/* Filtri data */}
+      <div style={{display:'flex',gap:12,marginBottom:20,alignItems:'center',flexWrap:'wrap'}}>
+        {modo==='giorno'&&(
+          <input type="date" value={data} onChange={e=>setData(e.target.value)}
+            style={{background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',
+              borderRadius:8,padding:'7px 12px',color:'#e2e8f0',fontSize:13}}/>
+        )}
+        {modo!=='giorno'&&(
+          <>
+            {modo==='mese'&&(
+              <select value={mese} onChange={e=>setMese(parseInt(e.target.value))}
+                style={{background:'#0f172a',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,
+                  padding:'7px 12px',color:'#e2e8f0',fontSize:13}}>
+                {MESI.map((m,i)=><option key={i+1} value={i+1}>{m}</option>)}
+              </select>
+            )}
+            <select value={anno} onChange={e=>setAnno(parseInt(e.target.value))}
+              style={{background:'#0f172a',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,
+                padding:'7px 12px',color:'#e2e8f0',fontSize:13}}>
+              {[2023,2024,2025,2026,2027].map(y=><option key={y} value={y}>{y}</option>)}
+            </select>
+          </>
+        )}
+        <button onClick={carica} style={{padding:'7px 14px',background:'rgba(59,130,246,0.15)',
+          border:'1px solid rgba(59,130,246,0.3)',borderRadius:8,color:'#60a5fa',cursor:'pointer',fontSize:13}}>
+          🔄 Aggiorna
+        </button>
+      </div>
+
+      {loading&&<div style={{textAlign:'center',color:'#475569',padding:40}}>Caricamento…</div>}
+
+      {!loading&&dati&&(
+        <>
+          {/* Box motivazionale confronto anno precedente */}
+          {incassoPrev>0&&delta!==null&&(
+            <div style={{padding:16,borderRadius:12,marginBottom:20,
+              background:delta.pos?'rgba(22,163,74,0.08)':'rgba(239,68,68,0.08)',
+              border:`1px solid ${delta.pos?'rgba(22,163,74,0.3)':'rgba(239,68,68,0.3)'}`}}>
+              <div style={{display:'flex',alignItems:'center',gap:12}}>
+                <div style={{fontSize:32}}>{delta.pos?'🚀':'💪'}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:14,fontWeight:700,color:delta.pos?'#4ade80':'#f87171'}}>
+                    {delta.pos
+                      ? `+${delta.val.toFixed(1)}% rispetto al ${labelPeriodo}!`
+                      : `${delta.val.toFixed(1)}% rispetto al ${labelPeriodo}`}
+                  </div>
+                  <div style={{fontSize:12,color:'#94a3b8',marginTop:2}}>
+                    {delta.pos
+                      ? `Stai battendo il record! ${labelPeriodo}: ${fmtE(incassoPrev)}`
+                      : `Dai, puoi farcela! Obiettivo: ${fmtE(incassoPrev)}, mancano ${fmtE(incassoPrev-incassoAttuale)}`}
+                  </div>
+                </div>
+                <div style={{fontSize:22,fontWeight:800,color:delta.pos?'#4ade80':'#f87171',fontFamily:'monospace'}}>
+                  {delta.pos?'+':''}{delta.val.toFixed(1)}%
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* KPI cards */}
+          <div style={{display:'flex',gap:12,flexWrap:'wrap',marginBottom:20}}>
+            <KpiCard label="Incasso totale" value={nv(dati.incasso||dati.tot_incasso||dati.chiusura_fiscale)} color="#3b82f6"/>
+            <KpiCard label="Fiscale (scontrini)" value={nv(dati.fiscale||dati.tot_fiscale||dati.chiusura_fiscale)} color="#8b5cf6"/>
+            <KpiCard label="Fatturato" value={nv(dati.fatturato||dati.tot_fatturato)} color="#0ea5e9"/>
+            <KpiCard label="Art. 36" value={nv(dati.art36||dati.tot_art36||dati.fatturato_art36)} color="#f59e0b"/>
+          </div>
+
+          {/* Riepilogo contabile */}
+          {modo!=='anno'&&(
+            <Sezione title="Riepilogo contabile IVA" color="#10b981">
+              <Riga label="Fiscale lordo" valore={nv(dati.tot_fiscale||dati.chiusura_fiscale)} bold/>
+              <Riga label="  → Netto" valore={scorporaIva(nv(dati.tot_fiscale||dati.chiusura_fiscale))} small/>
+              <Riga label="  → IVA 22%" valore={ivaLordo(nv(dati.tot_fiscale||dati.chiusura_fiscale))} small accent="#10b981"/>
+              <Riga label="Fatturato lordo" valore={nv(dati.tot_fatturato||dati.fatturato)} bold/>
+              <Riga label="  → Netto" valore={scorporaIva(nv(dati.tot_fatturato||dati.fatturato))} small/>
+              <Riga label="  → IVA 22%" valore={ivaLordo(nv(dati.tot_fatturato||dati.fatturato))} small accent="#10b981"/>
+              <Riga label="Art.36 (IVA solo su margine)" valore={ivaLordo(nv(dati.tot_art36||dati.fatturato_art36))} bold accent="#f59e0b"/>
+            </Sezione>
+          )}
+
+          {/* Contante da versare */}
+          {modo==='mese'&&nv(dati.contante_da_versare)>0&&(
+            <Sezione title="💵 Contante da versare (mese)" color="#f59e0b">
+              <Riga label="Totale da versare" valore={nv(dati.contante_da_versare)} bold accent="#f59e0b"/>
+              {accantonato>0&&<Riga label="Accantonato" valore={accantonato}/>}
+            </Sezione>
+          )}
+        </>
+      )}
+
+      {!loading&&!dati&&(
+        <div style={{textAlign:'center',color:'#475569',padding:60,fontSize:14}}>
+          Nessun dato per il periodo selezionato
         </div>
       )}
     </div>
   );
 }
 
-// ─── TAB RIEPILOGO CONTABILE ───────────────────────────────────────────────────
-function TabRiepilogo({ showToast }) {
-  const oggi = new Date();
-  const [mese, setMese] = useState(oggi.getMonth()+1);
-  const [anno, setAnno] = useState(oggi.getFullYear());
-  const [riepilogo, setRiepilogo] = useState(null);
-  const [config, setConfig] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [editAcc, setEditAcc] = useState(false);
-  const [nuovoAcc, setNuovoAcc] = useState('');
-  const iStyle = {padding:'8px 12px',borderRadius:8,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',color:'#e2e8f0',fontSize:14,outline:'none'};
+// ─────────────────────────────────────────────────────────────────────────────
+// TAB STORICO — anni / mesi espandibili / export CSV
+// ─────────────────────────────────────────────────────────────────────────────
+function TabStorico(){
+  const [anno,setAnno]=useState(new Date().getFullYear());
+  const [sommario,setSommario]=useState([]);
+  const [aperto,setAperto]=useState(null); // mese aperto
+  const [dettaglio,setDettaglio]=useState([]);
+  const [loading,setLoading]=useState(false);
+  const [loadingDett,setLoadingDett]=useState(false);
 
-  async function carica() {
+  useEffect(()=>{
     setLoading(true);
-    try {
-      const [r,c] = await Promise.all([
-        fetch(API+'/cassa/riepilogo/'+anno+'/'+mese).then(r=>r.json()),
-        fetch(API+'/cassa/config/'+anno+'/'+mese).then(r=>r.json())
-      ]);
-      setRiepilogo(r); setConfig(c); setNuovoAcc(c?.accantonato||0);
-    } catch { showToast('Errore caricamento','error'); }
-    setLoading(false);
+    fetch(`${API}/cassa/sommario?anno=${anno}`)
+      .then(r=>r.ok?r.json():[])
+      .then(d=>{setSommario(d);setAperto(null);})
+      .finally(()=>setLoading(false));
+  },[anno]);
+
+  async function apriMese(m){
+    if(aperto===m){setAperto(null);return;}
+    setAperto(m);
+    setLoadingDett(true);
+    try{
+      const r=await fetch(`${API}/cassa?anno=${anno}&mese=${m}`);
+      setDettaglio(r.ok?await r.json():[]);
+    }finally{setLoadingDett(false);}
   }
 
-  useEffect(() => { carica(); }, [mese, anno]);
-
-  async function salvaAccantonato() {
-    try {
-      await fetch(API+'/cassa/config',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({mese,anno,accantonato:parseFloat(nuovoAcc)||0,agenzie_bonifico:config?.agenzie_bonifico||['Compass','Stripe','Enwon Pay']})});
-      showToast('Accantonato salvato!','success'); setEditAcc(false); carica();
-    } catch { showToast('Errore','error'); }
+  function csvAnno(){
+    const rows=[['Data','Fiscale','Fatturato','Art36','Incasso','Contanti','Da Versare','Fondo Cassa','Operatore']];
+    sommario.forEach(m=>{
+      rows.push([`${MESI[m.mese-1]} ${anno}`,
+        fmt(m.tot_fiscale),fmt(m.tot_fatturato),fmt(m.tot_art36),
+        fmt(m.tot_incasso),fmt(m.tot_contanti),fmt(m.contante_da_versare),'','']);
+    });
+    scaricaCsv(rows,`chiusura_cassa_${anno}.csv`);
   }
+
+  function csvMese(m,righe){
+    const rows=[['Data','Fiscale','Fatturato','Art36','Incasso','Contanti','Da Versare','Fondo Cassa','Operatore']];
+    righe.forEach(r=>{
+      rows.push([r.data,fmt(r.chiusura_fiscale),fmt(r.fatturato),fmt(r.fatturato_art36),
+        fmt(r.tot_incasso||nv(r.chiusura_fiscale)+nv(r.fatturato)+nv(r.fatturato_art36)),
+        fmt(r.contanti),fmt(r.contante_da_versare),fmt(r.fondo_cassa_calcolato||r.fondo_cassa),r.operatore||'']);
+    });
+    scaricaCsv(rows,`chiusura_cassa_${anno}_${String(m).padStart(2,'0')}.csv`);
+  }
+
+  function scaricaCsv(rows,filename){
+    const csv=rows.map(r=>r.join(';')).join('\n');
+    const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=filename;a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  const totAnno=sommario.reduce((a,m)=>({
+    incasso:a.incasso+nv(m.tot_incasso),
+    fiscale:a.fiscale+nv(m.tot_fiscale),
+  }),{incasso:0,fiscale:0});
 
   return (
     <div>
-      <div style={{display:'flex',gap:12,alignItems:'center',marginBottom:24,flexWrap:'wrap'}}>
-        <div><div style={{fontSize:11,color:'#64748b',fontWeight:600,marginBottom:6}}>MESE</div><select value={mese} onChange={e=>setMese(Number(e.target.value))} style={iStyle}>{MESI.slice(1).map((m,i)=><option key={i+1} value={i+1}>{m}</option>)}</select></div>
-        <div><div style={{fontSize:11,color:'#64748b',fontWeight:600,marginBottom:6}}>ANNO</div><select value={anno} onChange={e=>setAnno(Number(e.target.value))} style={iStyle}>{[2024,2025,2026,2027].map(a=><option key={a} value={a}>{a}</option>)}</select></div>
-        <div style={{marginLeft:'auto',background:'rgba(245,158,11,0.08)',border:'1px solid rgba(245,158,11,0.2)',borderRadius:12,padding:'10px 16px'}}>
-          <div style={{fontSize:11,color:'#f59e0b',fontWeight:600}}>ACCANTONATO MESE</div>
-          {editAcc ? (
-            <div style={{display:'flex',gap:8,marginTop:4}}>
-              <input type="number" value={nuovoAcc} onChange={e=>setNuovoAcc(e.target.value)} style={{...iStyle,width:100,padding:'6px 10px',fontSize:13}}/>
-              <button onClick={salvaAccantonato} style={{padding:'6px 12px',borderRadius:8,background:'#22c55e',border:'none',color:'#fff',cursor:'pointer',fontSize:12,fontWeight:600}}>✓</button>
-              <button onClick={()=>setEditAcc(false)} style={{padding:'6px 10px',borderRadius:8,background:'rgba(255,255,255,0.06)',border:'none',color:'#94a3b8',cursor:'pointer',fontSize:12}}>✕</button>
+      {/* Selettore anno + export */}
+      <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:20,flexWrap:'wrap'}}>
+        <select value={anno} onChange={e=>setAnno(parseInt(e.target.value))}
+          style={{background:'#0f172a',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,
+            padding:'7px 12px',color:'#e2e8f0',fontSize:13}}>
+          {[2023,2024,2025,2026,2027].map(y=><option key={y} value={y}>{y}</option>)}
+        </select>
+        <button onClick={csvAnno}
+          style={{padding:'7px 14px',background:'rgba(16,185,129,0.15)',border:'1px solid rgba(16,185,129,0.3)',
+            borderRadius:8,color:'#34d399',cursor:'pointer',fontSize:13,fontWeight:600}}>
+          📥 Export anno {anno}
+        </button>
+      </div>
+
+      {/* KPI anno */}
+      {sommario.length>0&&(
+        <div style={{display:'flex',gap:12,marginBottom:20}}>
+          <KpiCard label={`Incasso ${anno}`} value={totAnno.incasso} color="#3b82f6" sub={`${sommario.length} mesi registrati`}/>
+          <KpiCard label={`Fiscale ${anno}`} value={totAnno.fiscale} color="#8b5cf6"/>
+          <div style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(16,185,129,0.3)',borderRadius:10,
+            padding:14,flex:1,display:'flex',flexDirection:'column',justifyContent:'center',alignItems:'center'}}>
+            <div style={{fontSize:10,color:'#64748b',textTransform:'uppercase',letterSpacing:.5}}>Mesi registrati</div>
+            <div style={{fontSize:36,fontWeight:800,color:'#10b981'}}>{sommario.length}</div>
+          </div>
+        </div>
+      )}
+
+      {loading&&<div style={{textAlign:'center',color:'#475569',padding:40}}>Caricamento…</div>}
+
+      {/* Lista mesi */}
+      {!loading&&sommario.map(m=>(
+        <div key={m.mese} style={{marginBottom:8}}>
+          {/* Header mese — cliccabile */}
+          <div onClick={()=>apriMese(m.mese)} style={{
+            display:'flex',alignItems:'center',justifyContent:'space-between',
+            padding:'12px 16px',borderRadius:aperto===m.mese?'10px 10px 0 0':'10px',
+            background:aperto===m.mese?'rgba(59,130,246,0.12)':'rgba(255,255,255,0.03)',
+            border:`1px solid ${aperto===m.mese?'rgba(59,130,246,0.3)':'rgba(255,255,255,0.07)'}`,
+            cursor:'pointer',transition:'all .2s'}}>
+            <div style={{display:'flex',alignItems:'center',gap:12}}>
+              <span style={{fontSize:18}}>{aperto===m.mese?'▾':'▸'}</span>
+              <span style={{fontSize:14,fontWeight:700,color:'#e2e8f0'}}>{MESI[m.mese-1]} {anno}</span>
             </div>
-          ) : (
-            <div style={{display:'flex',alignItems:'center',gap:8,marginTop:2}}>
-              <span style={{color:'#e2e8f0',fontWeight:700,fontSize:16}}>{fmtE(config?.accantonato||0)}</span>
-              <button onClick={()=>setEditAcc(true)} style={{padding:'3px 8px',borderRadius:6,background:'rgba(245,158,11,0.15)',border:'none',color:'#f59e0b',cursor:'pointer',fontSize:11}}>Modifica</button>
+            <div style={{display:'flex',gap:20,alignItems:'center'}}>
+              <div style={{textAlign:'right'}}>
+                <div style={{fontSize:10,color:'#64748b'}}>Incasso</div>
+                <div style={{fontSize:14,fontWeight:700,color:'#60a5fa',fontFamily:'monospace'}}>{fmtE(m.tot_incasso)}</div>
+              </div>
+              <div style={{textAlign:'right'}}>
+                <div style={{fontSize:10,color:'#64748b'}}>Fiscale</div>
+                <div style={{fontSize:14,fontWeight:600,color:'#a78bfa',fontFamily:'monospace'}}>{fmtE(m.tot_fiscale)}</div>
+              </div>
+              <div style={{textAlign:'right'}}>
+                <div style={{fontSize:10,color:'#64748b'}}>Art.36</div>
+                <div style={{fontSize:14,fontWeight:600,color:'#fbbf24',fontFamily:'monospace'}}>{fmtE(m.tot_art36)}</div>
+              </div>
+              <button onClick={e=>{e.stopPropagation();apriMese(m.mese);setTimeout(()=>csvMese(m.mese,dettaglio),500);}}
+                style={{padding:'5px 10px',background:'rgba(16,185,129,0.1)',border:'1px solid rgba(16,185,129,0.2)',
+                  borderRadius:6,color:'#34d399',cursor:'pointer',fontSize:11}}>
+                📥 CSV
+              </button>
+            </div>
+          </div>
+
+          {/* Dettaglio giornaliero */}
+          {aperto===m.mese&&(
+            <div style={{border:'1px solid rgba(59,130,246,0.2)',borderTop:'none',
+              borderRadius:'0 0 10px 10px',overflow:'hidden'}}>
+              {loadingDett?<div style={{padding:20,textAlign:'center',color:'#475569'}}>Caricamento…</div>:(
+                <>
+                  {/* Header tabella */}
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr',
+                    padding:'8px 16px',background:'rgba(255,255,255,0.03)',
+                    fontSize:10,color:'#475569',textTransform:'uppercase',letterSpacing:.5}}>
+                    <span>Data</span><span>Fiscale</span><span>Art.36</span>
+                    <span>Incasso</span><span>Contanti</span><span>Da Versare</span>
+                    <span>Fondo</span><span>Operatore</span>
+                  </div>
+                  {dettaglio.length===0&&<div style={{padding:20,textAlign:'center',color:'#475569',fontSize:13}}>
+                    Nessuna chiusura in questo mese
+                  </div>}
+                  {dettaglio.map((r,i)=>{
+                    const incassoGiorno = nv(r.chiusura_fiscale)+nv(r.fatturato)+nv(r.fatturato_art36);
+                    return (
+                      <div key={i} style={{display:'grid',
+                        gridTemplateColumns:'1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr',
+                        padding:'10px 16px',fontSize:12,
+                        background:i%2===0?'rgba(255,255,255,0.01)':'transparent',
+                        borderTop:'1px solid rgba(255,255,255,0.04)'}}>
+                        <span style={{color:'#94a3b8'}}>{r.data?.slice(5)}</span>
+                        <span style={{color:'#a78bfa',fontFamily:'monospace'}}>{fmtE(r.chiusura_fiscale)}</span>
+                        <span style={{color:'#fbbf24',fontFamily:'monospace'}}>{fmtE(r.fatturato_art36)}</span>
+                        <span style={{color:'#60a5fa',fontFamily:'monospace'}}>{fmtE(incassoGiorno)}</span>
+                        <span style={{color:'#e2e8f0',fontFamily:'monospace'}}>{fmtE(r.contanti)}</span>
+                        <span style={{color:'#f59e0b',fontFamily:'monospace'}}>{fmtE(r.contante_da_versare)}</span>
+                        <span style={{color:'#10b981',fontFamily:'monospace'}}>{fmtE(r.fondo_cassa_calcolato||r.fondo_cassa)}</span>
+                        <span style={{color:'#64748b'}}>{r.operatore||'—'}</span>
+                      </div>
+                    );
+                  })}
+                  {/* Download CSV mese */}
+                  <div style={{padding:'8px 16px',borderTop:'1px solid rgba(255,255,255,0.06)',textAlign:'right'}}>
+                    <button onClick={()=>csvMese(m.mese,dettaglio)}
+                      style={{padding:'6px 14px',background:'rgba(16,185,129,0.1)',border:'1px solid rgba(16,185,129,0.2)',
+                        borderRadius:6,color:'#34d399',cursor:'pointer',fontSize:12,fontWeight:600}}>
+                      📥 Scarica CSV {MESI[m.mese-1]}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
-      </div>
+      ))}
 
-      {loading && <div style={{textAlign:'center',padding:'40px',color:'#64748b'}}>⏳ Caricamento...</div>}
-      {!loading && riepilogo && riepilogo.giorni===0 && <div style={{textAlign:'center',padding:'60px',color:'#64748b'}}>Nessuna chiusura per {MESI[mese]} {anno}.</div>}
-
-      {!loading && riepilogo && riepilogo.giorni>0 && (
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
-          <div>
-            <Sezione titolo="📊 Vendite" color="#6366f1">
-              <Riga label="Chiusura Fiscale (lordo)" valore={riepilogo.tot_fiscale_lordo} highlight/>
-              <Riga label="  Netto IVA" valore={riepilogo.tot_fiscale_netto} small indent/>
-              <Riga label="  IVA 22%" valore={riepilogo.tot_fiscale_iva} small indent color="#6366f1"/>
-              {riepilogo.tot_fatture_lordo>0&&<><div style={{height:1,background:'rgba(255,255,255,0.05)',margin:'6px 0'}}/><Riga label="Fatturato (lordo)" valore={riepilogo.tot_fatture_lordo} highlight/><Riga label="  Netto IVA" valore={riepilogo.tot_fatture_netto} small indent/><Riga label="  IVA 22%" valore={riepilogo.tot_fatture_iva} small indent color="#6366f1"/></>}
-              {riepilogo.tot_art36_lordo>0&&<><div style={{height:1,background:'rgba(255,255,255,0.05)',margin:'6px 0'}}/><Riga label="Art.36 (lordo)" valore={riepilogo.tot_art36_lordo} highlight/><Riga label="  Acquisto privati" valore={riepilogo.tot_acquisti_privati} small indent color="#ef4444"/><Riga label="  Margine" valore={riepilogo.margine_art36} small indent/><Riga label="  IVA sul margine" valore={riepilogo.tot_art36_iva} small indent color="#f59e0b"/><Riga label="  Netto IVA" valore={riepilogo.tot_art36_netto} small indent/></>}
-              <div style={{height:1,background:'rgba(255,255,255,0.08)',margin:'8px 0'}}/>
-              <Riga label="TOTALE INCASSO LORDO" valore={riepilogo.tot_incasso_lordo} color="#a5b4fc" bold highlight/>
-              <Riga label="TOTALE NETTO IVA" valore={riepilogo.tot_incasso_netto} color="#e2e8f0" bold/>
-              <Riga label="IVA TOTALE INCASSATA" valore={riepilogo.tot_iva_incassata} color="#6366f1" bold/>
-            </Sezione>
-            <Sezione titolo="📋 Note di Credito" color="#ef4444" collapsible>
-              <Riga label="Totale note di credito" valore={riepilogo.tot_note_credito} color="#ef4444" bold highlight/>
-            </Sezione>
-          </div>
-          <div>
-            <Sezione titolo="💳 Metodi di Pagamento" color="#22c55e">
-              {riepilogo.tot_contanti>0&&<Riga label="Contanti" valore={riepilogo.tot_contanti} color="#f59e0b"/>}
-              {riepilogo.tot_pos>0&&<Riga label="POS" valore={riepilogo.tot_pos}/>}
-              {riepilogo.tot_satispay>0&&<Riga label="Satispay" valore={riepilogo.tot_satispay}/>}
-              {riepilogo.tot_assegni>0&&<Riga label="Assegni" valore={riepilogo.tot_assegni}/>}
-              {riepilogo.tot_bonifico>0&&<Riga label="Bonifico bancario" valore={riepilogo.tot_bonifico}/>}
-              <div style={{height:1,background:'rgba(255,255,255,0.06)',margin:'6px 0'}}/>
-              {riepilogo.tot_compass>0&&<Riga label="Compass" valore={riepilogo.tot_compass} color="#a5b4fc"/>}
-              {riepilogo.tot_stripe>0&&<Riga label="Stripe" valore={riepilogo.tot_stripe} color="#a5b4fc"/>}
-              {riepilogo.tot_enwon>0&&<Riga label="Enwon Pay" valore={riepilogo.tot_enwon} color="#a5b4fc"/>}
-              {riepilogo.bonifici_agenzie>0&&<><div style={{height:1,background:'rgba(255,255,255,0.06)',margin:'6px 0'}}/><Riga label="BONIFICI DA INCASSARE" valore={riepilogo.bonifici_agenzie} color="#a5b4fc" bold highlight/></>}
-            </Sezione>
-            <Sezione titolo="💰 Contante & Accantonato" color="#f59e0b">
-              <Riga label="Contanti incassati" valore={riepilogo.tot_contanti} color="#f59e0b"/>
-              <Riga label="Uscite contante" valore={riepilogo.tot_uscite_contante} color="#ef4444"/>
-              <Riga label="Accantonato mese" valore={riepilogo.accantonato} color="#f59e0b"/>
-              <div style={{height:1,background:'rgba(255,255,255,0.08)',margin:'8px 0'}}/>
-              <Riga label="CONTANTE DA VERSARE" valore={riepilogo.contante_da_versare} color="#f59e0b" bold highlight/>
-            </Sezione>
-            <div style={{background:'rgba(15,23,42,0.8)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:14,padding:'14px 18px'}}>
-              <div style={{fontSize:11,color:'#475569',fontWeight:600,letterSpacing:1,marginBottom:10}}>SINTESI {MESI[mese].toUpperCase()} {anno}</div>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-                {[{l:'Giorni',v:riepilogo.giorni+'gg',c:'#64748b'},{l:'Incasso lordo',v:fmtE(riepilogo.tot_incasso_lordo),c:'#22c55e'},{l:'IVA incassata',v:fmtE(riepilogo.tot_iva_incassata),c:'#6366f1'},{l:'Netto IVA',v:fmtE(riepilogo.tot_incasso_netto),c:'#e2e8f0'},{l:'Da versare',v:fmtE(riepilogo.contante_da_versare),c:'#f59e0b'},{l:'Agenzie',v:fmtE(riepilogo.bonifici_agenzie),c:'#a5b4fc'}].map(k=>(
-                  <div key={k.l} style={{padding:'8px 10px',background:'rgba(255,255,255,0.03)',borderRadius:8}}>
-                    <div style={{fontSize:10,color:'#475569',fontWeight:600}}>{k.l.toUpperCase()}</div>
-                    <div style={{fontSize:14,fontWeight:700,color:k.c,marginTop:2}}>{k.v}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+      {!loading&&sommario.length===0&&(
+        <div style={{textAlign:'center',color:'#475569',padding:60,fontSize:14}}>
+          Nessuna chiusura registrata per il {anno}
         </div>
       )}
     </div>
   );
 }
 
-// ─── TAB STORICO ───────────────────────────────────────────────────────────────
-function TabStorico() {
-  const anno = new Date().getFullYear();
-  const mese = new Date().getMonth()+1;
-  const [sommario, setSommario] = useState([]);
-  const [chiusure, setChiusure] = useState([]);
-  const [meseAperto, setMeseAperto] = useState(null);
-  useEffect(() => {
-    fetch(API+'/cassa/sommario?anno='+anno).then(r=>r.json()).then(d=>setSommario(Array.isArray(d)?d:[])).catch(()=>{});
-    fetch(API+'/cassa?anno='+anno).then(r=>r.json()).then(d=>setChiusure(Array.isArray(d)?d:[])).catch(()=>{});
-  }, []);
-  const tot = sommario.reduce((a,m)=>({inc:a.inc+(m.tot_incasso||0),fisc:a.fisc+(m.tot_fiscale||0),art36:a.art36+(m.tot_art36||0)}),{inc:0,fisc:0,art36:0});
-  return (
-    <div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:14,marginBottom:24}}>
-        {[{l:'Incasso Anno',v:tot.inc,c:'#22c55e'},{l:'Fiscale Anno',v:tot.fisc,c:'#6366f1'},{l:'Art.36 Anno',v:tot.art36,c:'#f59e0b'}].map(k=>(
-          <div key={k.l} style={{background:'rgba(15,23,42,0.8)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:14,padding:'18px 20px'}}>
-            <div style={{fontSize:11,color:'#64748b',fontWeight:600,marginBottom:8}}>{k.l.toUpperCase()}</div>
-            <div style={{fontSize:22,fontWeight:800,color:k.c}}>{fmtE(k.v)}</div>
-          </div>
-        ))}
-      </div>
-      <div style={{background:'rgba(15,23,42,0.8)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:14,overflow:'hidden'}}>
-        <div style={{padding:'14px 20px',borderBottom:'1px solid rgba(255,255,255,0.06)',display:'flex',justifyContent:'space-between'}}>
-          <span style={{color:'#e2e8f0',fontWeight:700}}>Riepilogo {anno}</span>
-          <span style={{color:'#64748b',fontSize:13}}>{sommario.length} mesi con dati</span>
-        </div>
-        {sommario.map(m=>(
-          <div key={m.mese}>
-            <div onClick={()=>setMeseAperto(meseAperto===m.mese?null:m.mese)}
-              style={{display:'flex',gap:16,padding:'12px 20px',borderBottom:'1px solid rgba(255,255,255,0.04)',cursor:'pointer',alignItems:'center',background:m.mese===mese?'rgba(34,197,94,0.03)':'transparent'}}>
-              <span style={{color:m.mese===mese?'#22c55e':'#e2e8f0',fontWeight:600,minWidth:110}}>{meseAperto===m.mese?'▾':'▸'} {MESI[m.mese]}</span>
-              <span style={{color:'#64748b',minWidth:30,fontSize:12}}>{m.giorni}gg</span>
-              <span style={{color:'#a5b4fc',minWidth:120,fontSize:13}}>Fisc: {fmtE(m.tot_fiscale)}</span>
-              <span style={{color:'#22c55e',fontWeight:700,minWidth:130}}>Inc: {fmtE(m.tot_incasso)}</span>
-              <span style={{color:'#f59e0b',minWidth:110,fontSize:12}}>Cash: {fmtE(m.tot_contanti)}</span>
-              <span style={{color:'#94a3b8',fontSize:12}}>POS: {fmtE(m.tot_pos)}</span>
-            </div>
-            {meseAperto===m.mese&&(
-              <div style={{padding:'8px 20px 12px',background:'rgba(99,102,241,0.02)'}}>
-                {chiusure.filter(c=>c.mese===m.mese).sort((a,b)=>b.data.localeCompare(a.data)).map(c=>{
-                  const totInc=nv(c.contanti)+nv(c.pos)+nv(c.satispay)+nv(c.assegni)+nv(c.bonifico)+nv(c.compass)+nv(c.stripe)+nv(c.enwon_pay);
-                  return(
-                    <div key={c.data} style={{display:'flex',gap:14,padding:'7px 10px',background:'rgba(255,255,255,0.02)',borderRadius:8,fontSize:12,alignItems:'center',marginBottom:4}}>
-                      <span style={{color:'#64748b',minWidth:80}}>{c.data.split('-').reverse().join('/')}</span>
-                      <span style={{color:'#a5b4fc'}}>Fisc: {fmtE(c.chiusura_fiscale)}</span>
-                      <span style={{color:'#22c55e',fontWeight:600}}>Inc: {fmtE(totInc)}</span>
-                      {nv(c.contanti)>0&&<span style={{color:'#f59e0b'}}>Cash: {fmtE(c.contanti)}</span>}
-                      {nv(c.fondo)>0&&<span style={{color:'#f59e0b'}}>Fondo: {fmtE(c.fondo)}</span>}
-                      {nv(c.acquisto_privati)>0&&<span style={{color:'#ef4444'}}>Acq.priv: {fmtE(c.acquisto_privati)}</span>}
-                      {nv(c.note_credito)>0&&<span style={{color:'#ef4444'}}>NC: {fmtE(c.note_credito)}</span>}
-                      {nv(c.contante_da_versare)>0&&<span style={{color:'#f59e0b',fontWeight:600}}>Da vers: {fmtE(c.contante_da_versare)}</span>}
-                      {c.operatore&&<span style={{color:'#475569',marginLeft:'auto'}}>{c.operatore}</span>}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        ))}
-        {sommario.length===0&&<div style={{textAlign:'center',padding:'48px',color:'#64748b'}}>Nessuna chiusura per il {anno}. Inizia dal tab Inserimento guidato.</div>}
-      </div>
-    </div>
-  );
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// EXPORT PRINCIPALE
+// ─────────────────────────────────────────────────────────────────────────────
+export default function Cassa({showToast}){
+  const [tab,setTab]=useState('wizard');
+  const [toast,setToast]=useState((m,t)=>showToast?.(m,t));
 
-// ─── MAIN ──────────────────────────────────────────────────────────────────────
-export default function Cassa({ showToast }) {
-  const [tab, setTab] = useState('wizard');
-  const toast = showToast || ((m,t)=>console.log(t,m));
-  const TABS = [
+  useEffect(()=>{ setToast(()=>(m,t)=>showToast?.(m,t)); },[showToast]);
+
+  const tabs=[
     {key:'wizard',label:'📋 Inserimento guidato'},
     {key:'riepilogo',label:'📊 Riepilogo contabile'},
     {key:'storico',label:'📁 Storico'},
   ];
+
   return (
-    <div style={{padding:'24px 28px',maxWidth:1200,margin:'0 auto'}}>
-      <div style={{marginBottom:24}}>
-        <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:4}}>
-          <h2 style={{margin:0,fontSize:22,fontWeight:700,color:'#e2e8f0'}}>💰 Chiusura Cassa</h2>
-          <div style={{padding:'3px 10px',borderRadius:20,background:'rgba(99,102,241,0.12)',border:'1px solid rgba(99,102,241,0.3)',fontSize:11,fontWeight:700,color:'#a5b4fc'}}>AMMINISTRAZIONE</div>
-        </div>
-        <p style={{margin:0,color:'#64748b',fontSize:13}}>Inserimento guidato · Riepilogo IVA · Contante da versare · Bonifici agenzie</p>
+    <div style={{maxWidth:860,margin:'0 auto'}}>
+      <h2 style={{fontSize:22,fontWeight:800,color:'#e2e8f0',marginBottom:4}}>💰 Chiusura Cassa</h2>
+      <p style={{fontSize:13,color:'#475569',marginBottom:24}}>
+        Chiusura giornaliera · Riepilogo IVA · Contante da versare · Bonifici agenzie
+      </p>
+
+      {/* Tab bar */}
+      <div style={{display:'flex',borderBottom:'1px solid rgba(255,255,255,0.07)',marginBottom:24}}>
+        {tabs.map(t=>(
+          <button key={t.key} onClick={()=>setTab(t.key)}
+            style={{padding:'10px 20px',background:'transparent',border:'none',cursor:'pointer',
+              color:tab===t.key?'#60a5fa':'#64748b',
+              borderBottom:tab===t.key?'2px solid #3b82f6':'2px solid transparent',
+              fontWeight:tab===t.key?600:400,fontSize:13,transition:'all .2s',
+              marginBottom:-1}}>
+            {t.label}
+          </button>
+        ))}
       </div>
-      <div style={{display:'flex',gap:0,marginBottom:28,borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
-        {TABS.map(t=><button key={t.key} onClick={()=>setTab(t.key)} style={{padding:'10px 22px',background:'none',border:'none',cursor:'pointer',color:tab===t.key?'#a5b4fc':'#64748b',borderBottom:tab===t.key?'2px solid #6366f1':'2px solid transparent',fontSize:14,fontWeight:tab===t.key?600:400,marginBottom:-1}}>{t.label}</button>)}
-      </div>
-      {tab==='wizard'&&<WizardChiusura showToast={toast} onComplete={()=>setTab('riepilogo')}/>}
-      {tab==='riepilogo'&&<TabRiepilogo showToast={toast}/>}
+
+      {tab==='wizard'&&<WizardChiusura showToast={m=>showToast?.(m,'success')} onComplete={()=>setTab('riepilogo')}/>}
+      {tab==='riepilogo'&&<TabRiepilogo showToast={showToast}/>}
       {tab==='storico'&&<TabStorico/>}
     </div>
   );
