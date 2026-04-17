@@ -558,10 +558,14 @@ function TabRiepilogo({showToast}){
 function TabStorico(){
   const [anno,setAnno]=useState(new Date().getFullYear());
   const [sommario,setSommario]=useState([]);
-  const [aperto,setAperto]=useState(null); // mese aperto
+  const [aperto,setAperto]=useState(null);
   const [dettaglio,setDettaglio]=useState([]);
   const [loading,setLoading]=useState(false);
   const [loadingDett,setLoadingDett]=useState(false);
+  // Per export giorno specifico
+  const [expGiorno,setExpGiorno]=useState('');
+  const [expMeseM,setExpMeseM]=useState(String(new Date().getMonth()+1).padStart(2,'0'));
+  const [expMeseA,setExpMeseA]=useState(String(new Date().getFullYear()));
 
   useEffect(()=>{
     setLoading(true);
@@ -573,177 +577,253 @@ function TabStorico(){
 
   async function apriMese(m){
     if(aperto===m){setAperto(null);return;}
-    setAperto(m);
-    setLoadingDett(true);
-    try{
-      const r=await fetch(`${API}/cassa?anno=${anno}&mese=${m}`);
+    setAperto(m);setLoadingDett(true);
+    try{const r=await fetch(`${API}/cassa?anno=${anno}&mese=${m}`);
       setDettaglio(r.ok?await r.json():[]);
     }finally{setLoadingDett(false);}
   }
 
-  function csvAnno(){
-    const rows=[['Data','Fiscale','Fatturato','Art36','Incasso','Contanti','Da Versare','Fondo Cassa','Operatore']];
-    sommario.forEach(m=>{
-      rows.push([`${MESI[m.mese-1]} ${anno}`,
-        fmt(m.tot_fiscale),fmt(m.tot_fatturato),fmt(m.tot_art36),
-        fmt(m.tot_incasso),fmt(m.tot_contanti),fmt(m.contante_da_versare),'','']);
-    });
-    scaricaCsv(rows,`chiusura_cassa_${anno}.csv`);
-  }
-
-  function csvMese(m,righe){
-    const rows=[['Data','Fiscale','Fatturato','Art36','Incasso','Contanti','Da Versare','Fondo Cassa','Operatore']];
-    righe.forEach(r=>{
-      rows.push([r.data,fmt(r.chiusura_fiscale),fmt(r.fatturato),fmt(r.fatturato_art36),
-        fmt(r.tot_incasso||nv(r.chiusura_fiscale)+nv(r.fatturato)+nv(r.fatturato_art36)),
-        fmt(r.contanti),fmt(r.contante_da_versare),fmt(r.fondo_cassa_calcolato||r.fondo_cassa),r.operatore||'']);
-    });
-    scaricaCsv(rows,`chiusura_cassa_${anno}_${String(m).padStart(2,'0')}.csv`);
-  }
-
+  /* ── SHARED HELPERS ── */
   function scaricaCsv(rows,filename){
     const csv=rows.map(r=>r.join(';')).join('\n');
     const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    a.href=url;a.download=filename;a.click();
-    URL.revokeObjectURL(url);
+    const url=URL.createObjectURL(blob);const a=document.createElement('a');
+    a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url);
+  }
+
+  function apriPdf(html,titolo){
+    const w=window.open('','_blank');
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>${titolo}</title>
+<style>
+  body{font-family:Arial,sans-serif;font-size:12px;margin:20px;color:#111}
+  h2{font-size:16px;margin-bottom:8px}
+  table{border-collapse:collapse;width:100%}
+  th,td{border:1px solid #ccc;padding:5px 8px;text-align:left}
+  th{background:#f0f0f0;font-weight:bold}
+  tr:nth-child(even){background:#fafafa}
+  .tot{font-weight:bold;background:#e8f5e9}
+  @media print{body{margin:0}}
+</style></head><body>${html}<br><script>window.print();<\/script></body></html>`);
+    w.document.close();
+  }
+
+  function righeHeader(){return ['Data','Fiscale €','Fatturato €','Art36 €','Contanti €','POS €','Satispay €','Da Versare €','Operatore'];}
+  function rigaDa(r){return[
+    r.data,fmt(r.chiusura_fiscale),fmt(r.fatturato),fmt(r.fatturato_art36),
+    fmt(r.contanti),fmt(r.pos),fmt(r.satispay),fmt(r.contante_da_versare),r.operatore||''
+  ];}
+
+  /* ── EXPORT GIORNO ── */
+  async function csvGiorno(data){
+    if(!data)return;
+    const r=await fetch(`${API}/cassa/${data}`);
+    const d=await r.json();
+    if(!d){alert('Nessuna chiusura trovata per '+data);return;}
+    scaricaCsv([righeHeader(),rigaDa(d)],`chiusura_${data}.csv`);
+  }
+  async function pdfGiorno(data){
+    if(!data)return;
+    const r=await fetch(`${API}/cassa/${data}`);
+    const d=await r.json();
+    if(!d){alert('Nessuna chiusura trovata per '+data);return;}
+    const riga=rigaDa(d);
+    const html=`<h2>Chiusura Cassa — ${data}</h2>
+<table><thead><tr>${righeHeader().map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+<tbody><tr>${riga.map(c=>`<td>${c}</td>`).join('')}</tr></tbody></table>`;
+    apriPdf(html,`Chiusura ${data}`);
+  }
+
+  /* ── EXPORT MESE ── */
+  async function csvMeseBtn(m,a){
+    const r=await fetch(`${API}/cassa?anno=${a}&mese=${m}`);
+    const righe=await r.json();
+    const rows=[righeHeader(),...righe.map(rigaDa)];
+    const tot=['TOTALE',
+      fmt(righe.reduce((s,x)=>s+nv(x.chiusura_fiscale),0)),
+      fmt(righe.reduce((s,x)=>s+nv(x.fatturato),0)),
+      fmt(righe.reduce((s,x)=>s+nv(x.fatturato_art36),0)),
+      fmt(righe.reduce((s,x)=>s+nv(x.contanti),0)),
+      fmt(righe.reduce((s,x)=>s+nv(x.pos),0)),
+      fmt(righe.reduce((s,x)=>s+nv(x.satispay),0)),
+      fmt(righe.reduce((s,x)=>s+nv(x.contante_da_versare),0)),''];
+    rows.push(tot);
+    scaricaCsv(rows,`chiusura_${a}_${String(m).padStart(2,'0')}.csv`);
+  }
+  async function pdfMeseBtn(m,a){
+    const r=await fetch(`${API}/cassa?anno=${a}&mese=${m}`);
+    const righe=await r.json();
+    const header=righeHeader().map(h=>`<th>${h}</th>`).join('');
+    const body=righe.map(x=>`<tr>${rigaDa(x).map(c=>`<td>${c}</td>`).join('')}</tr>`).join('');
+    const tot=`<tr class="tot"><td>TOTALE</td>
+      <td>${fmt(righe.reduce((s,x)=>s+nv(x.chiusura_fiscale),0))}</td>
+      <td>${fmt(righe.reduce((s,x)=>s+nv(x.fatturato),0))}</td>
+      <td>${fmt(righe.reduce((s,x)=>s+nv(x.fatturato_art36),0))}</td>
+      <td>${fmt(righe.reduce((s,x)=>s+nv(x.contanti),0))}</td>
+      <td>${fmt(righe.reduce((s,x)=>s+nv(x.pos),0))}</td>
+      <td>${fmt(righe.reduce((s,x)=>s+nv(x.satispay),0))}</td>
+      <td>${fmt(righe.reduce((s,x)=>s+nv(x.contante_da_versare),0))}</td><td></td></tr>`;
+    const html=`<h2>Chiusura Cassa — ${MESI[m-1]} ${a}</h2>
+<table><thead><tr>${header}</tr></thead><tbody>${body}${tot}</tbody></table>`;
+    apriPdf(html,`Chiusura ${MESI[m-1]} ${a}`);
+  }
+
+  /* ── EXPORT ANNO ── */
+  async function csvAnnoBtn(){
+    const rows=[['Mese','Fiscale €','Fatturato €','Art36 €','Incasso €','Contanti €','Da Versare €','Giorni']];
+    sommario.forEach(m=>{rows.push([
+      `${MESI[m.mese-1]} ${anno}`,
+      fmt(m.tot_fiscale),fmt(m.tot_fatture||m.tot_fatturato||0),fmt(m.tot_art36),
+      fmt(m.tot_incasso),fmt(m.tot_contanti),fmt(m.tot_da_versare||m.contante_da_versare||0),m.giorni
+    ]);});
+    scaricaCsv(rows,`chiusura_cassa_${anno}.csv`);
+  }
+  function pdfAnnoBtn(){
+    const header=['Mese','Fiscale €','Fatturato €','Art36 €','Incasso €','Contanti €','Da Versare €','Giorni']
+      .map(h=>`<th>${h}</th>`).join('');
+    const body=sommario.map(m=>`<tr>
+      <td>${MESI[m.mese-1]} ${anno}</td>
+      <td>${fmt(m.tot_fiscale)}</td><td>${fmt(m.tot_fatture||m.tot_fatturato||0)}</td>
+      <td>${fmt(m.tot_art36)}</td><td>${fmt(m.tot_incasso)}</td>
+      <td>${fmt(m.tot_contanti)}</td><td>${fmt(m.tot_da_versare||m.contante_da_versare||0)}</td>
+      <td>${m.giorni}</td></tr>`).join('');
+    const html=`<h2>Chiusura Cassa — Anno ${anno}</h2>
+<table><thead><tr>${header}</tr></thead><tbody>${body}</tbody></table>`;
+    apriPdf(html,`Chiusura Anno ${anno}`);
+  }
+
+  /* ── EXPORT GIORNO DA LISTA DETTAGLIO ── */
+  function csvGiornoRiga(r){scaricaCsv([righeHeader(),rigaDa(r)],`chiusura_${r.data}.csv`);}
+  function pdfGiornoRiga(r){
+    const html=`<h2>Chiusura Cassa — ${r.data}</h2>
+<table><thead><tr>${righeHeader().map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+<tbody><tr>${rigaDa(r).map(c=>`<td>${c}</td>`).join('')}</tr></tbody></table>`;
+    apriPdf(html,`Chiusura ${r.data}`);
   }
 
   const totAnno=sommario.reduce((a,m)=>({
-    incasso:a.incasso+nv(m.tot_incasso),
-    fiscale:a.fiscale+nv(m.tot_fiscale),
+    incasso:a.incasso+nv(m.tot_incasso),fiscale:a.fiscale+nv(m.tot_fiscale)
   }),{incasso:0,fiscale:0});
+
+  const btnStyle=(col)=>({
+    padding:'5px 11px',borderRadius:7,cursor:'pointer',fontSize:12,fontWeight:500,
+    background:col==='green'?'rgba(16,185,129,0.15)':col==='blue'?'rgba(59,130,246,0.15)':'rgba(251,191,36,0.15)',
+    border:`1px solid ${col==='green'?'rgba(16,185,129,0.35)':col==='blue'?'rgba(59,130,246,0.35)':'rgba(251,191,36,0.35)'}`,
+    color:col==='green'?'#34d399':col==='blue'?'#60a5fa':'#fbbf24'
+  });
 
   return (
     <div>
-      {/* Selettore anno + export */}
-      <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:20,flexWrap:'wrap'}}>
+      {/* ── SELETTORE ANNO ── */}
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:20,flexWrap:'wrap'}}>
         <select value={anno} onChange={e=>setAnno(parseInt(e.target.value))}
           style={{background:'#0f172a',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,
             padding:'7px 12px',color:'#e2e8f0',fontSize:13}}>
           {[2023,2024,2025,2026,2027].map(y=><option key={y} value={y}>{y}</option>)}
         </select>
-        <button onClick={csvAnno}
-          style={{padding:'7px 14px',background:'rgba(16,185,129,0.15)',border:'1px solid rgba(16,185,129,0.3)',
-            borderRadius:8,color:'#34d399',cursor:'pointer',fontSize:13,fontWeight:600}}>
-          📥 Export anno {anno}
-        </button>
+        <span style={{color:'#64748b',fontSize:13}}>Totale anno: <b style={{color:'#e2e8f0'}}>{fmtE(totAnno.fiscale)}</b> fiscale · <b style={{color:'#e2e8f0'}}>{fmtE(totAnno.incasso)}</b> incasso</span>
       </div>
 
-      {/* KPI anno */}
-      {sommario.length>0&&(
-        <div style={{display:'flex',gap:12,marginBottom:20}}>
-          <KpiCard label={`Incasso ${anno}`} value={totAnno.incasso} color="#3b82f6" sub={`${sommario.length} mesi registrati`}/>
-          <KpiCard label={`Fiscale ${anno}`} value={totAnno.fiscale} color="#8b5cf6"/>
-          <div style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(16,185,129,0.3)',borderRadius:10,
-            padding:14,flex:1,display:'flex',flexDirection:'column',justifyContent:'center',alignItems:'center'}}>
-            <div style={{fontSize:10,color:'#64748b',textTransform:'uppercase',letterSpacing:.5}}>Mesi registrati</div>
-            <div style={{fontSize:36,fontWeight:800,color:'#10b981'}}>{sommario.length}</div>
+      {/* ── SEZIONE EXPORT RAPIDO ── */}
+      <div style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.08)',
+        borderRadius:12,padding:18,marginBottom:24}}>
+        <div style={{color:'#94a3b8',fontSize:12,fontWeight:600,marginBottom:14,textTransform:'uppercase',letterSpacing:1}}>
+          📥 Export Rapido
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))',gap:16}}>
+
+          {/* Giorno specifico */}
+          <div style={{background:'rgba(255,255,255,0.04)',borderRadius:10,padding:14}}>
+            <div style={{color:'#cbd5e1',fontSize:13,fontWeight:600,marginBottom:10}}>📅 Giorno</div>
+            <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+              <input type="date" value={expGiorno} onChange={e=>setExpGiorno(e.target.value)}
+                style={{background:'#0f172a',border:'1px solid rgba(255,255,255,0.12)',borderRadius:8,
+                  padding:'6px 10px',color:'#e2e8f0',fontSize:13,flex:1,minWidth:140}}/>
+              <button onClick={()=>csvGiorno(expGiorno)} style={btnStyle('green')}>📥 CSV</button>
+              <button onClick={()=>pdfGiorno(expGiorno)} style={btnStyle('blue')}>📄 PDF</button>
+            </div>
+          </div>
+
+          {/* Mese */}
+          <div style={{background:'rgba(255,255,255,0.04)',borderRadius:10,padding:14}}>
+            <div style={{color:'#cbd5e1',fontSize:13,fontWeight:600,marginBottom:10}}>📆 Mese</div>
+            <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+              <select value={expMeseM} onChange={e=>setExpMeseM(e.target.value)}
+                style={{background:'#0f172a',border:'1px solid rgba(255,255,255,0.12)',borderRadius:8,
+                  padding:'6px 10px',color:'#e2e8f0',fontSize:13}}>
+                {MESI.map((n,i)=><option key={i} value={String(i+1).padStart(2,'0')}>{n}</option>)}
+              </select>
+              <select value={expMeseA} onChange={e=>setExpMeseA(e.target.value)}
+                style={{background:'#0f172a',border:'1px solid rgba(255,255,255,0.12)',borderRadius:8,
+                  padding:'6px 10px',color:'#e2e8f0',fontSize:13}}>
+                {[2023,2024,2025,2026,2027].map(y=><option key={y} value={y}>{y}</option>)}
+              </select>
+              <button onClick={()=>csvMeseBtn(parseInt(expMeseM),parseInt(expMeseA))} style={btnStyle('green')}>📥 CSV</button>
+              <button onClick={()=>pdfMeseBtn(parseInt(expMeseM),parseInt(expMeseA))} style={btnStyle('blue')}>📄 PDF</button>
+            </div>
+          </div>
+
+          {/* Anno */}
+          <div style={{background:'rgba(255,255,255,0.04)',borderRadius:10,padding:14}}>
+            <div style={{color:'#cbd5e1',fontSize:13,fontWeight:600,marginBottom:10}}>📊 Anno completo</div>
+            <div style={{display:'flex',gap:8,alignItems:'center'}}>
+              <span style={{color:'#94a3b8',fontSize:13}}>{anno}</span>
+              <button onClick={csvAnnoBtn} style={btnStyle('green')}>📥 CSV</button>
+              <button onClick={pdfAnnoBtn} style={btnStyle('blue')}>📄 PDF</button>
+            </div>
           </div>
         </div>
-      )}
+      </div>
 
-      {loading&&<div style={{textAlign:'center',color:'#475569',padding:40}}>Caricamento…</div>}
-
-      {/* Lista mesi */}
-      {!loading&&sommario.map(m=>(
-        <div key={m.mese} style={{marginBottom:8}}>
-          {/* Header mese — cliccabile */}
-          <div onClick={()=>apriMese(m.mese)} style={{
-            display:'flex',alignItems:'center',justifyContent:'space-between',
-            padding:'12px 16px',borderRadius:aperto===m.mese?'10px 10px 0 0':'10px',
-            background:aperto===m.mese?'rgba(59,130,246,0.12)':'rgba(255,255,255,0.03)',
-            border:`1px solid ${aperto===m.mese?'rgba(59,130,246,0.3)':'rgba(255,255,255,0.07)'}`,
-            cursor:'pointer',transition:'all .2s'}}>
-            <div style={{display:'flex',alignItems:'center',gap:12}}>
-              <span style={{fontSize:18}}>{aperto===m.mese?'▾':'▸'}</span>
-              <span style={{fontSize:14,fontWeight:700,color:'#e2e8f0'}}>{MESI[m.mese-1]} {anno}</span>
+      {/* ── LISTA MESI ── */}
+      {loading?<div style={{color:'#64748b',textAlign:'center',padding:40}}>Caricamento...</div>:
+      sommario.length===0?<div style={{color:'#64748b',textAlign:'center',padding:40}}>Nessuna chiusura per {anno}</div>:
+      sommario.map(m=>(
+        <div key={m.mese} style={{marginBottom:10,border:'1px solid rgba(255,255,255,0.08)',borderRadius:12,overflow:'hidden'}}>
+          {/* Intestazione mese */}
+          <div onClick={()=>apriMese(m.mese)}
+            style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 18px',
+              background:'rgba(255,255,255,0.04)',cursor:'pointer',userSelect:'none',flexWrap:'wrap',gap:8}}>
+            <div style={{display:'flex',alignItems:'center',gap:10}}>
+              <span style={{color:'#f1f5f9',fontWeight:600,fontSize:14}}>{MESI[m.mese-1]} {anno}</span>
+              <span style={{color:'#64748b',fontSize:12}}>{m.giorni} giorn{m.giorni===1?'o':'i'}</span>
             </div>
-            <div style={{display:'flex',gap:20,alignItems:'center'}}>
-              <div style={{textAlign:'right'}}>
-                <div style={{fontSize:10,color:'#64748b'}}>Incasso</div>
-                <div style={{fontSize:14,fontWeight:700,color:'#60a5fa',fontFamily:'monospace'}}>{fmtE(m.tot_incasso)}</div>
-              </div>
-              <div style={{textAlign:'right'}}>
-                <div style={{fontSize:10,color:'#64748b'}}>Fiscale</div>
-                <div style={{fontSize:14,fontWeight:600,color:'#a78bfa',fontFamily:'monospace'}}>{fmtE(m.tot_fiscale)}</div>
-              </div>
-              <div style={{textAlign:'right'}}>
-                <div style={{fontSize:10,color:'#64748b'}}>Art.36</div>
-                <div style={{fontSize:14,fontWeight:600,color:'#fbbf24',fontFamily:'monospace'}}>{fmtE(m.tot_art36)}</div>
-              </div>
-              <button onClick={e=>{e.stopPropagation();apriMese(m.mese);setTimeout(()=>csvMese(m.mese,dettaglio),500);}}
-                style={{padding:'5px 10px',background:'rgba(16,185,129,0.1)',border:'1px solid rgba(16,185,129,0.2)',
-                  borderRadius:6,color:'#34d399',cursor:'pointer',fontSize:11}}>
-                📥 CSV
-              </button>
+            <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+              <span style={{color:'#34d399',fontSize:13,fontWeight:500}}>{fmtE(m.tot_fiscale||0)}</span>
+              <button onClick={e=>{e.stopPropagation();csvMeseBtn(m.mese,anno);}} style={btnStyle('green')}>📥 CSV</button>
+              <button onClick={e=>{e.stopPropagation();pdfMeseBtn(m.mese,anno);}} style={btnStyle('blue')}>📄 PDF</button>
+              <span style={{color:'#475569',fontSize:16}}>{aperto===m.mese?'▲':'▼'}</span>
             </div>
           </div>
 
-          {/* Dettaglio giornaliero */}
-          {aperto===m.mese&&(
-            <div style={{border:'1px solid rgba(59,130,246,0.2)',borderTop:'none',
-              borderRadius:'0 0 10px 10px',overflow:'hidden'}}>
-              {loadingDett?<div style={{padding:20,textAlign:'center',color:'#475569'}}>Caricamento…</div>:(
-                <>
-                  {/* Header tabella */}
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr',
-                    padding:'8px 16px',background:'rgba(255,255,255,0.03)',
-                    fontSize:10,color:'#475569',textTransform:'uppercase',letterSpacing:.5}}>
-                    <span>Data</span><span>Fiscale</span><span>Art.36</span>
-                    <span>Incasso</span><span>Contanti</span><span>Da Versare</span>
-                    <span>Fondo</span><span>Operatore</span>
+          {/* Dettaglio giorni */}
+          {aperto===m.mese && (
+            <div style={{padding:'0 12px 12px'}}>
+              {loadingDett?<div style={{color:'#64748b',padding:16,textAlign:'center'}}>Caricamento...</div>:
+              dettaglio.length===0?<div style={{color:'#64748b',padding:12}}>Nessun giorno</div>:
+              dettaglio.map(r=>(
+                <div key={r.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',
+                  padding:'10px 8px',borderBottom:'1px solid rgba(255,255,255,0.05)',flexWrap:'wrap',gap:6}}>
+                  <div style={{display:'flex',alignItems:'center',gap:14,flexWrap:'wrap'}}>
+                    <span style={{color:'#94a3b8',fontSize:13,minWidth:90}}>{r.data}</span>
+                    <span style={{color:'#f1f5f9',fontSize:13}}>Fiscale: <b>{fmtE(r.chiusura_fiscale)}</b></span>
+                    <span style={{color:'#94a3b8',fontSize:12}}>Contanti: {fmtE(r.contanti)}</span>
+                    {r.operatore&&<span style={{color:'#64748b',fontSize:11}}>👤 {r.operatore}</span>}
                   </div>
-                  {dettaglio.length===0&&<div style={{padding:20,textAlign:'center',color:'#475569',fontSize:13}}>
-                    Nessuna chiusura in questo mese
-                  </div>}
-                  {dettaglio.map((r,i)=>{
-                    const incassoGiorno = nv(r.chiusura_fiscale)+nv(r.fatturato)+nv(r.fatturato_art36);
-                    return (
-                      <div key={i} style={{display:'grid',
-                        gridTemplateColumns:'1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr',
-                        padding:'10px 16px',fontSize:12,
-                        background:i%2===0?'rgba(255,255,255,0.01)':'transparent',
-                        borderTop:'1px solid rgba(255,255,255,0.04)'}}>
-                        <span style={{color:'#94a3b8'}}>{r.data?.slice(5)}</span>
-                        <span style={{color:'#a78bfa',fontFamily:'monospace'}}>{fmtE(r.chiusura_fiscale)}</span>
-                        <span style={{color:'#fbbf24',fontFamily:'monospace'}}>{fmtE(r.fatturato_art36)}</span>
-                        <span style={{color:'#60a5fa',fontFamily:'monospace'}}>{fmtE(incassoGiorno)}</span>
-                        <span style={{color:'#e2e8f0',fontFamily:'monospace'}}>{fmtE(r.contanti)}</span>
-                        <span style={{color:'#f59e0b',fontFamily:'monospace'}}>{fmtE(r.contante_da_versare)}</span>
-                        <span style={{color:'#10b981',fontFamily:'monospace'}}>{fmtE(r.fondo_cassa_calcolato||r.fondo_cassa)}</span>
-                        <span style={{color:'#64748b'}}>{r.operatore||'—'}</span>
-                      </div>
-                    );
-                  })}
-                  {/* Download CSV mese */}
-                  <div style={{padding:'8px 16px',borderTop:'1px solid rgba(255,255,255,0.06)',textAlign:'right'}}>
-                    <button onClick={()=>csvMese(m.mese,dettaglio)}
-                      style={{padding:'6px 14px',background:'rgba(16,185,129,0.1)',border:'1px solid rgba(16,185,129,0.2)',
-                        borderRadius:6,color:'#34d399',cursor:'pointer',fontSize:12,fontWeight:600}}>
-                      📥 Scarica CSV {MESI[m.mese-1]}
-                    </button>
+                  <div style={{display:'flex',gap:6}}>
+                    <button onClick={()=>csvGiornoRiga(r)} style={btnStyle('green')}>📥 CSV</button>
+                    <button onClick={()=>pdfGiornoRiga(r)} style={btnStyle('blue')}>📄 PDF</button>
                   </div>
-                </>
-              )}
+                </div>
+              ))}
             </div>
           )}
         </div>
       ))}
-
-      {!loading&&sommario.length===0&&(
-        <div style={{textAlign:'center',color:'#475569',padding:60,fontSize:14}}>
-          Nessuna chiusura registrata per il {anno}
-        </div>
-      )}
     </div>
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// EXPORT PRINCIPALE
-// ─────────────────────────────────────────────────────────────────────────────
 export default function Cassa({showToast}){
   const [tab,setTab]=useState('wizard');
   const [toast,setToast]=useState((m,t)=>showToast?.(m,t));
