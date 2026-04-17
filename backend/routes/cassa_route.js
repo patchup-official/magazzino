@@ -1,4 +1,5 @@
-// routes/cassa_route.js v2
+// routes/cassa_route.js v3 — compatibile con frontend v4
+// Aggiunge migrazioni ALTER TABLE per colonne nuove
 const express = require('express');
 const router = express.Router();
 function db(req) { return req.app.locals; }
@@ -8,6 +9,7 @@ function scorporaIva(lordo) { return lordo / (1 + IVA); }
 function ivaLordo(lordo) { return lordo - scorporaIva(lordo); }
 
 function ensureTables(req) {
+  // Crea tabella con schema completo
   db(req).run(`CREATE TABLE IF NOT EXISTS cassa_chiusure (
     id TEXT PRIMARY KEY,
     data TEXT NOT NULL UNIQUE,
@@ -24,24 +26,43 @@ function ensureTables(req) {
     compass REAL DEFAULT 0,
     stripe REAL DEFAULT 0,
     enwon_pay REAL DEFAULT 0,
-    uscita_contante REAL DEFAULT 0,
-    uscita_tipo TEXT DEFAULT 'contante',
-    versamento_contante REAL DEFAULT 0,
-    fattura_sifar REAL DEFAULT 0,
-    acquisto_privati REAL DEFAULT 0,
-    spostamento_contante REAL DEFAULT 0,
     note_credito REAL DEFAULT 0,
+    uscite_contante REAL DEFAULT 0,
+    uscite_bonifico REAL DEFAULT 0,
+    uscite_pos REAL DEFAULT 0,
+    destinazione_contante TEXT DEFAULT 'banca',
+    fondo_cassa_calcolato REAL DEFAULT 0,
+    contante_da_versare REAL DEFAULT 0,
+    accantonato REAL DEFAULT 0,
     fc_100 REAL DEFAULT 0, fc_50 REAL DEFAULT 0, fc_20 REAL DEFAULT 0,
     fc_10 REAL DEFAULT 0, fc_5 REAL DEFAULT 0, fc_2 REAL DEFAULT 0,
     fc_1 REAL DEFAULT 0, fc_050 REAL DEFAULT 0, fc_020 REAL DEFAULT 0,
     fc_010 REAL DEFAULT 0, fc_005 REAL DEFAULT 0, fc_002 REAL DEFAULT 0,
     fc_001 REAL DEFAULT 0,
-    contante_da_versare REAL DEFAULT 0,
     note TEXT DEFAULT '',
     operatore TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))
   )`);
+
+  // Migrazioni per DB esistenti: aggiunge colonne mancanti senza errori
+  const migrazioni = [
+    "ALTER TABLE cassa_chiusure ADD COLUMN enwon_pay REAL DEFAULT 0",
+    "ALTER TABLE cassa_chiusure ADD COLUMN note_credito REAL DEFAULT 0",
+    "ALTER TABLE cassa_chiusure ADD COLUMN uscite_contante REAL DEFAULT 0",
+    "ALTER TABLE cassa_chiusure ADD COLUMN uscite_bonifico REAL DEFAULT 0",
+    "ALTER TABLE cassa_chiusure ADD COLUMN uscite_pos REAL DEFAULT 0",
+    "ALTER TABLE cassa_chiusure ADD COLUMN destinazione_contante TEXT DEFAULT 'banca'",
+    "ALTER TABLE cassa_chiusure ADD COLUMN fondo_cassa_calcolato REAL DEFAULT 0",
+    "ALTER TABLE cassa_chiusure ADD COLUMN contante_da_versare REAL DEFAULT 0",
+    "ALTER TABLE cassa_chiusure ADD COLUMN accantonato REAL DEFAULT 0",
+    "ALTER TABLE cassa_chiusure ADD COLUMN operatore TEXT DEFAULT ''",
+    "ALTER TABLE cassa_chiusure ADD COLUMN note TEXT DEFAULT ''",
+  ];
+  migrazioni.forEach(sql => {
+    try { db(req).run(sql); } catch(e) { /* colonna già esistente, ignora */ }
+  });
+
   db(req).run(`CREATE TABLE IF NOT EXISTS cassa_config_mese (
     id TEXT PRIMARY KEY,
     mese INTEGER NOT NULL,
@@ -66,12 +87,11 @@ function calcolaRiepilogo(chiusure, config) {
   const fiscaleIva = ivaLordo(totFiscale);
   const fattureNetto = scorporaIva(totFatture);
   const fattureIva = ivaLordo(totFatture);
-  const totAcquistiPrivati = chiusure.reduce((s,c) => s+(c.acquisto_privati||0), 0);
-  const margineArt36 = Math.max(0, totArt36 - totAcquistiPrivati);
+  const margineArt36 = totArt36;
   const ivaArt36 = ivaLordo(margineArt36);
   const art36Netto = totArt36 - ivaArt36;
-  const totIncasso = totFiscale + totFatture;
-  const totIncassoNetto = fiscaleNetto + fattureNetto;
+  const totIncasso = totFiscale + totFatture + totArt36 - totNoteCredito;
+  const totIncassoNetto = fiscaleNetto + fattureNetto + art36Netto;
   const totIvaIncassata = fiscaleIva + fattureIva + ivaArt36;
   const totContanti = chiusure.reduce((s,c) => s+(c.contanti||0), 0);
   const totPos = chiusure.reduce((s,c) => s+(c.pos||0), 0);
@@ -82,23 +102,19 @@ function calcolaRiepilogo(chiusure, config) {
   const totStripe = chiusure.reduce((s,c) => s+(c.stripe||0), 0);
   const totEnwon = chiusure.reduce((s,c) => s+(c.enwon_pay||0), 0);
   const bonificiAgenzie = totCompass + totStripe + totEnwon;
-  const totUsciteContante = chiusure.reduce((s,c) => {
-    const uc = (c.uscita_tipo==='contante'||!c.uscita_tipo) ? (c.uscita_contante||0) : 0;
-    return s + uc + (c.versamento_contante||0) + (c.fattura_sifar||0) + (c.acquisto_privati||0) + (c.spostamento_contante||0);
-  }, 0);
+  const totUsciteContante = chiusure.reduce((s,c) => s+(c.uscite_contante||0), 0);
   const contanteDaVersare = Math.max(0, totContanti - totUsciteContante - acc);
   return {
     accantonato: acc,
-    tot_fiscale_lordo: totFiscale, tot_fiscale_netto: fiscaleNetto, tot_fiscale_iva: fiscaleIva,
-    tot_fatture_lordo: totFatture, tot_fatture_netto: fattureNetto, tot_fatture_iva: fattureIva,
-    tot_art36_lordo: totArt36, tot_art36_netto: art36Netto, tot_art36_iva: ivaArt36,
-    tot_acquisti_privati: totAcquistiPrivati, margine_art36: margineArt36,
-    tot_incasso_lordo: totIncasso, tot_incasso_netto: totIncassoNetto, tot_iva_incassata: totIvaIncassata,
+    tot_fiscale: totFiscale, tot_fiscale_netto: fiscaleNetto, tot_fiscale_iva: fiscaleIva,
+    tot_fatturato: totFatture, tot_fatture_netto: fattureNetto, tot_fatture_iva: fattureIva,
+    tot_art36: totArt36, tot_art36_netto: art36Netto, tot_art36_iva: ivaArt36,
+    tot_incasso: totIncasso, tot_incasso_netto: totIncassoNetto, tot_iva_incassata: totIvaIncassata,
     tot_contanti: totContanti, tot_pos: totPos, tot_satispay: totSatispay, tot_assegni: totAssegni,
     tot_bonifico: totBonifico, tot_compass: totCompass, tot_stripe: totStripe, tot_enwon: totEnwon,
     tot_uscite_contante: totUsciteContante, contante_da_versare: contanteDaVersare,
-    bonifici_agenzie: bonificiAgenzie, bonifici_bancari: totBonifico,
-    tot_note_credito: totNoteCredito, giorni: chiusure.length
+    bonificj_agenzie: bonificmAgenzie, tot_note_credito: totNoteCredito,
+    giorni: chiusure.length
   };
 }
 
@@ -141,16 +157,26 @@ router.get('/sommario', (req, res) => {
   try {
     ensureTables(req);
     const anno = parseInt(req.query.anno) || new Date().getFullYear();
-    const rows = db(req).query(`SELECT mese, COUNT(*) as giorni, SUM(chiusura_fiscale) as tot_fiscale, SUM(fatturato) as tot_fatture, SUM(fatturato_art36) as tot_art36, SUM(note_credito) as tot_note_credito, SUM(contanti+pos+satispay+assegni+bonifico+compass+stripe+enwon_pay) as tot_incasso, SUM(contanti) as tot_contanti, SUM(pos) as tot_pos, SUM(satispay) as tot_satispay, SUM(assegni) as tot_assegni, SUM(bonifico) as tot_bonifico, SUM(compass) as tot_compass, SUM(stripe) as tot_stripe, SUM(enwon_pay) as tot_enwon, SUM(versamento_contante) as tot_versamenti, SUM(acquisto_privati) as tot_acquisti_privati, SUM(contante_da_versare) as tot_da_versare FROM cassa_chiusure WHERE anno=? GROUP BY mese ORDER BY mese`, [anno]);
+    const rows = db(req).query(`
+      SELECT mese,
+        COUNT(*) as giorni,
+        SUM(chiusura_fiscale) as tot_fiscale,
+        SUM(fatturato) as tot_fatturato,
+        SUM(fatturato_art36) as tot_art36,
+        SUM(note_credito) as tot_note_credito,
+        SUM(chiusura_fiscale+fatturato+fatturato_art36-COAESCE(note_credito,0)) as tot_incasso,
+        SUM(contanti) as tot_contanti,
+        SUM(pos) as tot_pos,
+        SUM(satispay) as tot_satispay,
+        SUM(assegni) as tot_assegni,
+        SUM(bonifico) as tot_bonifico,
+        SUM(compass) as tot_compass,
+        SUM(stripe) as tot_stripe,
+        SUM(enwon_pay) as tot_enwon,
+        SUM(uscite_contante) as tot_uscite_contante,
+        SUM(contante_da_versare) as contante_da_versare
+      FROM cassa_chiusure WHERE anno=? GROUP BY mese ORDER BY mese`, [anno]);
     res.json(rows);
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-router.get('/oggi', (req, res) => {
-  try {
-    ensureTables(req);
-    const today = new Date().toISOString().slice(0,10);
-    res.json(db(req).get('SELECT * FROM cassa_chiusure WHERE data=?', [today]) || null);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -164,6 +190,14 @@ router.get('/', (req, res) => {
     if (mese) { sql += ' AND mese=?'; params.push(parseInt(mese)); }
     sql += ' ORDER BY data DESC';
     res.json(db(req).query(sql, params));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+router.get('/oggi', (req, res) => {
+  try {
+    ensureTables(req);
+    const today = new Date().toISOString().slice(0,10);
+    res.json(db(req).get('SELECT * FROM cassa_chiusure WHERE data=?', [today]) || null);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -182,19 +216,39 @@ router.post('/', (req, res) => {
     const dateObj = new Date(d.data);
     const mese = dateObj.getMonth() + 1;
     const anno = dateObj.getFullYear();
+
+    const acc = parseFloat(d.accantonato) || 0;
+    const contanteDaVersare = Math.max(0, (parseFloat(d.contanti)||0) - (parseFloat(d.uscite_contante)||0) - acc);
+
     const existing = db(req).get('SELECT id FROM cassa_chiusure WHERE data=?', [d.data]);
-    const fields = ['chiusura_fiscale','fatturato','fatturato_art36','contanti','pos','satispay','assegni','bonifico','compass','stripe','enwon_pay','uscita_contante','uscita_tipo','versamento_contante','fattura_sifar','acquisto_privati','spostamento_contante','note_credito','fc_100','fc_50','fc_20','fc_10','fc_5','fc_2','fc_1','fc_050','fc_020','fc_010','fc_005','fc_002','fc_001','contante_da_versare','note','operatore'];
+    const fields = [
+      'chiusura_fiscale','fatturato','fatturato_art36',
+      'contanti','pos','satispay','assegni','bonifico','compass','stripe','enwon_pay',
+      'note_credito',
+      'uscite_contante','uscite_bonifico','uscite_pos',
+      'destinazione_contante','fondo_cassa_calcolato','accantonato',
+      'fc_100','fc_50','fc_20','fc_10','fc_5','fc_2','fc_1',
+      'fc_050','fc_020','fc_010','fc_005','fc_002','fc_001',
+      'note','operatore'
+    ];
+
+    const getVal = (f) => {
+      if (d[f] !== undefined) return d[f];
+      if (f === 'destinazione_contante') return 'banca';
+      return 0;
+    };
+
     if (existing) {
-      const sets = fields.map(f => f+'=?').join(', ') + ", updated_at=datetime('now')";
-      const vals = fields.map(f => d[f]!==undefined ? d[f] : (f==='uscita_tipo'?'contante':0));
-      vals.push(existing.id);
+      const sets = [...fields.map(f => f+'=?'), 'contante_da_versare=?', "updated_at=datetime('now')"].join(', ');
+      const vals = [...fields.map(getVal), contanteDaVersare, existing.id];
       db(req).run('UPDATE cassa_chiusure SET '+sets+' WHERE id=?', vals);
       res.json(db(req).get('SELECT * FROM cassa_chiusure WHERE id=?', [existing.id]));
     } else {
       const id = db(req).uid();
-      const cols = ['id','data','mese','anno',...fields].join(', ');
-      const ph = ['?','?','?','?',...fields.map(()=>'?')].join(', ');
-      const vals = [id, d.data, mese, anno, ...fields.map(f => d[f]!==undefined ? d[f] : (f==='uscita_tipo'?'contante':0))];
+      const allFields = ['id','data','mese','anno',...fields,'contante_da_versare'];
+      const cols = allFields.join(', ');
+      const ph = allFields.map(()=>'?').join(', ');
+      const vals = [id, d.data, mese, anno, ...fields.map(getVal), contanteDaVersare];
       db(req).run('INSERT INTO cassa_chiusure ('+cols+') VALUES ('+ph+')', vals);
       res.status(201).json(db(req).get('SELECT * FROM cassa_chiusure WHERE id=?', [id]));
     }
@@ -203,6 +257,7 @@ router.post('/', (req, res) => {
 
 router.delete('/:data', (req, res) => {
   try {
+    ensureTables(req);
     db(req).run('DELETE FROM cassa_chiusure WHERE data=?', [req.params.data]);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
