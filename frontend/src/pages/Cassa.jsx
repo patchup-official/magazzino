@@ -196,7 +196,28 @@ function WizardChiusura({showToast,onComplete}){
       {/* STEP 0 — Data */}
       {step===0&&(
         <Sezione title="📅 Data chiusura" color="#6366f1">
-          <Campo label="Data" value={form.data} onChange={v=>set('data',v)} type="date" prefix=""/>
+          <div style={{marginBottom:4}}>
+            <div style={{fontSize:11,color:'rgba(255,255,255,0.4)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:8}}>DATA</div>
+            <div style={{display:'flex',gap:10,alignItems:'center'}}>
+              <select value={parseInt(form.data?.split('-')[2]||new Date().getDate())}
+                onChange={e=>{const p=form.data?.split('-')||[new Date().getFullYear()+'',String(new Date().getMonth()+1).padStart(2,'0'),'01']; set('data',p[0]+'-'+p[1]+'-'+String(e.target.value).padStart(2,'0'));}}
+                style={{background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.15)',borderRadius:9,padding:'10px 12px',color:'#f1f5f9',fontSize:16,fontFamily:'Inter,sans-serif',cursor:'pointer',flex:1}}>
+                {Array.from({length:31},(_,i)=>i+1).map(d=><option key={d} value={d}>{String(d).padStart(2,'0')}</option>)}
+              </select>
+              <span style={{color:'#475569',fontSize:20}}>/</span>
+              <select value={parseInt(form.data?.split('-')[1]||new Date().getMonth()+1)}
+                onChange={e=>{const p=form.data?.split('-')||[new Date().getFullYear()+'','01','01']; set('data',p[0]+'-'+String(e.target.value).padStart(2,'0')+'-'+p[2]);}}
+                style={{background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.15)',borderRadius:9,padding:'10px 12px',color:'#f1f5f9',fontSize:16,fontFamily:'Inter,sans-serif',cursor:'pointer',flex:2}}>
+                {['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'].map((m,i)=><option key={i+1} value={i+1}>{m}</option>)}
+              </select>
+              <span style={{color:'#475569',fontSize:20}}>/</span>
+              <select value={parseInt(form.data?.split('-')[0]||new Date().getFullYear())}
+                onChange={e=>{const p=form.data?.split('-')||['2026','01','01']; set('data',e.target.value+'-'+p[1]+'-'+p[2]);}}
+                style={{background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.15)',borderRadius:9,padding:'10px 12px',color:'#f1f5f9',fontSize:16,fontFamily:'Inter,sans-serif',cursor:'pointer',flex:1}}>
+                {[2024,2025,2026,2027].map(y=><option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+          </div>
           {accantonato>0&&<div style={{marginTop:8,padding:'8px 12px',background:'rgba(99,102,241,0.1)',
             borderRadius:8,fontSize:12,color:'#818cf8'}}>
             💰 Accantonato del mese: {fmtE(accantonato)}
