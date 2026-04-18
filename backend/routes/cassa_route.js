@@ -164,7 +164,7 @@ router.get('/sommario', (req, res) => {
         SUM(fatturato) as tot_fatturato,
         SUM(fatturato_art36) as tot_art36,
         SUM(note_credito) as tot_note_credito,
-        SUM(chiusura_fiscale+fatturato+fatturato_art36-COAESCE(note_credito,0)) as tot_incasso,
+        SUM(chiusura_fiscale+fatturato+fatturato_art36-COALESCE(note_credito,0)) as tot_incasso,
         SUM(contanti) as tot_contanti,
         SUM(pos) as tot_pos,
         SUM(satispay) as tot_satispay,
