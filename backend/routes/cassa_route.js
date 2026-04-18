@@ -113,7 +113,7 @@ function calcolaRiepilogo(chiusure, config) {
     tot_contanti: totContanti, tot_pos: totPos, tot_satispay: totSatispay, tot_assegni: totAssegni,
     tot_bonifico: totBonifico, tot_compass: totCompass, tot_stripe: totStripe, tot_enwon: totEnwon,
     tot_uscite_contante: totUsciteContante, contante_da_versare: contanteDaVersare,
-    bonificj_agenzie: bonificmAgenzie, tot_note_credito: totNoteCredito,
+    bonifici_agenzie: bonificiAgenzie, tot_note_credito: totNoteCredito,
     giorni: chiusure.length
   };
 }
