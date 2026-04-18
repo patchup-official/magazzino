@@ -317,7 +317,7 @@ function WizardChiusura({showToast,onComplete}){
             <div style={{padding:20,borderRadius:12,background:'rgba(255,255,255,0.03)',
               border:'1px solid rgba(255,255,255,0.08)',textAlign:'center'}}>
               <div style={{fontSize:15,color:'#e2e8f0',fontWeight:600,marginBottom:16}}>
-                {usciteVoci.length===0?'Hai fatto un'uscita di cassa oggi?':'Hai un'altra uscita da registrare?'}
+                {usciteVoci.length===0?"Hai fatto un'uscita di cassa oggi?":"Hai un'altra uscita da registrare?"}
               </div>
               <div style={{display:'flex',gap:10,justifyContent:'center'}}>
                 <button onClick={()=>setAggiungiUscita(true)}
