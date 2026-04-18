@@ -126,6 +126,17 @@ function WizardChiusura({showToast,onComplete}){
   const [saving,setSaving]=useState(false);
   const [esistente,setEsistente]=useState(null);
   const [accantonato,setAccantonato]=useState(0);
+  const [usciteVoci,setUsciteVoci]=useState([]); // [{id,metodo,importo,tipo,nota}]
+  const [nuovaUscita,setNuovaUscita]=useState({metodo:'contante',importo:'',tipo:'banca',nota:''});
+  const [aggiungiUscita,setAggiungiUscita]=useState(false);
+  const TIPI_USCITA = [
+    {v:'banca', l:'🏦 Versamento Banca'},
+    {v:'acquisto_privato', l:'👤 Acquisto da Privato'},
+    {v:'fornitore', l:'🤝 Pagamento Fornitore'},
+    {v:'store', l:'🏪 Trasferimento Store'},
+    {v:'spese', l:'🧾 Spese varie'},
+    {v:'altro', l:'📦 Altro'},
+  ];
 
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
 
@@ -153,7 +164,11 @@ function WizardChiusura({showToast,onComplete}){
   const diffOk = Math.abs(diff)<0.01;
 
   const totUscite = nv(form.uscite_contante)+nv(form.uscite_bonifico)+nv(form.uscite_pos);
-  const contanteDaVersare = Math.max(0, nv(form.contanti)-nv(form.uscite_contante)-accantonato);
+  const usciteContanteVoci = usciteVoci.filter(u=>u.metodo==='contante').reduce((s,u)=>s+nv(u.importo),0);
+  const usciteBonificoVoci = usciteVoci.filter(u=>u.metodo==='bonifico').reduce((s,u)=>s+nv(u.importo),0);
+  const uscitePosvVoci = usciteVoci.filter(u=>u.metodo==='pos').reduce((s,u)=>s+nv(u.importo),0);
+  const totUsciteVoci = usciteVoci.reduce((s,u)=>s+nv(u.importo),0);
+  const contanteDaVersare = Math.max(0, nv(form.contanti)-usciteContanteVoci-accantonato);
 
   const fondoCassa = TAGLIE_FC.reduce((acc,t)=>{
     const val = t.val || parseInt(t.key.replace('fc_',''));
@@ -241,40 +256,155 @@ function WizardChiusura({showToast,onComplete}){
       {/* STEP 3 — Uscite */}
       {step===3&&(
         <Sezione title="📤 Uscite del giorno" color="#f59e0b">
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'0 16px'}}>
-            <Campo label="Uscite contante" value={form.uscite_contante} onChange={v=>set('uscite_contante',v)}/>
-            <Campo label="Uscite bonifico" value={form.uscite_bonifico} onChange={v=>set('uscite_bonifico',v)}/>
-            <Campo label="Uscite POS" value={form.uscite_pos} onChange={v=>set('uscite_pos',v)}/>
-          </div>
-          {totUscite>0&&<Riga label="Totale uscite" valore={totUscite} bold accent="#f59e0b"/>}
 
-          {/* CONTANTE DA VERSARE — sezione prominente */}
+          {/* Lista voci già inserite */}
+          {usciteVoci.length>0&&(
+            <div style={{marginBottom:16}}>
+              <div style={{fontSize:11,color:'#94a3b8',fontWeight:600,textTransform:'uppercase',letterSpacing:.8,marginBottom:8}}>Uscite registrate</div>
+              {usciteVoci.map((u,i)=>(
+                <div key={u.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',
+                  padding:'10px 14px',marginBottom:6,borderRadius:9,
+                  background:'rgba(245,158,11,0.06)',border:'1px solid rgba(245,158,11,0.2)'}}>
+                  <div>
+                    <span style={{fontSize:13,color:'#f1f5f9',fontWeight:600}}>
+                      {TIPI_USCITA.find(t=>t.v===u.tipo)?.l||u.tipo}
+                    </span>
+                    <span style={{fontSize:11,color:'#64748b',marginLeft:8}}>
+                      {u.metodo==='contante'?'💵':u.metodo==='bonifico'?'🏦':'💳'} {u.metodo}
+                      {u.nota?' · '+u.nota:''}
+                    </span>
+                  </div>
+                  <div style={{display:'flex',alignItems:'center',gap:10}}>
+                    <span style={{fontFamily:'monospace',fontWeight:700,color:'#fbbf24',fontSize:15}}>{fmtE(u.importo)}</span>
+                    <button onClick={()=>setUsciteVoci(v=>v.filter((_,j)=>j!==i))}
+                      style={{background:'rgba(248,113,113,0.1)',border:'1px solid rgba(248,113,113,0.2)',
+                        borderRadius:6,color:'#f87171',cursor:'pointer',padding:'3px 8px',fontSize:12}}>✕</button>
+                  </div>
+                </div>
+              ))}
+              <div style={{display:'flex',justifyContent:'space-between',padding:'8px 14px',
+                background:'rgba(245,158,11,0.12)',border:'1px solid rgba(245,158,11,0.3)',
+                borderRadius:9,marginTop:4}}>
+                <span style={{fontSize:13,fontWeight:700,color:'#fbbf24'}}>Totale uscite</span>
+                <span style={{fontFamily:'monospace',fontWeight:800,color:'#f59e0b',fontSize:15}}>{fmtE(totUsciteVoci)}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Domanda: nuova uscita? */}
+          {!aggiungiUscita?(
+            <div style={{padding:20,borderRadius:12,background:'rgba(255,255,255,0.03)',
+              border:'1px solid rgba(255,255,255,0.08)',textAlign:'center'}}>
+              <div style={{fontSize:15,color:'#e2e8f0',fontWeight:600,marginBottom:16}}>
+                {usciteVoci.length===0?'Hai fatto un'uscita di cassa oggi?':'Hai un'altra uscita da registrare?'}
+              </div>
+              <div style={{display:'flex',gap:10,justifyContent:'center'}}>
+                <button onClick={()=>setAggiungiUscita(true)}
+                  style={{padding:'10px 28px',borderRadius:9,fontSize:14,fontWeight:700,cursor:'pointer',
+                    background:'linear-gradient(135deg,#d97706,#f59e0b)',border:'none',color:'#000'}}>
+                  ✅ Sì, aggiungi
+                </button>
+                <button onClick={()=>setAggiungiUscita(false)}
+                  style={{padding:'10px 28px',borderRadius:9,fontSize:14,fontWeight:600,cursor:'pointer',
+                    background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.12)',color:'#94a3b8'}}>
+                  ❌ No, continua
+                </button>
+              </div>
+            </div>
+          ):(
+            /* Form nuova uscita */
+            <div style={{padding:18,borderRadius:12,background:'rgba(245,158,11,0.06)',
+              border:'1px solid rgba(245,158,11,0.25)'}}>
+              <div style={{fontSize:13,fontWeight:700,color:'#fbbf24',marginBottom:14}}>
+                ➕ Nuova uscita
+              </div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12}}>
+                <div>
+                  <div style={{fontSize:11,color:'#64748b',fontWeight:600,textTransform:'uppercase',letterSpacing:.6,marginBottom:6}}>Metodo di pagamento</div>
+                  <div style={{display:'flex',gap:6}}>
+                    {[['contante','💵 Contante'],['bonifico','🏦 Bonifico'],['pos','💳 POS']].map(([v,l])=>(
+                      <button key={v} onClick={()=>setNuovaUscita(u=>({...u,metodo:v}))}
+                        style={{flex:1,padding:'8px 4px',borderRadius:7,fontSize:12,fontWeight:600,cursor:'pointer',
+                          background:nuovaUscita.metodo===v?'#f59e0b':'rgba(255,255,255,0.05)',
+                          border:`1px solid ${nuovaUscita.metodo===v?'#f59e0b':'rgba(255,255,255,0.1)'}`,
+                          color:nuovaUscita.metodo===v?'#000':'#94a3b8'}}>
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div style={{fontSize:11,color:'#64748b',fontWeight:600,textTransform:'uppercase',letterSpacing:.6,marginBottom:6}}>Importo *</div>
+                  <div style={{position:'relative'}}>
+                    <span style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',color:'#94a3b8',fontSize:14}}>€</span>
+                    <input type="number" value={nuovaUscita.importo}
+                      onChange={e=>setNuovaUscita(u=>({...u,importo:e.target.value}))}
+                      style={{background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.15)',
+                        borderRadius:8,padding:'9px 12px 9px 28px',color:'#e2e8f0',fontSize:15,
+                        fontFamily:'monospace',width:'100%',boxSizing:'border-box'}}
+                      placeholder="0,00" step="0.01" min="0" autoFocus/>
+                  </div>
+                </div>
+              </div>
+              <div style={{marginBottom:12}}>
+                <div style={{fontSize:11,color:'#64748b',fontWeight:600,textTransform:'uppercase',letterSpacing:.6,marginBottom:6}}>Per cosa? *</div>
+                <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                  {TIPI_USCITA.map(({v,l})=>(
+                    <button key={v} onClick={()=>setNuovaUscita(u=>({...u,tipo:v}))}
+                      style={{padding:'7px 14px',borderRadius:8,fontSize:12,fontWeight:600,cursor:'pointer',
+                        background:nuovaUscita.tipo===v?'#f59e0b':'rgba(255,255,255,0.05)',
+                        border:`1px solid ${nuovaUscita.tipo===v?'#f59e0b':'rgba(255,255,255,0.1)'}`,
+                        color:nuovaUscita.tipo===v?'#000':'#94a3b8'}}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div style={{marginBottom:14}}>
+                <div style={{fontSize:11,color:'#64748b',fontWeight:600,textTransform:'uppercase',letterSpacing:.6,marginBottom:6}}>Nota (opzionale)</div>
+                <input value={nuovaUscita.nota} onChange={e=>setNuovaUscita(u=>({...u,nota:e.target.value}))}
+                  style={{background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.12)',
+                    borderRadius:8,padding:'9px 12px',color:'#e2e8f0',fontSize:13,width:'100%',boxSizing:'border-box'}}
+                  placeholder="es. Versamento cassa serale, Acquisto iPhone da Mario Rossi..."/>
+              </div>
+              <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
+                <button onClick={()=>{setAggiungiUscita(false);setNuovaUscita({metodo:'contante',importo:'',tipo:'banca',nota:'');}}
+                  style={{padding:'9px 18px',borderRadius:8,fontSize:13,cursor:'pointer',
+                    background:'transparent',border:'1px solid rgba(255,255,255,0.1)',color:'#94a3b8'}}>
+                  Annulla
+                </button>
+                <button onClick={()=>{
+                  if(!nuovaUscita.importo||isNaN(+nuovaUscita.importo)||+nuovaUscita.importo<=0) return;
+                  const voce = {...nuovaUscita, importo:+nuovaUscita.importo, id:Date.now()};
+                  setUsciteVoci(v=>[...v,voce]);
+                  // Aggiorna anche i campi form per il salvataggio
+                  const nuoveVoci = [...usciteVoci, voce];
+                  set('uscite_contante', nuoveVoci.filter(u=>u.metodo==='contante').reduce((s,u)=>s+u.importo,0));
+                  set('uscite_bonifico', nuoveVoci.filter(u=>u.metodo==='bonifico').reduce((s,u)=>s+u.importo,0));
+                  set('uscite_pos', nuoveVoci.filter(u=>u.metodo==='pos').reduce((s,u)=>s+u.importo,0));
+                  setNuovaUscita({metodo:'contante',importo:'',tipo:'banca',nota:''});
+                  setAggiungiUscita(false);
+                }}
+                  style={{padding:'9px 22px',borderRadius:8,fontSize:13,fontWeight:700,cursor:'pointer',
+                    background:'linear-gradient(135deg,#d97706,#f59e0b)',border:'none',color:'#000'}}>
+                  ✅ Aggiungi uscita
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Contante da versare — sempre visibile */}
           <div style={{marginTop:20,padding:16,background:'rgba(245,158,11,0.08)',
             border:'2px solid rgba(245,158,11,0.3)',borderRadius:12}}>
-            <div style={{fontSize:13,fontWeight:700,color:'#fbbf24',marginBottom:12}}>
-              💵 CONTANTE DA VERSARE
-            </div>
-            <div style={{fontSize:22,fontWeight:800,color:'#f59e0b',fontFamily:'monospace',marginBottom:12}}>
+            <div style={{fontSize:13,fontWeight:700,color:'#fbbf24',marginBottom:8}}>💵 CONTANTE DA VERSARE</div>
+            <div style={{fontSize:26,fontWeight:800,color:'#f59e0b',fontFamily:'monospace',marginBottom:8}}>
               {fmtE(contanteDaVersare)}
             </div>
-            <div style={{fontSize:11,color:'#94a3b8',marginBottom:12}}>
-              Contanti ({fmtE(nv(form.contanti))}) − Uscite ({fmtE(nv(form.uscite_contante))}) − Accantonato ({fmtE(accantonato)})
-            </div>
-            <div style={{fontSize:12,color:'#94a3b8',marginBottom:8,fontWeight:600,textTransform:'uppercase',letterSpacing:.5}}>
-              Destinazione
-            </div>
-            <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-              {[['banca','🏦 Banca'],['store','🏪 Altro Store'],['fornitore','🤝 Fornitore'],['privato','👤 Acquisto Privato']].map(([v,l])=>(
-                <button key={v} onClick={()=>set('destinazione_contante',v)}
-                  style={{padding:'7px 14px',borderRadius:8,fontSize:12,fontWeight:600,cursor:'pointer',
-                    background:form.destinazione_contante===v?'#f59e0b':'rgba(255,255,255,0.05)',
-                    border:`1px solid ${form.destinazione_contante===v?'#f59e0b':'rgba(255,255,255,0.1)'}`,
-                    color:form.destinazione_contante===v?'#000':'#94a3b8'}}>
-                  {l}
-                </button>
-              ))}
+            <div style={{fontSize:11,color:'#94a3b8'}}>
+              Contanti ({fmtE(nv(form.contanti))}) − Uscite contante ({fmtE(usciteContanteVoci)}) − Accantonato ({fmtE(accantonato)})
             </div>
           </div>
+
           <Nav step={step} setStep={setStep} total={6}/>
         </Sezione>
       )}
