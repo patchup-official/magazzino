@@ -589,6 +589,36 @@ function TabRiepilogo({showToast}){
     await fetch(`${API}/cassa/config`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mese,anno,accantonato,fondo_cassa_target:val,agenzie_bonifico:config?.agenzie_bonifico||[]})});
     setFcTarget(val);setEditFc(false);showToast&&showToast('Target salvato','ok');carica();};
 
+  function scaricaCsvUscite(){
+    const periodo=modo==='giorno'?data:modo==='mese'?`${anno}-${String(mese).padStart(2,'0')}`:`${anno}`;
+    const rows=[['Data','Operatore','Contante €','Bonifico €','POS €','Totale €','Note']];
+    giorni.filter(r=>nv(r.uscite_contante||r.uscita_contante||0)+nv(r.uscite_bonifico||0)+nv(r.uscite_pos||0)>0).forEach(r=>{
+      const uc=nv(r.uscite_contante||r.uscita_contante||0),ub=nv(r.uscite_bonifico||0),up=nv(r.uscite_pos||0);
+      rows.push([r.data,r.operatore||'',uc.toFixed(2),ub.toFixed(2),up.toFixed(2),(uc+ub+up).toFixed(2),r.note||'']);
+    });
+    rows.push(['TOTALE','',ucont.toFixed(2),ubon.toFixed(2),upos.toFixed(2),utot.toFixed(2),'']);
+    const csv=rows.map(r=>r.join(';')).join('\n');
+    const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
+    const url=URL.createObjectURL(blob);const a=document.createElement('a');
+    a.href=url;a.download=`uscite_${periodo}.csv`;a.click();URL.revokeObjectURL(url);
+  }
+  function apriPdfUscite(){
+    const periodo=modo==='giorno'?data:modo==='mese'?`${MESI[mese-1]} ${anno}`:`Anno ${anno}`;
+    const righe=giorni.filter(r=>nv(r.uscite_contante||r.uscita_contante||0)+nv(r.uscite_bonifico||0)+nv(r.uscite_pos||0)>0);
+    const body=righe.map(r=>{const uc=nv(r.uscite_contante||r.uscita_contante||0),ub=nv(r.uscite_bonifico||0),up=nv(r.uscite_pos||0);
+      return `<tr><td>${r.data}</td><td>${r.operatore||'—'}</td><td>${uc>0?'€ '+uc.toFixed(2):'—'}</td><td>${ub>0?'€ '+ub.toFixed(2):'—'}</td><td>${up>0?'€ '+up.toFixed(2):'—'}</td><td style="font-weight:bold">€ ${(uc+ub+up).toFixed(2)}</td><td>${r.note||''}</td></tr>`;
+    }).join('');
+    const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Uscite ${periodo}</title>
+<style>body{font-family:Arial,sans-serif;font-size:12px;margin:20px}h2{font-size:16px}
+table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:5px 8px}
+th{background:#f0f0f0}tr:nth-child(even){background:#fafafa}.tot{background:#fff3cd;font-weight:bold}
+@media print{body{margin:0}}</style></head><body>
+<h2>📤 Uscite di cassa — ${periodo}</h2>
+<table><thead><tr><th>Data</th><th>Operatore</th><th>Contante</th><th>Bonifico</th><th>POS</th><th>Totale</th><th>Note</th></tr></thead>
+<tbody>${body}<tr class="tot"><td colspan="2">TOTALE</td><td>€ ${ucont.toFixed(2)}</td><td>€ ${ubon.toFixed(2)}</td><td>€ ${upos.toFixed(2)}</td><td>€ ${utot.toFixed(2)}</td><td></td></tr>
+</tbody></table><br><script>window.print();<\/script></body></html>`;
+    const w=window.open('','_blank');w.document.write(html);w.document.close();
+  }
   const g=(k,...a)=>nv(dati?.[k]||a.reduce((x,y)=>x||nv(dati?.[y]),0)||0);
   const fisc=g('tot_fiscale_lordo','tot_fiscale','chiusura_fiscale');
   const fatt=g('tot_fatture_lordo','tot_fatturato','fatturato');
@@ -763,6 +793,10 @@ function TabRiepilogo({showToast}){
       </div>}
 
       {sez==='uscite'&&<div style={{display:'flex',flexDirection:'column',gap:14}}>
+        <div style={{display:'flex',gap:10,justifyContent:'flex-end',flexWrap:'wrap'}}>
+          <button onClick={scaricaCsvUscite} style={{padding:'7px 16px',borderRadius:8,fontSize:13,fontWeight:600,cursor:'pointer',background:'rgba(16,185,129,0.15)',border:'1px solid rgba(16,185,129,0.3)',color:'#34d399'}}>📥 Esporta CSV</button>
+          <button onClick={apriPdfUscite} style={{padding:'7px 16px',borderRadius:8,fontSize:13,fontWeight:600,cursor:'pointer',background:'rgba(59,130,246,0.15)',border:'1px solid rgba(59,130,246,0.3)',color:'#60a5fa'}}>📄 Esporta PDF</button>
+        </div>
         <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))',gap:10}}>
           {[['Uscite contante','#f87171',ucont],['Uscite bonifico','#38bdf8',ubon],['Uscite POS','#a78bfa',upos],['TOTALE USCITE','#fbbf24',utot]].map(([n,c,v])=>(
             <div key={n} style={{padding:'12px 16px',borderRadius:10,background:'rgba(255,255,255,0.04)',border:`1px solid ${c}33`}}>
