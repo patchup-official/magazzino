@@ -518,188 +518,334 @@ function WizardChiusura({showToast,onComplete}){
 // TAB RIEPILOGO — giorno / mese / anno con confronto anno precedente
 // ─────────────────────────────────────────────────────────────────────────────
 function TabRiepilogo({showToast}){
-  const oggi = new Date();
-  const [modo,setModo]=useState('mese'); // 'giorno' | 'mese' | 'anno'
+  const oggi=new Date();
+  const [sez,setSez]=useState('cassa');
+  const [modo,setModo]=useState('mese');
   const [data,setData]=useState(oggi.toISOString().slice(0,10));
   const [mese,setMese]=useState(oggi.getMonth()+1);
   const [anno,setAnno]=useState(oggi.getFullYear());
   const [dati,setDati]=useState(null);
-  const [datiPrecAnno,setDatiPrecAnno]=useState(null);
+  const [datiPrec,setDatiPrec]=useState(null);
+  const [config,setConfig]=useState(null);
   const [accantonato,setAccantonato]=useState(0);
+  const [editAcc,setEditAcc]=useState(false);
+  const [accInput,setAccInput]=useState('0');
+  const [fcTarget,setFcTarget]=useState(150);
+  const [editFc,setEditFc]=useState(false);
+  const [fcInput,setFcInput]=useState('150');
+  const [giorni,setGiorni]=useState([]);
   const [loading,setLoading]=useState(false);
 
-  const carica = useCallback(async()=>{
+  const carica=useCallback(async()=>{
     setLoading(true);
     try{
       if(modo==='giorno'){
-        const r=await fetch(`${API}/cassa/${data}`);
-        setDati(r.ok?await r.json():null);
-        // anno prec stesso giorno
-        const dataPrev=data.replace(/^(\d{4})/,y=>parseInt(y)-1);
-        const r2=await fetch(`${API}/cassa/${dataPrev}`);
-        setDatiPrecAnno(r2.ok?await r2.json():null);
+        const [r,r2]=await Promise.all([
+          fetch(`${API}/cassa/${data}`).then(r=>r.ok?r.json():null),
+          fetch(`${API}/cassa/${data.replace(/^(\d{4})/,y=>parseInt(y)-1)}`).then(r=>r.ok?r.json():null),
+        ]);
+        setDati(r);setDatiPrec(r2);setGiorni(r?[r]:[]);
       } else if(modo==='mese'){
-        const r=await fetch(`${API}/cassa/riepilogo/${anno}/${mese}`);
-        const d=r.ok?await r.json():null;
-        setDati(d);
-        const rc=await fetch(`${API}/cassa/config/${anno}/${mese}`);
-        setAccantonato(rc.ok?(await rc.json()).accantonato||0:0);
-        // anno prec
-        const r2=await fetch(`${API}/cassa/riepilogo/${anno-1}/${mese}`);
-        setDatiPrecAnno(r2.ok?await r2.json():null);
+        const [r,rC,r2,rD]=await Promise.all([
+          fetch(`${API}/cassa/riepilogo/${anno}/${mese}`).then(r=>r.ok?r.json():null),
+          fetch(`${API}/cassa/config/${anno}/${mese}`).then(r=>r.ok?r.json():null),
+          fetch(`${API}/cassa/riepilogo/${anno-1}/${mese}`).then(r=>r.ok?r.json():null),
+          fetch(`${API}/cassa?anno=${anno}&mese=${mese}`).then(r=>r.ok?r.json():[]),
+        ]);
+        setDati(r);setDatiPrec(r2);setConfig(rC);
+        const acc=rC?.accantonato||0;setAccantonato(acc);setAccInput(String(acc));
+        if(rC?.fondo_cassa_target){setFcTarget(rC.fondo_cassa_target);setFcInput(String(rC.fondo_cassa_target));}
+        setGiorni(Array.isArray(rD)?rD:[]);
       } else {
-        const r=await fetch(`${API}/cassa/sommario?anno=${anno}`);
-        const rows=r.ok?await r.json():[];
-        const tot={incasso:0,fiscale:0,fatturato:0,art36:0,contanteDaVersare:0};
-        rows.forEach(row=>{
-          tot.incasso+=nv(row.tot_incasso);
-          tot.fiscale+=nv(row.tot_fiscale);
-          tot.fatturato+=nv(row.tot_fatturato);
-          tot.art36+=nv(row.tot_art36);
-          tot.contanteDaVersare+=nv(row.contante_da_versare);
-        });
-        setDati({...tot,mesi:rows.length});
-        // anno prec
-        const r2=await fetch(`${API}/cassa/sommario?anno=${anno-1}`);
-        const rows2=r2.ok?await r2.json():[];
-        const tot2={incasso:0,fiscale:0};
-        rows2.forEach(row=>{tot2.incasso+=nv(row.tot_incasso);tot2.fiscale+=nv(row.tot_fiscale);});
-        setDatiPrecAnno(tot2);
+        const [r,r2]=await Promise.all([
+          fetch(`${API}/cassa/sommario?anno=${anno}`).then(r=>r.ok?r.json():[]),
+          fetch(`${API}/cassa/sommario?anno=${anno-1}`).then(r=>r.ok?r.json():[]),
+        ]);
+        const S=rows=>rows.reduce((a,m)=>({
+          tot_fiscale_lordo:(a.tot_fiscale_lordo||0)+nv(m.tot_fiscale),
+          tot_fatture_lordo:(a.tot_fatture_lordo||0)+nv(m.tot_fatture||m.tot_fatturato||0),
+          tot_art36_lordo:(a.tot_art36_lordo||0)+nv(m.tot_art36),
+          tot_incasso_lordo:(a.tot_incasso_lordo||0)+nv(m.tot_incasso),
+          tot_contanti:(a.tot_contanti||0)+nv(m.tot_contanti),
+          tot_pos:(a.tot_pos||0)+nv(m.tot_pos||0),
+          tot_satispay:(a.tot_satispay||0)+nv(m.tot_satispay||0),
+          contante_da_versare:(a.contante_da_versare||0)+nv(m.tot_da_versare||m.contante_da_versare||0),
+          tot_note_credito:(a.tot_note_credito||0)+nv(m.tot_note_credito||0),
+          giorni:(a.giorni||0)+nv(m.giorni),
+        }),{});
+        setDati(S(Array.isArray(r)?r:[]));setDatiPrec(S(Array.isArray(r2)?r2:[]));setGiorni([]);
       }
     }finally{setLoading(false);}
   },[modo,data,mese,anno]);
 
   useEffect(()=>{carica();},[carica]);
 
-  const pct=(curr,prev)=>{
-    if(!prev||prev===0) return null;
-    const d=((curr-prev)/prev*100);
-    return {val:d,pos:d>=0};
-  };
+  const saveAcc=async()=>{const val=parseFloat(accInput)||0;
+    await fetch(`${API}/cassa/config`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mese,anno,accantonato:val,fondo_cassa_target:fcTarget,agenzie_bonifico:config?.agenzie_bonifico||[]})});
+    setAccantonato(val);setEditAcc(false);showToast&&showToast('Salvato','ok');carica();};
+  const saveFc=async()=>{const val=parseFloat(fcInput)||0;
+    await fetch(`${API}/cassa/config`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mese,anno,accantonato,fondo_cassa_target:val,agenzie_bonifico:config?.agenzie_bonifico||[]})});
+    setFcTarget(val);setEditFc(false);showToast&&showToast('Target salvato','ok');carica();};
 
-  const incassoAttuale = nv(dati?.incasso||dati?.tot_incasso||dati?.chiusura_fiscale);
-  const incassoPrev = nv(datiPrecAnno?.incasso||datiPrecAnno?.tot_incasso||datiPrecAnno?.chiusura_fiscale);
-  const delta = pct(incassoAttuale,incassoPrev);
+  const g=(k,...a)=>nv(dati?.[k]||a.reduce((x,y)=>x||nv(dati?.[y]),0)||0);
+  const fisc=g('tot_fiscale_lordo','tot_fiscale','chiusura_fiscale');
+  const fatt=g('tot_fatture_lordo','tot_fatturato','fatturato');
+  const a36=g('tot_art36_lordo','tot_art36','fatturato_art36');
+  const inc=g('tot_incasso_lordo','incasso')||(fisc+fatt);
+  const cont=g('tot_contanti','contanti');
+  const pos_=g('tot_pos','pos');
+  const sat=g('tot_satispay','satispay');
+  const ass=g('tot_assegni','assegni');
+  const bon=g('tot_bonifico','bonifico');
+  const cmp=g('tot_compass','compass');
+  const str=g('tot_stripe','stripe');
+  const enw=g('tot_enwon','enwon_pay','enwon');
+  const nc=g('tot_note_credito','note_credito');
+  const dav=g('contante_da_versare','tot_da_versare');
+  const iF=ivaLordo(fisc);const iB=ivaLordo(fatt);
+  const iA=ivaLordo(g('margine_art36')||a36);
+  const ucont=giorni.reduce((s,r)=>s+nv(r.uscite_contante||r.uscita_contante||0),0);
+  const ubon=giorni.reduce((s,r)=>s+nv(r.uscite_bonifico||0),0);
+  const upos=giorni.reduce((s,r)=>s+nv(r.uscite_pos||0),0);
+  const utot=ucont+ubon+upos;
+  const fcMedia=giorni.length?giorni.reduce((s,r)=>s+nv(r.fondo_cassa_calcolato||0),0)/giorni.length:0;
+  const gestione=Math.max(0,cont-ucont-accantonato);
+  const incP=nv(datiPrec?.tot_incasso_lordo||datiPrec?.incasso||0);
+  const delta=incP>0?((inc-incP)/incP*100):null;
+  const labP=modo==='giorno'?`stesso giorno ${anno-1}`:modo==='mese'?`${MESI[mese-1]} ${anno-1}`:`anno ${anno-1}`;
+  const bx=(br,bg)=>({borderRadius:12,padding:'16px 20px',background:bg||'rgba(255,255,255,0.04)',border:`1px solid ${br||'rgba(255,255,255,0.08)'}`});
+  const lbl={fontSize:11,color:'#64748b',textTransform:'uppercase',letterSpacing:.8,fontWeight:600,marginBottom:6,display:'block'};
+  const BIG=(c)=>({fontSize:26,fontWeight:800,fontFamily:'monospace',color:c||'#f1f5f9',lineHeight:1.1});
+  const MED=(c)=>({fontSize:15,fontWeight:700,fontFamily:'monospace',color:c||'#cbd5e1'});
+  const sub={fontSize:11,color:'#94a3b8',marginTop:3};
 
-  const labelPeriodo = modo==='giorno'?`stesso giorno ${anno-1}`:modo==='mese'?`${MESI[mese-1]} ${anno-1}`:`anno ${anno-1}`;
-
-  return (
-    <div>
-      {/* Selettore modo */}
-      <div style={{display:'flex',gap:8,marginBottom:16}}>
-        {[['giorno','📅 Giorno'],['mese','📆 Mese'],['anno','🗓️ Anno']].map(([k,l])=>(
-          <button key={k} onClick={()=>setModo(k)}
-            style={{padding:'7px 16px',borderRadius:8,fontSize:13,fontWeight:600,cursor:'pointer',
-              background:modo===k?'#2563eb':'rgba(255,255,255,0.05)',
-              border:`1px solid ${modo===k?'#3b82f6':'rgba(255,255,255,0.1)'}`,
-              color:modo===k?'#fff':'#94a3b8'}}>
-            {l}
-          </button>
-        ))}
-      </div>
-
-      {/* Filtri data */}
-      <div style={{display:'flex',gap:12,marginBottom:20,alignItems:'center',flexWrap:'wrap'}}>
-        {modo==='giorno'&&(
-          <input type="date" value={data} onChange={e=>setData(e.target.value)}
-            style={{background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',
-              borderRadius:8,padding:'7px 12px',color:'#e2e8f0',fontSize:13}}/>
-        )}
-        {modo!=='giorno'&&(
-          <>
-            {modo==='mese'&&(
-              <select value={mese} onChange={e=>setMese(parseInt(e.target.value))}
-                style={{background:'#0f172a',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,
-                  padding:'7px 12px',color:'#e2e8f0',fontSize:13}}>
-                {MESI.map((m,i)=><option key={i+1} value={i+1}>{m}</option>)}
-              </select>
-            )}
-            <select value={anno} onChange={e=>setAnno(parseInt(e.target.value))}
-              style={{background:'#0f172a',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,
-                padding:'7px 12px',color:'#e2e8f0',fontSize:13}}>
-              {[2023,2024,2025,2026,2027].map(y=><option key={y} value={y}>{y}</option>)}
-            </select>
-          </>
-        )}
-        <button onClick={carica} style={{padding:'7px 14px',background:'rgba(59,130,246,0.15)',
-          border:'1px solid rgba(59,130,246,0.3)',borderRadius:8,color:'#60a5fa',cursor:'pointer',fontSize:13}}>
-          🔄 Aggiorna
-        </button>
-      </div>
-
-      {loading&&<div style={{textAlign:'center',color:'#475569',padding:40}}>Caricamento…</div>}
-
-      {!loading&&dati&&(
-        <>
-          {/* Box motivazionale confronto anno precedente */}
-          {incassoPrev>0&&delta!==null&&(
-            <div style={{padding:16,borderRadius:12,marginBottom:20,
-              background:delta.pos?'rgba(22,163,74,0.08)':'rgba(239,68,68,0.08)',
-              border:`1px solid ${delta.pos?'rgba(22,163,74,0.3)':'rgba(239,68,68,0.3)'}`}}>
-              <div style={{display:'flex',alignItems:'center',gap:12}}>
-                <div style={{fontSize:32}}>{delta.pos?'🚀':'💪'}</div>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:14,fontWeight:700,color:delta.pos?'#4ade80':'#f87171'}}>
-                    {delta.pos
-                      ? `+${delta.val.toFixed(1)}% rispetto al ${labelPeriodo}!`
-                      : `${delta.val.toFixed(1)}% rispetto al ${labelPeriodo}`}
-                  </div>
-                  <div style={{fontSize:12,color:'#94a3b8',marginTop:2}}>
-                    {delta.pos
-                      ? `Stai battendo il record! ${labelPeriodo}: ${fmtE(incassoPrev)}`
-                      : `Dai, puoi farcela! Obiettivo: ${fmtE(incassoPrev)}, mancano ${fmtE(incassoPrev-incassoAttuale)}`}
-                  </div>
-                </div>
-                <div style={{fontSize:22,fontWeight:800,color:delta.pos?'#4ade80':'#f87171',fontFamily:'monospace'}}>
-                  {delta.pos?'+':''}{delta.val.toFixed(1)}%
-                </div>
+  return(<div style={{display:'flex',flexDirection:'column',gap:16}}>
+    <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
+      {[['giorno','📅 Giorno'],['mese','📆 Mese'],['anno','🗓️ Anno']].map(([k,l])=>(
+        <button key={k} onClick={()=>setModo(k)} style={{padding:'6px 14px',borderRadius:8,fontSize:13,fontWeight:600,cursor:'pointer',
+          background:modo===k?'#2563eb':'rgba(255,255,255,0.05)',border:`1px solid ${modo===k?'#3b82f6':'rgba(255,255,255,0.1)'}`,color:modo===k?'#fff':'#94a3b8'}}>{l}</button>
+      ))}
+      {modo==='giorno'&&<input type="date" value={data} onChange={e=>setData(e.target.value)} style={{background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,padding:'6px 10px',color:'#e2e8f0',fontSize:13}}/>}
+      {modo==='mese'&&<select value={mese} onChange={e=>setMese(parseInt(e.target.value))} style={{background:'#0f172a',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,padding:'6px 10px',color:'#e2e8f0',fontSize:13}}>{MESI.map((m,i)=><option key={i+1} value={i+1}>{m}</option>)}</select>}
+      {modo!=='giorno'&&<select value={anno} onChange={e=>setAnno(parseInt(e.target.value))} style={{background:'#0f172a',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,padding:'6px 10px',color:'#e2e8f0',fontSize:13}}>{[2024,2025,2026,2027].map(y=><option key={y} value={y}>{y}</option>)}</select>}
+      <button onClick={carica} style={{padding:'6px 12px',background:'rgba(59,130,246,0.15)',border:'1px solid rgba(59,130,246,0.3)',borderRadius:8,color:'#60a5fa',cursor:'pointer',fontSize:13}}>🔄</button>
+    </div>
+    <div style={{display:'flex',gap:0,borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
+      {[{k:'cassa',l:'💵 Cassa'},{k:'fondo',l:'🪙 Fondo Cassa'},{k:'uscite',l:'📤 Uscite'},{k:'contabile',l:'🧾 Contabile'}].map(({k,l})=>(
+        <button key={k} onClick={()=>setSez(k)} style={{padding:'8px 16px',border:'none',cursor:'pointer',fontSize:13,fontWeight:600,
+          background:sez===k?'rgba(255,255,255,0.07)':'transparent',
+          borderBottom:sez===k?'2px solid #3b82f6':'2px solid transparent',
+          color:sez===k?'#e2e8f0':'#64748b'}}>{l}</button>
+      ))}
+    </div>
+    {loading&&<div style={{textAlign:'center',color:'#475569',padding:40}}>Caricamento…</div>}
+    {!loading&&!dati&&<div style={{textAlign:'center',color:'#475569',padding:60}}>Nessun dato</div>}
+    {!loading&&dati&&(<>
+      {sez==='cassa'&&<div style={{display:'flex',flexDirection:'column',gap:14}}>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12}}>
+          <div style={{...bx('rgba(16,185,129,0.35)','rgba(16,185,129,0.06)'),textAlign:'center'}}>
+            <span style={lbl}>💶 Contante in gestione</span>
+            <div style={BIG('#34d399')}>{fmtE(gestione)}</div>
+            <div style={sub}>Incassato − uscite − accantonato</div>
+          </div>
+          <div style={{...bx('rgba(251,191,36,0.35)','rgba(251,191,36,0.06)'),textAlign:'center'}}>
+            <span style={lbl}>💵 Da versare</span>
+            <div style={BIG('#fbbf24')}>{fmtE(dav)}</div>
+            <div style={sub}>Da portare in banca</div>
+          </div>
+          <div style={bx('rgba(168,85,247,0.3)','rgba(168,85,247,0.05)')}>
+            <span style={lbl}>🏦 Accantonato mese</span>
+            {editAcc?(<div style={{display:'flex',gap:6,alignItems:'center',marginTop:4}}>
+              <input type="number" value={accInput} onChange={e=>setAccInput(e.target.value)} autoFocus onKeyDown={e=>e.key==='Enter'&&saveAcc()}
+                style={{background:'#0f172a',border:'1px solid #7c3aed',borderRadius:7,padding:'5px 8px',color:'#e2e8f0',fontSize:18,width:100,fontFamily:'monospace'}}/>
+              <button onClick={saveAcc} style={{padding:'5px 10px',background:'#7c3aed',border:'none',borderRadius:7,color:'#fff',cursor:'pointer'}}>✓</button>
+              <button onClick={()=>{setEditAcc(false);setAccInput(String(accantonato));}} style={{padding:'5px 8px',background:'transparent',border:'1px solid rgba(255,255,255,0.1)',borderRadius:7,color:'#94a3b8',cursor:'pointer'}}>✕</button>
+            </div>):(
+              <div style={{display:'flex',alignItems:'center',gap:8,marginTop:4}}>
+                <span style={BIG('#c084fc')}>{fmtE(accantonato)}</span>
+                {modo==='mese'&&<button onClick={()=>setEditAcc(true)} style={{padding:'3px 8px',background:'rgba(168,85,247,0.15)',border:'1px solid rgba(168,85,247,0.3)',borderRadius:6,color:'#c084fc',cursor:'pointer',fontSize:12}}>✏️</button>}
               </div>
+            )}
+            <div style={sub}>Imposta a inizio mese</div>
+          </div>
+        </div>
+        {incP>0&&delta!==null&&(<div style={{padding:12,borderRadius:10,background:delta>=0?'rgba(22,163,74,0.08)':'rgba(239,68,68,0.08)',border:`1px solid ${delta>=0?'rgba(22,163,74,0.3)':'rgba(239,68,68,0.3)'}`}}>
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            <span style={{fontSize:24}}>{delta>=0?'🚀':'💪'}</span>
+            <div style={{flex:1}}>
+              <div style={{fontSize:13,fontWeight:700,color:delta>=0?'#4ade80':'#f87171'}}>{delta>=0?`+${delta.toFixed(1)}% vs ${labP}!`:`${delta.toFixed(1)}% vs ${labP}`}</div>
+              <div style={{fontSize:11,color:'#94a3b8'}}>{delta>=0?`Prec: ${fmtE(incP)}`:`Obiettivo ${fmtE(incP)} — mancano ${fmtE(incP-inc)}`}</div>
+            </div>
+            <span style={{fontSize:18,fontWeight:800,fontFamily:'monospace',color:delta>=0?'#4ade80':'#f87171'}}>{delta>=0?'+':''}{delta.toFixed(1)}%</span>
+          </div>
+        </div>)}
+        <div style={{...bx('rgba(59,130,246,0.3)'),display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:8}}>
+          <div>
+            <span style={lbl}>📊 Totale incasso</span>
+            <div style={BIG('#60a5fa')}>{fmtE(inc)}</div>
+            {dati?.giorni>0&&<div style={sub}>{dati.giorni} giorni · media {fmtE(inc/(dati.giorni||1))}/g</div>}
+          </div>
+          <div style={{display:'flex',gap:16,flexWrap:'wrap'}}>
+            {fisc>0&&<div><div style={sub}>Fiscale</div><div style={MED('#818cf8')}>{fmtE(fisc)}</div></div>}
+            {fatt>0&&<div><div style={sub}>Fatturato</div><div style={MED('#38bdf8')}>{fmtE(fatt)}</div></div>}
+            {a36>0&&<div><div style={sub}>Art.36</div><div style={MED('#fb923c')}>{fmtE(a36)}</div></div>}
+            {nc>0&&<div><div style={sub}>Note cred.</div><div style={MED('#f87171')}>-{fmtE(nc)}</div></div>}
+          </div>
+        </div>
+        <div>
+          <span style={lbl}>💳 Metodi</span>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(110px,1fr))',gap:8}}>
+            {[['Contanti','#fbbf24',cont],['POS','#34d399',pos_],['Satispay','#f472b6',sat],['Assegni','#a78bfa',ass],
+              ['Bonifico','#38bdf8',bon],['Compass','#fb923c',cmp],['Stripe','#818cf8',str],['Enwon','#4ade80',enw],
+            ].filter(([,,v])=>v>0).map(([n,c,v])=>(
+              <div key={n} style={{padding:'10px 12px',borderRadius:9,background:'rgba(255,255,255,0.04)',border:`1px solid ${c}44`}}>
+                <div style={{fontSize:11,color:'#64748b',marginBottom:2}}>{n}</div>
+                <div style={MED(c)}>{fmtE(v)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>}
+
+      {sez==='fondo'&&<div style={{display:'flex',flexDirection:'column',gap:14}}>
+        <div style={{...bx('rgba(251,191,36,0.3)','rgba(251,191,36,0.05)')}}>
+          <span style={lbl}>🎯 Target fondo cassa fisso</span>
+          <div style={{fontSize:11,color:'#94a3b8',marginBottom:10}}>Il negozio deve avere sempre questo importo come fondo operativo</div>
+          {editFc?(<div style={{display:'flex',gap:8,alignItems:'center'}}>
+            <span style={{color:'#64748b'}}>€</span>
+            <input type="number" value={fcInput} onChange={e=>setFcInput(e.target.value)} autoFocus onKeyDown={e=>e.key==='Enter'&&saveFc()}
+              style={{background:'#0f172a',border:'1px solid #f59e0b',borderRadius:8,padding:'8px 12px',color:'#e2e8f0',fontSize:20,width:130,fontFamily:'monospace'}}/>
+            <button onClick={saveFc} style={{padding:'8px 14px',background:'#d97706',border:'none',borderRadius:8,color:'#000',cursor:'pointer',fontWeight:700}}>✓ Salva</button>
+            <button onClick={()=>{setEditFc(false);setFcInput(String(fcTarget));}} style={{padding:'8px 10px',background:'transparent',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,color:'#94a3b8',cursor:'pointer'}}>✕</button>
+          </div>):(
+            <div style={{display:'flex',alignItems:'center',gap:12}}>
+              <span style={BIG('#fbbf24')}>{fmtE(fcTarget)}</span>
+              <button onClick={()=>setEditFc(true)} style={{padding:'4px 10px',background:'rgba(251,191,36,0.15)',border:'1px solid rgba(251,191,36,0.3)',borderRadius:6,color:'#fbbf24',cursor:'pointer',fontSize:12}}>✏️ Modifica</button>
             </div>
           )}
-
-          {/* KPI cards */}
-          <div style={{display:'flex',gap:12,flexWrap:'wrap',marginBottom:20}}>
-            <KpiCard label="Incasso totale" value={nv(dati.incasso||dati.tot_incasso||dati.chiusura_fiscale)} color="#3b82f6"/>
-            <KpiCard label="Fiscale (scontrini)" value={nv(dati.fiscale||dati.tot_fiscale||dati.chiusura_fiscale)} color="#8b5cf6"/>
-            <KpiCard label="Fatturato" value={nv(dati.fatturato||dati.tot_fatturato)} color="#0ea5e9"/>
-            <KpiCard label="Art. 36" value={nv(dati.art36||dati.tot_art36||dati.fatturato_art36)} color="#f59e0b"/>
-          </div>
-
-          {/* Riepilogo contabile */}
-          {modo!=='anno'&&(
-            <Sezione title="Riepilogo contabile IVA" color="#10b981">
-              <Riga label="Fiscale lordo" valore={nv(dati.tot_fiscale||dati.chiusura_fiscale)} bold/>
-              <Riga label="  → Netto" valore={scorporaIva(nv(dati.tot_fiscale||dati.chiusura_fiscale))} small/>
-              <Riga label="  → IVA 22%" valore={ivaLordo(nv(dati.tot_fiscale||dati.chiusura_fiscale))} small accent="#10b981"/>
-              <Riga label="Fatturato lordo" valore={nv(dati.tot_fatturato||dati.fatturato)} bold/>
-              <Riga label="  → Netto" valore={scorporaIva(nv(dati.tot_fatturato||dati.fatturato))} small/>
-              <Riga label="  → IVA 22%" valore={ivaLordo(nv(dati.tot_fatturato||dati.fatturato))} small accent="#10b981"/>
-              <Riga label="Art.36 (IVA solo su margine)" valore={ivaLordo(nv(dati.tot_art36||dati.fatturato_art36))} bold accent="#f59e0b"/>
-            </Sezione>
-          )}
-
-          {/* Contante da versare */}
-          {modo==='mese'&&nv(dati.contante_da_versare)>0&&(
-            <Sezione title="💵 Contante da versare (mese)" color="#f59e0b">
-              <Riga label="Totale da versare" valore={nv(dati.contante_da_versare)} bold accent="#f59e0b"/>
-              {accantonato>0&&<Riga label="Accantonato" valore={accantonato}/>}
-            </Sezione>
-          )}
-        </>
-      )}
-
-      {!loading&&!dati&&(
-        <div style={{textAlign:'center',color:'#475569',padding:60,fontSize:14}}>
-          Nessun dato per il periodo selezionato
         </div>
-      )}
-    </div>
-  );
-}
+        {giorni.length>0&&<div>
+          <span style={lbl}>📋 Fondo per giorno</span>
+          <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:12}}>
+            {giorni.map(r=>{const fc=nv(r.fondo_cassa_calcolato)||0;const diff=fc-fcTarget;const ok=Math.abs(diff)<5;const ec=diff>5;
+              return(<div key={r.data} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 14px',borderRadius:9,flexWrap:'wrap',gap:8,
+                background:ok?'rgba(22,163,74,0.06)':ec?'rgba(59,130,246,0.06)':'rgba(239,68,68,0.06)',
+                border:`1px solid ${ok?'rgba(22,163,74,0.2)':ec?'rgba(59,130,246,0.2)':'rgba(239,68,68,0.2)'}`}}>
+                <div style={{display:'flex',gap:12,alignItems:'center'}}>
+                  <span style={{color:'#94a3b8',fontSize:13,minWidth:90}}>{r.data}</span>
+                  {r.operatore&&<span style={{fontSize:11,color:'#64748b'}}>👤 {r.operatore}</span>}
+                </div>
+                <div style={{display:'flex',gap:14,alignItems:'center'}}>
+                  <div style={{textAlign:'right'}}><div style={{fontSize:11,color:'#64748b'}}>Dichiarato</div><div style={{fontFamily:'monospace',fontWeight:700,color:'#f1f5f9',fontSize:15}}>{fmtE(fc)}</div></div>
+                  <div style={{textAlign:'right',minWidth:70}}><div style={{fontSize:11,color:'#64748b'}}>vs target</div><div style={{fontFamily:'monospace',fontWeight:700,fontSize:14,color:ok?'#4ade80':ec?'#60a5fa':'#f87171'}}>{diff>=0?'+':''}{fmtE(diff)}</div></div>
+                  <span style={{fontSize:16}}>{ok?'✅':ec?'📈':'⚠️'}</span>
+                </div>
+              </div>);
+            })}
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))',gap:10}}>
+            {[['Media dichiarata',fmtE(fcMedia),'#94a3b8'],['Target',fmtE(fcTarget),'#fbbf24'],
+              ['Giorni ok',giorni.filter(r=>Math.abs(nv(r.fondo_cassa_calcolato)-fcTarget)<5).length+'/'+giorni.length,'#34d399'],
+              ['Giorni sotto',giorni.filter(r=>nv(r.fondo_cassa_calcolato)<fcTarget-5).length,'#f87171'],
+            ].map(([n,v,c])=>(
+              <div key={n} style={{padding:'10px 14px',borderRadius:9,background:'rgba(255,255,255,0.04)',border:`1px solid ${c}33`}}>
+                <div style={{fontSize:11,color:'#64748b',marginBottom:3}}>{n}</div>
+                <div style={{fontFamily:'monospace',fontWeight:700,fontSize:15,color:c}}>{v}</div>
+              </div>
+            ))}
+          </div>
+        </div>}
+        {modo==='anno'&&<div style={{color:'#475569',fontSize:13,textAlign:'center',padding:30}}>Seleziona Mese per il dettaglio</div>}
+      </div>}
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TAB STORICO — anni / mesi espandibili / export CSV
-// ─────────────────────────────────────────────────────────────────────────────
+      {sez==='uscite'&&<div style={{display:'flex',flexDirection:'column',gap:14}}>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))',gap:10}}>
+          {[['Uscite contante','#f87171',ucont],['Uscite bonifico','#38bdf8',ubon],['Uscite POS','#a78bfa',upos],['TOTALE USCITE','#fbbf24',utot]].map(([n,c,v])=>(
+            <div key={n} style={{padding:'12px 16px',borderRadius:10,background:'rgba(255,255,255,0.04)',border:`1px solid ${c}33`}}>
+              <div style={{fontSize:11,color:'#64748b',marginBottom:4}}>{n}</div>
+              <div style={{fontFamily:'monospace',fontWeight:700,fontSize:n==='TOTALE USCITE'?20:15,color:c}}>{fmtE(v)}</div>
+            </div>
+          ))}
+        </div>
+        {giorni.length>0&&<div>
+          <span style={lbl}>📋 Uscite per giorno — operatore in evidenza</span>
+          {giorni.filter(r=>nv(r.uscite_contante||r.uscita_contante||0)+nv(r.uscite_bonifico||0)+nv(r.uscite_pos||0)>0).length===0
+            ?<div style={{color:'#475569',textAlign:'center',padding:30,fontSize:13}}>Nessuna uscita dichiarata</div>
+            :giorni.filter(r=>nv(r.uscite_contante||r.uscita_contante||0)+nv(r.uscite_bonifico||0)+nv(r.uscite_pos||0)>0).map(r=>{
+              const uc=nv(r.uscite_contante||r.uscita_contante||0),ub=nv(r.uscite_bonifico||0),up=nv(r.uscite_pos||0);
+              return(<div key={r.data} style={{padding:'12px 16px',borderRadius:10,marginBottom:6,background:'rgba(248,113,113,0.05)',border:'1px solid rgba(248,113,113,0.15)'}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8,flexWrap:'wrap',gap:6}}>
+                  <div style={{display:'flex',gap:10,alignItems:'center'}}>
+                    <span style={{color:'#94a3b8',fontSize:13,fontWeight:600}}>{r.data}</span>
+                    {r.operatore&&<span style={{background:'rgba(96,165,250,0.15)',border:'1px solid rgba(96,165,250,0.3)',borderRadius:6,padding:'2px 8px',fontSize:11,color:'#60a5fa',fontWeight:600}}>👤 {r.operatore}</span>}
+                  </div>
+                  <span style={{fontFamily:'monospace',fontWeight:800,color:'#f87171',fontSize:16}}>{fmtE(uc+ub+up)}</span>
+                </div>
+                <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
+                  {uc>0&&<span style={{fontSize:12,color:'#94a3b8'}}>💵 Contante: <b style={{color:'#fbbf24'}}>{fmtE(uc)}</b></span>}
+                  {ub>0&&<span style={{fontSize:12,color:'#94a3b8'}}>🏦 Bonifico: <b style={{color:'#38bdf8'}}>{fmtE(ub)}</b></span>}
+                  {up>0&&<span style={{fontSize:12,color:'#94a3b8'}}>💳 POS: <b style={{color:'#a78bfa'}}>{fmtE(up)}</b></span>}
+                  {r.note&&<span style={{fontSize:12,color:'#64748b'}}>📝 {r.note}</span>}
+                </div>
+              </div>);
+            })
+          }
+        </div>}
+        {modo==='anno'&&<div style={{color:'#475569',fontSize:13,textAlign:'center',padding:30}}>Seleziona Mese per il dettaglio con operatore</div>}
+      </div>}
+
+      {sez==='contabile'&&<div style={{display:'flex',flexDirection:'column',gap:14}}>
+        <div style={bx('rgba(16,185,129,0.25)')}>
+          <span style={{...lbl,color:'#34d399'}}>🧾 IVA scorporata (22%)</span>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))',gap:12,marginTop:8}}>
+            {[['Fiscale lordo',fisc,'#94a3b8'],['Fiscale netto',scorporaIva(fisc),'#64748b'],['IVA fiscale',iF,'#34d399'],
+              ['Fatturato lordo',fatt,'#94a3b8'],['Fatturato netto',scorporaIva(fatt),'#64748b'],['IVA fatture',iB,'#34d399'],
+              ['Art.36 lordo',a36,'#fb923c'],['IVA margine',iA,'#fbbf24'],['TOTALE IVA',iF+iB+iA,'#10b981'],
+            ].map(([n,v,c])=>(
+              <div key={n} style={{padding:'10px 12px',borderRadius:9,background:'rgba(255,255,255,0.04)',border:`1px solid ${c}33`}}>
+                <div style={{fontSize:11,color:'#64748b',marginBottom:3}}>{n}</div>
+                <div style={{fontFamily:'monospace',fontWeight:700,fontSize:n==='TOTALE IVA'?18:14,color:c}}>{fmtE(v)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={bx('rgba(255,255,255,0.08)')}>
+          <span style={lbl}>📊 Riepilogo cassa completo</span>
+          {[['Incasso totale',inc,'#60a5fa',true],['  Contanti',cont,'#fbbf24',false],['  POS',pos_,'#34d399',false],
+            ['  Satispay',sat,'#f472b6',false],['  Bonifico+agenzie',bon+cmp+str+enw,'#38bdf8',false],
+            ['  Note credito',-nc,'#f87171',false],[null,null,null,false],
+            ['Totale uscite',-utot,'#f87171',true],['  Contante',-ucont,'#f87171',false],
+            ['  Bonifico',-ubon,'#f87171',false],['  POS',-upos,'#f87171',false],
+            ['Accantonato',-accantonato,'#c084fc',false],[null,null,null,false],
+            ['Contante in gestione',gestione,'#34d399',true],['Da versare',dav,'#fbbf24',true],
+          ].map(([n,v,c,bold],i)=>(
+            n===null?<div key={i} style={{borderTop:'1px solid rgba(255,255,255,0.06)',margin:'4px 0'}}/>:(
+              <div key={i} style={{display:'flex',justifyContent:'space-between',padding:'6px 8px',borderRadius:6,background:bold?'rgba(255,255,255,0.04)':'transparent'}}>
+                <span style={{fontSize:13,color:bold?'#e2e8f0':'#94a3b8',fontWeight:bold?700:400}}>{n}</span>
+                <span style={{fontFamily:'monospace',fontWeight:bold?700:500,fontSize:bold?15:13,color:c||'#94a3b8'}}>{v<0?'-':''}{fmtE(Math.abs(v))}</span>
+              </div>
+            )
+          ))}
+        </div>
+        {giorni.length>0&&[...new Set(giorni.map(r=>r.operatore).filter(Boolean))].length>0&&(
+          <div style={bx('rgba(255,255,255,0.07)')}>
+            <span style={lbl}>👤 Operatori del periodo</span>
+            <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:4}}>
+              {[...new Set(giorni.map(r=>r.operatore).filter(Boolean))].map(op=>{
+                const gg=giorni.filter(r=>r.operatore===op).length;
+                const ii=giorni.filter(r=>r.operatore===op).reduce((s,r)=>s+nv(r.chiusura_fiscale)+nv(r.fatturato)+nv(r.fatturato_art36),0);
+                return(<div key={op} style={{padding:'10px 16px',borderRadius:10,background:'rgba(96,165,250,0.08)',border:'1px solid rgba(96,165,250,0.2)'}}>
+                  <div style={{fontWeight:700,color:'#60a5fa',fontSize:14}}>👤 {op}</div>
+                  <div style={{fontSize:12,color:'#64748b',marginTop:2}}>{gg} giorni · {fmtE(ii)}</div>
+                </div>);
+              })}
+            </div>
+          </div>
+        )}
+      </div>}
+    </>)}
+  </div>);
+}
 function TabStorico(){
   const [anno,setAnno]=useState(new Date().getFullYear());
   const [sommario,setSommario]=useState([]);
