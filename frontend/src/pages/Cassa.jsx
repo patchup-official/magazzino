@@ -533,6 +533,8 @@ function TabRiepilogo({showToast}){
   const [fcTarget,setFcTarget]=useState(150);
   const [editFc,setEditFc]=useState(false);
   const [fcInput,setFcInput]=useState('150');
+  const [costoA36,setCostoA36]=useState('');
+  const [editCostoA36,setEditCostoA36]=useState(false);
   const [giorni,setGiorni]=useState([]);
   const [loading,setLoading]=useState(false);
 
@@ -603,7 +605,9 @@ function TabRiepilogo({showToast}){
   const nc=g('tot_note_credito','note_credito');
   const dav=g('contante_da_versare','tot_da_versare');
   const iF=ivaLordo(fisc);const iB=ivaLordo(fatt);
-  const iA=ivaLordo(g('margine_art36')||a36);
+  const costoA36Num=parseFloat(costoA36)||g('tot_acquisti_privati','acquisto_privati')||0;
+  const margineA36Reale=Math.max(0,a36-costoA36Num);
+  const iA=ivaLordo(margineA36Reale);
   const ucont=giorni.reduce((s,r)=>s+nv(r.uscite_contante||r.uscita_contante||0),0);
   const ubon=giorni.reduce((s,r)=>s+nv(r.uscite_bonifico||0),0);
   const upos=giorni.reduce((s,r)=>s+nv(r.uscite_pos||0),0);
@@ -796,18 +800,46 @@ function TabRiepilogo({showToast}){
 
       {sez==='contabile'&&<div style={{display:'flex',flexDirection:'column',gap:14}}>
         <div style={bx('rgba(16,185,129,0.25)')}>
-          <span style={{...lbl,color:'#34d399'}}>🧾 IVA scorporata (22%)</span>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))',gap:12,marginTop:8}}>
+          <span style={{...lbl,color:'#34d399'}}>🧾 IVA scorporata (22%) — calcolo netto reale</span>
+          <div style={{background:'rgba(251,191,36,0.08)',border:'1px solid rgba(251,191,36,0.25)',borderRadius:10,padding:'12px 16px',marginBottom:12}}>
+            <div style={{fontSize:11,color:'#94a3b8',fontWeight:600,textTransform:'uppercase',letterSpacing:.7,marginBottom:6}}>📦 Costo acquisto dispositivi Art.36 del periodo</div>
+            <div style={{fontSize:12,color:'#64748b',marginBottom:10}}>Inserisci il totale pagato ai privati per i dispositivi venduti — serve per calcolare margine reale e IVA esatta</div>
+            {editCostoA36?(
+              <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                <span style={{color:'#64748b',fontSize:14}}>€</span>
+                <input type="number" value={costoA36} onChange={e=>setCostoA36(e.target.value)} autoFocus
+                  onKeyDown={e=>e.key==='Enter'&&setEditCostoA36(false)}
+                  style={{background:'#0f172a',border:'1px solid #f59e0b',borderRadius:8,padding:'8px 12px',color:'#e2e8f0',fontSize:18,width:150,fontFamily:'monospace'}}
+                  placeholder="0.00" step="0.01" min="0"/>
+                <button onClick={()=>setEditCostoA36(false)} style={{padding:'8px 14px',background:'#d97706',border:'none',borderRadius:8,color:'#000',cursor:'pointer',fontWeight:700}}>✓ Ok</button>
+              </div>
+            ):(
+              <div style={{display:'flex',alignItems:'center',gap:12}}>
+                <span style={{fontFamily:'monospace',fontWeight:700,fontSize:20,color:costoA36Num>0?'#f87171':'#475569'}}>{costoA36Num>0?fmtE(costoA36Num):'Non inserito'}</span>
+                <button onClick={()=>setEditCostoA36(true)} style={{padding:'4px 10px',background:'rgba(251,191,36,0.15)',border:'1px solid rgba(251,191,36,0.3)',borderRadius:6,color:'#fbbf24',cursor:'pointer',fontSize:12}}>✏️ Inserisci costo</button>
+              </div>
+            )}
+            {costoA36Num>0&&<div style={{marginTop:10,display:'flex',gap:16,flexWrap:'wrap',fontSize:12,color:'#94a3b8'}}>
+              <span>Venduto: <b style={{color:'#fb923c'}}>{fmtE(a36)}</b></span>
+              <span>Costo: <b style={{color:'#f87171'}}>-{fmtE(costoA36Num)}</b></span>
+              <span>Margine reale: <b style={{color:'#34d399'}}>{fmtE(margineA36Reale)}</b></span>
+            </div>}
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))',gap:12}}>
             {[['Fiscale lordo',fisc,'#94a3b8'],['Fiscale netto',scorporaIva(fisc),'#64748b'],['IVA fiscale',iF,'#34d399'],
               ['Fatturato lordo',fatt,'#94a3b8'],['Fatturato netto',scorporaIva(fatt),'#64748b'],['IVA fatture',iB,'#34d399'],
-              ['Art.36 lordo',a36,'#fb923c'],['IVA margine',iA,'#fbbf24'],['TOTALE IVA',iF+iB+iA,'#10b981'],
+              ['Art.36 lordo',a36,'#fb923c'],['Costo acquisto',costoA36Num,'#f87171'],
+              ['Margine reale',margineA36Reale,'#fb923c'],['IVA su margine',iA,'#fbbf24'],['TOTALE IVA',iF+iB+iA,'#10b981'],
             ].map(([n,v,c])=>(
-              <div key={n} style={{padding:'10px 12px',borderRadius:9,background:'rgba(255,255,255,0.04)',border:`1px solid ${c}33`}}>
+              <div key={n} style={{padding:'10px 12px',borderRadius:9,background:n==='TOTALE IVA'?'rgba(16,185,129,0.1)':'rgba(255,255,255,0.04)',border:`1px solid ${c}33`}}>
                 <div style={{fontSize:11,color:'#64748b',marginBottom:3}}>{n}</div>
-                <div style={{fontFamily:'monospace',fontWeight:700,fontSize:n==='TOTALE IVA'?18:14,color:c}}>{fmtE(v)}</div>
+                <div style={{fontFamily:'monospace',fontWeight:700,fontSize:n==='TOTALE IVA'?20:14,color:c}}>{fmtE(v)}</div>
               </div>
             ))}
           </div>
+          {!costoA36Num&&a36>0&&<div style={{marginTop:10,padding:'8px 12px',borderRadius:8,background:'rgba(251,191,36,0.08)',border:'1px solid rgba(251,191,36,0.2)',fontSize:12,color:'#fbbf24'}}>
+            ⚠️ Inserisci il costo di acquisto per calcolare IVA reale sul margine Art.36
+          </div>}
         </div>
         <div style={bx('rgba(255,255,255,0.08)')}>
           <span style={lbl}>📊 Riepilogo cassa completo</span>
