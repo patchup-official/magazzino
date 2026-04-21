@@ -5,6 +5,7 @@ import Sidebar from './components/Sidebar'
 import Dashboard from './pages/Dashboard'
 import Magazzino from './pages/Magazzino'
 import AcquistoPlugin from './pages/AcquistoPlugin'
+import StoricoDispositivi from './pages/StoricoDispositivi'
 import Riparazioni from './pages/Riparazioni'
 import Servizi from './pages/Servizi'
 import Clienti from './pages/Clienti'
@@ -48,6 +49,7 @@ export default function App() {
   const titles = {
     dashboard: 'Homepage', magazzino: 'Magazzino', servizi: 'Servizi',
     acquisto: 'Acquisto dispositivo', riparazioni: 'Riparazioni',
+    'storico-dispositivi': 'Storico Dispositivi',
     storico: 'Storico acquisti', clienti: 'Clienti',
     importexport: 'Import / Export', protezione: 'Protezione Dispositivo',
     valutazione: 'Valutazione Display',
@@ -58,6 +60,7 @@ export default function App() {
   const pages = {
     dashboard: Dashboard, magazzino: Magazzino, servizi: Servizi,
     acquisto: AcquistoPlugin, riparazioni: Riparazioni,
+    'storico-dispositivi': StoricoDispositivi,
     storico: Storico, clienti: Clienti,
     importexport: ImportExport, protezione: Protezione,
     valutazione: ValutazioneDisplay,
