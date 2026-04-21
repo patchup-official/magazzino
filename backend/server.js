@@ -182,12 +182,14 @@ initDB().then(() => {
   // Display Ordini Buyback
   const displayOrdini = require('./routes/display_ordini_route');
 const cassaRoute = require('./routes/cassa_route');
+const storicoDispRoute = require('./routes/storico_dispositivi_route');
   app.use('/display-ordini', displayOrdini.router);
+  app.use('/storico-dispositivi', storicoDispRoute.router);
   app.use('/cassa', cassaRoute.router);
 
   app.get('/health', (req, res) => {
     res.json({
-      status: 'ok', version: '2.6.0',
+      status: 'ok', version: '2.7.0',
       products:   app.locals.get('SELECT COUNT(*) as n FROM products')?.n   || 0,
       devices:    app.locals.get('SELECT COUNT(*) as n FROM devices')?.n    || 0,
       repairs:    app.locals.get('SELECT COUNT(*) as n FROM repairs')?.n    || 0,
