@@ -5,14 +5,14 @@ const API = import.meta.env.VITE_API_URL || 'https://magazzino-backend-f7vr.onre
 const IVA = 0.22
 const MESI = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre']
 const TIPI_DISP = ['Smartphone','Tablet','Laptop','Smartwatch','Console','Fotocamera','Altro']
-const MARCHE = ['Apple','Samsung','Xiaomi','Huawei','OnePlus','Google','Sony','LG','Motorola','Nokia','Oppo','Realme','Altra']hh
+const MARCHE = ['Apple','Samsung','Xiaomi','Huawei','OnePlus','Google','Sony','LG','Motorola','Nokia','Oppo','Realme','Altra']
 const CONDIZIONI = [{v:'ottimo',l:'Ottimo'},{v:'buono',l:'Buono'},{v:'discreto',l:'Discreto'},{v:'danneggiato',l:'Danneggiato'}]
 const fmtE = v => '€ '+Number(v||0).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2})
 const oggi = () => new Date().toISOString().slice(0,10)
 
 const inp = {background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.12)',borderRadius:9,padding:'10px 14px',color:'#f1f5f9',fontFamily:'Inter,sans-serif',fontSize:13.5,width:'100%',boxSizing:'border-box',outline:'none'}
 const lbl = {fontSize:11,fontWeight:600,color:'rgba(255,255,255,0.4)',textTransform:'uppercase',letterSpacing:'.07em',display:'block',marginBottom:6}
-const card = (border) => ({background:'linear-gradient(135deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01))',border:`1px solid ${border||'rgba(255,255,255,0.07)'}`,borderRadius:14,padding:'18px 22px'})
+const card = (border) => ({background:'linear-gradient(135deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01))',border:'1px solid '+(border||'rgba(255,255,255,0.07)'),borderRadius:14,padding:'18px 22px'})
 const btnPrimary = {background:'linear-gradient(135deg,#1d4ed8,#2563eb)',border:'none',borderRadius:10,padding:'11px 24px',color:'#fff',fontWeight:700,fontSize:14,cursor:'pointer'}
 const btnSec = {background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:10,padding:'11px 20px',color:'#94a3b8',fontWeight:600,fontSize:14,cursor:'pointer'}
 
@@ -84,7 +84,7 @@ function WizardVendita({dispositivo,onSalva,onAnnulla}){
       <div style={{background:'#0a0f1e',border:'1px solid rgba(255,255,255,0.1)',borderRadius:20,width:'100%',maxWidth:560,maxHeight:'90vh',overflowY:'auto',fontFamily:'Inter,sans-serif'}}>
         <div style={{padding:'22px 28px 18px',borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
           <div style={{fontSize:16,fontWeight:700,color:'#f1f5f9',marginBottom:4}}>💰 Registra vendita</div>
-          <div style={{fontSize:13,color:'#64748b'}}>{dispositivo.dispositivo_marca} {dispositivo.dispositivo_modello}{dispositivo.dispositivo_imei?` · IMEI ${dispositivo.dispositivo_imei}":''}</div>
+          <div style={{fontSize:13,color:'#64748b'}}>{dispositivo.dispositivo_marca} {dispositivo.dispositivo_modello}{dispositivo.dispositivo_imei ? ` · IMEI ${dispositivo.dispositivo_imei}` : ''}</div>
           <div style={{display:'flex',gap:6,marginTop:14}}>
             {STEPS.map((s,i)=>(
               <div key={i} style={{flex:1,textAlign:'center'}}>
@@ -335,7 +335,7 @@ export default function StoricoDispositivi({showToast}){
 
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))',gap:10,marginBottom:18}}>
         {[['In magazzino',inMag,'#fbbf24'],['Tot. acquistato',fmtE(totAcq),'#f87171'],['Tot. venduto',fmtE(totVend),'#34d399'],['Margine totale',fmtE(totMarg),'#60a5fa'],['IVA su margine',fmtE(totIva),'#fbbf24']].map(([n,v,c])=>(
-          <div key={n} style={{padding:'10px 14px',borderRadius:10,background:'rgba(255,255,255,0.04)',border:`1px solid ${c}33`}}>
+          <div key={n} style={{padding:'10px 14px',borderRadius:10,background:'rgba(255,255,255,0.04)',border:'1px solid '+c+'33'}}>
             <div style={{fontSize:11,color:'#64748b',marginBottom:3}}>{n}</div>
             <div style={{fontFamily:'monospace',fontWeight:700,fontSize:15,color:c}}>{v}</div>
           </div>
