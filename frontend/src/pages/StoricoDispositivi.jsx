@@ -5,7 +5,7 @@ const API = import.meta.env.VITE_API_URL || 'https://magazzino-backend-f7vr.onre
 const IVA = 0.22
 const MESI = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre']
 const TIPI_DISP = ['Smartphone','Tablet','Laptop','Smartwatch','Console','Fotocamera','Altro']
-const MARCHE = ['Apple','Samsung','Xiaomi','Huawei','OnePlus','Google','Sony','LG','Motorola','Nokia','Oppo','Realme','Altra']
+const MARCHE = ['Apple','Samsung','Xiaomi','Huawei','OnePlus','Google','Sony','LG','Motorola','Nokia','Oppo','Realme','Altra']hh
 const CONDIZIONI = [{v:'ottimo',l:'Ottimo'},{v:'buono',l:'Buono'},{v:'discreto',l:'Discreto'},{v:'danneggiato',l:'Danneggiato'}]
 const fmtE = v => '€ '+Number(v||0).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2})
 const oggi = () => new Date().toISOString().slice(0,10)
@@ -110,7 +110,7 @@ function WizardVendita({dispositivo,onSalva,onAnnulla}){
             </Campo>
             {+form.prezzo_vendita>0&&<div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}}>
               {[['Costo acquisto',dispositivo.prezzo_acquisto,'#f87171'],['Margine reale',margine,'#34d399'],['IVA sul margine',ivaReale,'#fbbf24']].map(([n,v,c])=>(
-                <div key={n} style={{padding:'10px 12px',borderRadius:9,background:'rgba(255,255,255,0.04)',border:`1px solid ${c}33`,textAlign:'center'}}>
+              <div key={n} style={{padding:'10px 12px',borderRadius:9,background:'rgba(255,255,255,0.04)',border:'1px solid '+c+'33',textAlign:'center'}}>
                   <div style={{fontSize:10,color:'#64748b',marginBottom:3}}>{n}</div>
                   <div style={{fontFamily:'monospace',fontWeight:700,fontSize:14,color:c}}>{fmtE(v)}</div>
                 </div>
