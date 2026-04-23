@@ -13,6 +13,7 @@ export default function Sidebar({ currentPage, onNavigate, onCreaNuovo }) {
   ]
   const navPlugin = [
     { id:'acquisto',   icon:'◈',  label:'Acquisto dispositivo' },
+    { id:'storico-dispositivi', icon:'📱', label:'Storico Dispositivi' },
     { id:'protezione', icon:'🛡️', label:'Protezione' },
     { id:'valutazione', icon:'🔍', label:'Valutazione Display' },
     { id:'noleggio', icon:'📦', label:'Noleggio', badge:'Subbyx' },
