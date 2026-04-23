@@ -8,6 +8,56 @@ const MARCHE = ['Apple','Samsung','Xiaomi','Huawei','OnePlus','Google','Sony','L
 const COND = [{v:'ottimo',l:'Ottimo ✨'},{v:'buono',l:'Buono 👍'},{v:'discreto',l:'Discreto ⚠️'},{v:'danneggiato',l:'Danneggiato 🔧'}]
 const fmtE = v => '\u20ac '+Number(v||0).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2})
 const oggi = () => new Date().toISOString().slice(0,10)
+async function generaFoglioVendita(dispositivo,vendita){
+  if(!window.jspdf){await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';s.onload=res;s.onerror=rej;document.head.appendChild(s)})}
+  const {jsPDF}=window.jspdf,doc=new jsPDF({unit:'mm',format:'a4'}),W=210,M=20;let y=20
+  doc.setFillColor(30,64,175);doc.rect(0,0,W,18,'F')
+  doc.setTextColor(255,255,255);doc.setFontSize(13);doc.setFont(undefined,'bold')
+  doc.text('FOGLIO DI VENDITA',M,12)
+  doc.setFontSize(9);doc.setFont(undefined,'normal')
+  doc.text('N.'+(vendita.fattura_numero||'—')+'  Data:'+new Date().toLocaleDateString('it-IT'),W-M,12,{align:'right'})
+  y=26;doc.setFillColor(245,247,255);doc.rect(M-2,y-4,W-M*2+4,28,'F')
+  doc.setTextColor(30,64,175);doc.setFontSize(11);doc.setFont(undefined,'bold')
+  doc.text('DISPOSITIVO VENDUTO',M,y+2)
+  doc.setTextColor(0,0,0);doc.setFontSize(9);doc.setFont(undefined,'normal')
+  doc.text('Marca/Modello: '+(dispositivo.dispositivo_marca||'')+' '+(dispositivo.dispositivo_modello||''),M,y+9)
+  if(dispositivo.dispositivo_imei) doc.text('IMEI: '+dispositivo.dispositivo_imei,M,y+15)
+  if(dispositivo.dispositivo_storage) doc.text('Storage: '+dispositivo.dispositivo_storage,M+80,y+15)
+  if(dispositivo.dispositivo_colore) doc.text('Colore: '+dispositivo.dispositivo_colore,M+130,y+15)
+  y+=32
+  doc.setFillColor(240,253,244);doc.rect(M-2,y-4,W-M*2+4,36,'F')
+  doc.setTextColor(21,128,61);doc.setFontSize(11);doc.setFont(undefined,'bold')
+  doc.text('ACQUIRENTE',M,y+2)
+  doc.setTextColor(0,0,0);doc.setFontSize(9);doc.setFont(undefined,'normal')
+  const nomeAcq=vendita.acquirente_tipo==='azienda'?vendita.acquirente_ragione_sociale:((vendita.acquirente_nome||'')+' '+(vendita.acquirente_cognome||'')).trim()
+  doc.text('Nome: '+nomeAcq,M,y+9)
+  if(vendita.acquirente_email) doc.text('Email: '+vendita.acquirente_email,M,y+16)
+  if(vendita.acquirente_telefono) doc.text('Tel: '+vendita.acquirente_telefono,M+90,y+16)
+  if(vendita.acquirente_cf||vendita.acquirente_piva) doc.text('CF/PIVA: '+(vendita.acquirente_cf||vendita.acquirente_piva||''),M,y+23)
+  if(vendita.acquirente_indirizzo) doc.text('Indirizzo: '+(vendita.acquirente_indirizzo||'')+', '+(vendita.acquirente_cap||'')+' '+(vendita.acquirente_citta||''),M,y+30)
+  y+=42
+  doc.setFillColor(255,251,235);doc.rect(M-2,y-4,W-M*2+4,40,'F')
+  doc.setTextColor(146,64,14);doc.setFontSize(11);doc.setFont(undefined,'bold')
+  doc.text('RIEPILOGO ECONOMICO - ART.36',M,y+2)
+  doc.setTextColor(0,0,0);doc.setFontSize(9);doc.setFont(undefined,'normal')
+  doc.text('Prezzo acquisto (da privato): € '+Number(dispositivo.prezzo_acquisto||0).toFixed(2),M,y+10)
+  doc.text('Prezzo di vendita: € '+Number(vendita.prezzo_vendita||0).toFixed(2),M,y+18)
+  doc.setFont(undefined,'bold')
+  doc.text('Margine reale: € '+Number(vendita.margine_art36||0).toFixed(2),M,y+26)
+  doc.text('IVA su margine (22%): € '+Number(vendita.iva_sul_margine||0).toFixed(2),M+80,y+26)
+  doc.setFont(undefined,'normal');y+=46
+  doc.setFillColor(248,250,252);doc.rect(M-2,y-4,W-M*2+4,24,'F')
+  doc.setTextColor(100,116,139);doc.setFontSize(10);doc.setFont(undefined,'bold')
+  doc.text('VENDITORE ORIGINALE (PRIVATO)',M,y+2)
+  doc.setTextColor(0,0,0);doc.setFont(undefined,'normal');doc.setFontSize(9)
+  doc.text('Nome: '+(dispositivo.venditore_nome||'')+' '+(dispositivo.venditore_cognome||''),M,y+10)
+  if(dispositivo.venditore_telefono) doc.text('Tel: '+dispositivo.venditore_telefono,M+90,y+10)
+  y+=28
+  doc.setFillColor(30,64,175);doc.rect(0,287,W,10,'F')
+  doc.setTextColor(255,255,255);doc.setFontSize(7)
+  doc.text('Operatore: '+(vendita.operatore||'—')+'   |   '+new Date().toLocaleString('it-IT'),W/2,292.5,{align:'center'})
+  doc.save('vendita_'+nomeAcq.replace(/\s+/g,'_')+'_'+new Date().toISOString().slice(0,10)+'.pdf')
+}
 const brd = (c) => '1px solid '+c
 const brd33 = (c) => '1px solid '+c+'33'
 const brd44 = (c) => '1px solid '+c+'44'
@@ -102,6 +152,7 @@ function WizardVendita({dispositivo,onSalva,onAnnulla}){
       })
       const d=await r.json()
       if(d.error) throw new Error(d.error)
+      try{await generaFoglioVendita(dispositivo,d)}catch(e){console.warn('PDF err',e)}
       onSalva(d)
     }catch(e){setErrs({global:e.message})}
     finally{setSaving(false)}
