@@ -252,6 +252,10 @@ export default function AcquistoPlugin({api,showToast}) {
         tipo_pagamento:form.tipo,cliente_nome:form.nome,cliente_tel:form.tel,
       })
     }catch{}
+    try{
+      const _A=import.meta.env.VITE_API_URL||'https://magazzino-backend-f7vr.onrender.com'
+      await fetch(_A+'/storico-dispositivi',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({venditore_nome:form.nome,venditore_cognome:'',venditore_telefono:form.tel||'',venditore_doc_numero:form.cf||'',dispositivo_tipo:'Smartphone',dispositivo_marca:s.brand,dispositivo_modello:s.model,dispositivo_imei:form.imei||'',dispositivo_storage:form.storage||s.storage||'',dispositivo_colore:form.colore||'',dispositivo_condizione:typeof condEffettiva==='function'&&condEffettiva()==='A'?'ottimo':typeof condEffettiva==='function'&&condEffettiva()==='C'?'danneggiato':'buono',prezzo_acquisto:prezzoFinale(),operatore:''})})
+    }catch(e){console.warn('SD save:',e.message)}
     upd({step:6});showToast('✓ Acquisto completato!')
   }
 
