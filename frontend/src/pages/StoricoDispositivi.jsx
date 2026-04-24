@@ -10,62 +10,65 @@ const fmtE = v => '\u20ac '+Number(v||0).toLocaleString('it-IT',{minimumFraction
 const oggi = () => new Date().toISOString().slice(0,10)
 async function generaFoglioVendita(dispositivo,vendita){
   if(!window.jspdf){await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';s.onload=res;s.onerror=rej;document.head.appendChild(s)})}
-  const {jsPDF}=window.jspdf,doc=new jsPDF({unit:'mm',format:'a4'}),W=210,M=20;let y=20
-  doc.setFillColor(30,64,175);doc.rect(0,0,W,18,'F')
-  doc.setTextColor(255,255,255);doc.setFontSize(13);doc.setFont(undefined,'bold')
-  doc.text('FOGLIO DI VENDITA',M,12)
-  doc.setFontSize(9);doc.setFont(undefined,'normal')
-  doc.text('N.'+(vendita.fattura_numero||'—')+'  Data:'+new Date().toLocaleDateString('it-IT'),W-M,12,{align:'right'})
-  y=26;doc.setFillColor(245,247,255);doc.rect(M-2,y-4,W-M*2+4,28,'F')
-  doc.setTextColor(30,64,175);doc.setFontSize(11);doc.setFont(undefined,'bold')
-  doc.text('DISPOSITIVO VENDUTO',M,y+2)
-  doc.setTextColor(0,0,0);doc.setFontSize(9);doc.setFont(undefined,'normal')
-  doc.text('Marca/Modello: '+(dispositivo.dispositivo_marca||'')+' '+(dispositivo.dispositivo_modello||''),M,y+9)
-  if(dispositivo.dispositivo_imei) doc.text('IMEI: '+dispositivo.dispositivo_imei,M,y+15)
-  if(dispositivo.dispositivo_storage) doc.text('Storage: '+dispositivo.dispositivo_storage,M+80,y+15)
-  if(dispositivo.dispositivo_colore) doc.text('Colore: '+dispositivo.dispositivo_colore,M+130,y+15)
-  y+=32
-  doc.setFillColor(240,253,244);doc.rect(M-2,y-4,W-M*2+4,36,'F')
-  doc.setTextColor(21,128,61);doc.setFontSize(11);doc.setFont(undefined,'bold')
-  doc.text('ACQUIRENTE',M,y+2)
-  doc.setTextColor(0,0,0);doc.setFontSize(9);doc.setFont(undefined,'normal')
+  const {jsPDF}=window.jspdf,doc=new jsPDF({unit:'mm',format:'a4'}),W=210,M=15;let y=0
+  doc.setFillColor(15,23,42);doc.rect(0,0,W,38,'F')
+  doc.setTextColor(255,255,255);doc.setFontSize(20);doc.setFont(undefined,'bold')
+  doc.text('PatchUp',M,16)
+  doc.setFontSize(8);doc.setFont(undefined,'normal');doc.setTextColor(148,163,184)
+  doc.text('Riparazione e vendita dispositivi usati',M,23)
+  doc.text('Tel: — | info@patchup.it',M,29)
+  doc.setTextColor(255,255,255);doc.setFontSize(10);doc.setFont(undefined,'bold')
+  doc.text('RICEVUTA DI VENDITA',W-M,14,{align:'right'})
+  doc.setFont(undefined,'normal');doc.setFontSize(8);doc.setTextColor(148,163,184)
+  doc.text('N. '+(vendita.fattura_numero||'—'),W-M,20,{align:'right'})
+  doc.text('Data: '+new Date(vendita.data_vendita||Date.now()).toLocaleDateString('it-IT'),W-M,26,{align:'right'})
+  doc.text('Operatore: '+(vendita.operatore||'—'),W-M,32,{align:'right'})
+  y=46
+  doc.setFillColor(241,245,249);doc.rect(M-2,y-4,W-M*2+4,34,'F')
+  doc.setTextColor(30,64,175);doc.setFontSize(9);doc.setFont(undefined,'bold')
+  doc.text('DATI ACQUIRENTE',M,y+2)
+  doc.setTextColor(15,23,42);doc.setFontSize(9);doc.setFont(undefined,'normal')
   const nomeAcq=vendita.acquirente_tipo==='azienda'?vendita.acquirente_ragione_sociale:((vendita.acquirente_nome||'')+' '+(vendita.acquirente_cognome||'')).trim()
-  doc.text('Nome: '+nomeAcq,M,y+9)
-  if(vendita.acquirente_email) doc.text('Email: '+vendita.acquirente_email,M,y+16)
-  if(vendita.acquirente_telefono) doc.text('Tel: '+vendita.acquirente_telefono,M+90,y+16)
-  if(vendita.acquirente_cf||vendita.acquirente_piva) doc.text('CF/PIVA: '+(vendita.acquirente_cf||vendita.acquirente_piva||''),M,y+23)
-  if(vendita.acquirente_indirizzo) doc.text('Indirizzo: '+(vendita.acquirente_indirizzo||'')+', '+(vendita.acquirente_cap||'')+' '+(vendita.acquirente_citta||''),M,y+30)
+  doc.text(nomeAcq,M,y+10)
+  if(vendita.acquirente_cf||vendita.acquirente_piva) doc.text('CF/P.IVA: '+(vendita.acquirente_cf||vendita.acquirente_piva||''),M,y+17)
+  if(vendita.acquirente_indirizzo) doc.text((vendita.acquirente_indirizzo||'')+' '+(vendita.acquirente_cap||'')+' '+(vendita.acquirente_citta||''),M,y+24)
+  if(vendita.acquirente_email) doc.text(vendita.acquirente_email,W-M,y+10,{align:'right'})
+  if(vendita.acquirente_telefono) doc.text(vendita.acquirente_telefono,W-M,y+17,{align:'right'})
   y+=42
-  doc.setFillColor(255,251,235);doc.rect(M-2,y-4,W-M*2+4,40,'F')
-  doc.setTextColor(146,64,14);doc.setFontSize(11);doc.setFont(undefined,'bold')
-  doc.text('RIEPILOGO ECONOMICO - ART.36',M,y+2)
-  doc.setTextColor(0,0,0);doc.setFontSize(9);doc.setFont(undefined,'normal')
-  doc.text('Prezzo acquisto (da privato): € '+Number(dispositivo.prezzo_acquisto||0).toFixed(2),M,y+10)
-  doc.text('Prezzo di vendita: € '+Number(vendita.prezzo_vendita||0).toFixed(2),M,y+18)
-  doc.setFont(undefined,'bold')
-  doc.text('Margine reale: € '+Number(vendita.margine_art36||0).toFixed(2),M,y+26)
-  doc.text('IVA su margine (22%): € '+Number(vendita.iva_sul_margine||0).toFixed(2),M+80,y+26)
-  doc.setFont(undefined,'normal');y+=46
-  doc.setFillColor(248,250,252);doc.rect(M-2,y-4,W-M*2+4,24,'F')
-  doc.setTextColor(100,116,139);doc.setFontSize(10);doc.setFont(undefined,'bold')
-  doc.text('VENDITORE ORIGINALE (PRIVATO)',M,y+2)
-  doc.setTextColor(0,0,0);doc.setFont(undefined,'normal');doc.setFontSize(9)
-  doc.text('Nome: '+(dispositivo.venditore_nome||'')+' '+(dispositivo.venditore_cognome||''),M,y+10)
-  if(dispositivo.venditore_telefono) doc.text('Tel: '+dispositivo.venditore_telefono,M+90,y+10)
-  y+=28
-  doc.setFillColor(30,64,175);doc.rect(0,287,W,10,'F')
-  doc.setTextColor(255,255,255);doc.setFontSize(7)
-  doc.text('Operatore: '+(vendita.operatore||'—')+'   |   '+new Date().toLocaleString('it-IT'),W/2,292.5,{align:'center'})
-  doc.save('vendita_'+nomeAcq.replace(/\s+/g,'_')+'_'+new Date().toISOString().slice(0,10)+'.pdf')
+  doc.setFillColor(255,255,255);doc.setDrawColor(226,232,240);doc.rect(M-2,y-4,W-M*2+4,38,'FD')
+  doc.setTextColor(30,64,175);doc.setFontSize(9);doc.setFont(undefined,'bold')
+  doc.text('DISPOSITIVO VENDUTO',M,y+2)
+  doc.setTextColor(15,23,42);doc.setFontSize(12);doc.setFont(undefined,'bold')
+  doc.text((dispositivo.dispositivo_marca||'')+' '+(dispositivo.dispositivo_modello||''),M,y+12)
+  doc.setFont(undefined,'normal');doc.setFontSize(9);doc.setTextColor(71,85,105)
+  const dets=[]
+  if(dispositivo.dispositivo_storage) dets.push('Storage: '+dispositivo.dispositivo_storage)
+  if(dispositivo.dispositivo_colore) dets.push('Colore: '+dispositivo.dispositivo_colore)
+  if(dispositivo.dispositivo_condizione) dets.push('Condizione: '+dispositivo.dispositivo_condizione)
+  if(dets.length) doc.text(dets.join('   '),M,y+20)
+  if(dispositivo.dispositivo_imei) doc.text('IMEI: '+dispositivo.dispositivo_imei,M,y+28)
+  y+=46
+  doc.setFillColor(30,64,175);doc.rect(M-2,y-4,W-M*2+4,24,'F')
+  doc.setTextColor(255,255,255);doc.setFontSize(10);doc.setFont(undefined,'bold')
+  doc.text('TOTALE PAGATO',M,y+6)
+  doc.setFontSize(20)
+  doc.text('\u20ac '+Number(vendita.prezzo_vendita||0).toFixed(2),W-M,y+10,{align:'right'})
+  doc.setFontSize(7);doc.setFont(undefined,'normal');doc.setTextColor(147,197,253)
+  doc.text('Regime Art.36 D.L.41/95 - IVA inclusa sul margine',M,y+17)
+  y+=32
+  if(vendita.note_vendita){doc.setTextColor(71,85,105);doc.setFontSize(8);doc.text('Note: '+vendita.note_vendita,M,y);y+=8}
+  y=Math.max(y+14,230)
+  doc.setDrawColor(203,213,225);doc.line(M,y,M+65,y)
+  doc.setDrawColor(203,213,225);doc.line(W-M-65,y,W-M,y)
+  doc.setTextColor(148,163,184);doc.setFontSize(7)
+  doc.text('Firma acquirente',M+32,y+5,{align:'center'})
+  doc.text('Timbro e firma PatchUp',W-M-32,y+5,{align:'center'})
+  doc.setFillColor(15,23,42);doc.rect(0,281,W,16,'F')
+  doc.setTextColor(148,163,184);doc.setFontSize(7)
+  doc.text('Documento emesso ai sensi del regime del margine Art.36 D.L.41/95.',W/2,287,{align:'center'})
+  doc.text('Grazie per il tuo acquisto - PatchUp',W/2,293,{align:'center'})
+  doc.save('ricevuta_'+nomeAcq.replace(/\s+/g,'_')+'_'+new Date().toISOString().slice(0,10)+'.pdf')
 }
-const brd = (c) => '1px solid '+c
-const brd33 = (c) => '1px solid '+c+'33'
-const brd44 = (c) => '1px solid '+c+'44'
-
-const INP = {background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.12)',borderRadius:9,padding:'10px 14px',color:'#f1f5f9',fontFamily:'Inter,sans-serif',fontSize:13.5,width:'100%',boxSizing:'border-box',outline:'none'}
-const LBL = {fontSize:11,fontWeight:600,color:'rgba(255,255,255,0.4)',textTransform:'uppercase',letterSpacing:'.07em',display:'block',marginBottom:6}
-const BPRI = {background:'linear-gradient(135deg,#1d4ed8,#2563eb)',border:'none',borderRadius:10,padding:'11px 24px',color:'#fff',fontWeight:700,fontSize:14,cursor:'pointer'}
-const BSEC = {background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:10,padding:'11px 20px',color:'#94a3b8',fontWeight:600,fontSize:14,cursor:'pointer'}
 
 function Campo({label,required,error,children}){
   return(
