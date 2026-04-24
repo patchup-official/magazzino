@@ -10,6 +10,9 @@ const fmtE = v => '\u20ac '+Number(v||0).toLocaleString('it-IT',{minimumFraction
 const oggi = () => new Date().toISOString().slice(0,10)
 const BPRI = {background:'linear-gradient(135deg,#1d4ed8,#2563eb)',border:'none',borderRadius:10,padding:'11px 24px',color:'#fff',fontWeight:700,fontSize:14,cursor:'pointer'}
 const BSEC = {background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:10,padding:'11px 20px',color:'#94a3b8',fontWeight:600,fontSize:14,cursor:'pointer'}
+const brd = (c) => '1px solid '+c
+const brd33 = (c) => '1px solid '+c+'33'
+const brd44 = (c) => '1px solid '+c+'44'
 async function generaFoglioVendita(dispositivo,vendita){
   if(!window.jspdf){await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';s.onload=res;s.onerror=rej;document.head.appendChild(s)})}
   const {jsPDF}=window.jspdf,doc=new jsPDF({unit:'mm',format:'a4'}),W=210,M=15;let y=0
