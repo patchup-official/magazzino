@@ -15,6 +15,13 @@ const lbl = {fontSize:11,fontWeight:600,color:'rgba(255,255,255,0.4)',textTransf
 const btnPrimary = {background:'linear-gradient(135deg,#1d4ed8,#2563eb)',border:'none',borderRadius:10,padding:'11px 24px',color:'#fff',fontWeight:700,fontSize:14,cursor:'pointer'}
 const btnSec = {background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:10,padding:'11px 20px',color:'#94a3b8',fontWeight:600,fontSize:14,cursor:'pointer'}
 
+function generaNumOrdine(){
+  const now=new Date();
+  const ymd=now.getFullYear().toString()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0');
+  const rnd=Math.floor(1000+Math.random()*9000);
+  return 'VND-'+ymd+'-'+rnd;
+}
+
 function Campo({label,required,error,children}){
   return(
     <div style={{display:'flex',flexDirection:'column',gap:4}}>
@@ -28,13 +35,14 @@ function Campo({label,required,error,children}){
 function WizardVendita({dispositivo,onSalva,onAnnulla}){
   const [step,setStep]=useState(0)
   const [form,setForm]=useState({
+    numero_ordine:generaNumOrdine(),
     data_vendita:oggi(),prezzo_vendita:'',
     acquirente_tipo:'privato',
     acquirente_nome:'',acquirente_cognome:'',
     acquirente_email:'',acquirente_telefono:'',
     acquirente_cf:'',acquirente_piva:'',acquirente_ragione_sociale:'',
     acquirente_indirizzo:'',acquirente_cap:'',acquirente_citta:'',acquirente_provincia:'',
-    fattura_numero:'',operatore:'',note_vendita:''
+    operatore:'',note_vendita:''
   })
   const [errors,setErrors]=useState({})
   const [saving,setSaving]=useState(false)
@@ -46,7 +54,7 @@ function WizardVendita({dispositivo,onSalva,onAnnulla}){
   const margine=Math.max(0,pv-pa)
   const ivaReale=margine/(1+IVA)*IVA
 
-  const STEPS=['Prezzo','Acquirente','Fattura','Conferma']
+  const STEPS=['Prezzo','Acquirente','Conferma']
 
   function valida(s){
     const e={}
@@ -65,7 +73,7 @@ function WizardVendita({dispositivo,onSalva,onAnnulla}){
       if(!form.acquirente_indirizzo)e.acquirente_indirizzo='Indirizzo obbligatorio'
       if(!form.acquirente_citta)e.acquirente_citta='Citta obbligatoria'
     }
-    if(s===2){if(!form.fattura_numero)e.fattura_numero='Numero fattura obbligatorio'}
+    // step 2 = conferma, nessuna validazione aggiuntiva
     setErrors(e)
     return Object.keys(e).length===0
   }
@@ -79,7 +87,7 @@ function WizardVendita({dispositivo,onSalva,onAnnulla}){
       const r=await fetch(API+'/storico-dispositivi/'+dispositivo.id+'/vendi',{
         method:'PUT',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({...form,prezzo_vendita:pv})
+        body:JSON.stringify({...form,prezzo_vendita:pv,fattura_numero:form.numero_ordine})
       })
       const d=await r.json()
       if(!r.ok||d.error)throw new Error(d.error||'Errore server '+r.status)
@@ -87,6 +95,71 @@ function WizardVendita({dispositivo,onSalva,onAnnulla}){
     }catch(e){
       setErrors({global:e.message})
     }finally{setSaving(false)}
+  }
+
+  function generaPdfVendita(){
+    const nom = form.acquirente_tipo==='azienda'?form.acquirente_ragione_sociale:(form.acquirente_nome+' '+form.acquirente_cognome);
+    const pa = dispositivo?.prezzo_acquisto||0;
+    const pv = parseFloat(form.prezzo_vendita)||0;
+    const margine = Math.max(0,pv-pa);
+    const ivaReale = margine/(1+IVA)*IVA;
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Documento Vendita ${form.numero_ordine}</title>
+<style>
+  body{font-family:Arial,sans-serif;font-size:12px;margin:30px;color:#222}
+  h1{font-size:18px;margin-bottom:4px}
+  .disclaimer{background:#fff3cd;border:2px solid #f59e0b;border-radius:6px;padding:12px 16px;margin:16px 0;font-weight:bold;font-size:13px;color:#92400e;text-align:center}
+  table{border-collapse:collapse;width:100%;margin:12px 0}
+  th,td{border:1px solid #ccc;padding:7px 10px;text-align:left}
+  th{background:#f0f0f0}
+  .section{margin-top:18px;font-weight:bold;font-size:13px;border-bottom:2px solid #333;padding-bottom:3px;margin-bottom:8px}
+  .totale{font-weight:bold;background:#e8f5e9}
+  .footer{margin-top:30px;font-size:10px;color:#888;border-top:1px solid #ccc;padding-top:10px}
+  @media print{body{margin:10px}}
+</style></head><body>
+<h1>Documento di Vendita</h1>
+<div style="font-size:13px;color:#555;margin-bottom:8px">N. Ordine: <strong>${form.numero_ordine}</strong> &nbsp;|&nbsp; Data: <strong>${form.data_vendita}</strong></div>
+
+<div class="disclaimer">
+  ⚠️ ATTENZIONE: QUESTO DOCUMENTO NON VALE AI FINI FISCALI ⚠️<br>
+  Il presente documento è un riepilogo interno della transazione commerciale.<br>
+  La fattura fiscale verrà emessa separatamente secondo le disposizioni di legge.
+</div>
+
+<div class="section">VENDITORE (Negozio)</div>
+<table><tr><th>Operatore</th><td>${form.operatore||'—'}</td></tr></table>
+
+<div class="section">DISPOSITIVO VENDUTO</div>
+<table>
+  <tr><th>Tipo</th><td>${dispositivo.dispositivo_tipo}</td><th>Marca / Modello</th><td>${dispositivo.dispositivo_marca} ${dispositivo.dispositivo_modello}</td></tr>
+  <tr><th>IMEI / Seriale</th><td>${dispositivo.dispositivo_imei||'—'}</td><th>Colore / Storage</th><td>${dispositivo.dispositivo_colore||'—'} ${dispositivo.dispositivo_storage||''}</td></tr>
+  <tr><th>Condizione</th><td>${dispositivo.dispositivo_condizione}</td><th>Note</th><td>${dispositivo.dispositivo_note||'—'}</td></tr>
+</table>
+
+<div class="section">ACQUIRENTE</div>
+<table>
+  <tr><th>Nome / Ragione Sociale</th><td>${nom}</td><th>CF / P.IVA</th><td>${form.acquirente_cf||form.acquirente_piva||'—'}</td></tr>
+  <tr><th>Indirizzo</th><td>${form.acquirente_indirizzo}, ${form.acquirente_cap} ${form.acquirente_citta} (${form.acquirente_provincia})</td><th>Email</th><td>${form.acquirente_email}</td></tr>
+  <tr><th>Telefono</th><td colspan="3">${form.acquirente_telefono||'—'}</td></tr>
+</table>
+
+<div class="section">RIEPILOGO ECONOMICO (Art. 36 D.P.R. 633/1972)</div>
+<table>
+  <tr><th>Prezzo acquisto da privato</th><td style="text-align:right">€ ${pa.toFixed(2)}</td></tr>
+  <tr><th>Prezzo di vendita</th><td style="text-align:right">€ ${pv.toFixed(2)}</td></tr>
+  <tr><th>Margine di utile (base imponibile)</th><td style="text-align:right">€ ${margine.toFixed(2)}</td></tr>
+  <tr class="totale"><th>IVA dovuta su margine (22%)</th><td style="text-align:right">€ ${ivaReale.toFixed(2)}</td></tr>
+</table>
+
+${form.note_vendita?'<div class="section">NOTE</div><p>'+form.note_vendita+'</p>':''}
+
+<div class="footer">
+  Documento generato dalla piattaforma Enown/Magazzino il ${new Date().toLocaleString('it-IT')} — N. Ordine ${form.numero_ordine}<br>
+  <strong>QUESTO DOCUMENTO NON SOSTITUISCE LA FATTURA FISCALE</strong> e non ha valore ai fini tributari, IVA o di qualsiasi altra imposta.
+  La fattura verrà emessa separatamente e inviata a ${form.acquirente_email}.
+</div>
+</body></html>`;
+    const w=window.open('','_blank');
+    if(w){w.document.write(html);w.document.close();setTimeout(()=>w.print(),500);}
   }
 
   if(!dispositivo)return null
@@ -211,27 +284,16 @@ function WizardVendita({dispositivo,onSalva,onAnnulla}){
                   <input style={inp} value={form.acquirente_provincia} onChange={e=>set('acquirente_provincia',e.target.value.toUpperCase())} placeholder="TO" maxLength={2}/>
                 </Campo>
               </div>
+              <Campo label="Operatore">
+                <input style={inp} value={form.operatore} onChange={e=>set('operatore',e.target.value)} placeholder="Chi ha effettuato la vendita"/>
+              </Campo>
+              <Campo label="Note aggiuntive">
+                <textarea style={{...inp,resize:'vertical',minHeight:60}} value={form.note_vendita} onChange={e=>set('note_vendita',e.target.value)} placeholder="Note..."/>
+              </Campo>
             </div>
           )}
 
           {step===2&&(
-            <div style={{display:'flex',flexDirection:'column',gap:14}}>
-              <div style={{padding:'12px 16px',borderRadius:10,background:'rgba(59,130,246,0.08)',border:'1px solid rgba(59,130,246,0.25)',fontSize:13,color:'#94a3b8',lineHeight:1.6}}>
-                Ricordati di inviare la fattura a {form.acquirente_email}
-              </div>
-              <Campo label="Numero fattura" required error={errors.fattura_numero}>
-                <input style={inp} value={form.fattura_numero} autoFocus onChange={e=>{set('fattura_numero',e.target.value);clr('fattura_numero')}} placeholder="2026/001"/>
-              </Campo>
-              <Campo label="Operatore">
-                <input style={inp} value={form.operatore} onChange={e=>set('operatore',e.target.value)} placeholder="Chi ha effettuato la vendita"/>
-              </Campo>
-              <Campo label="Note">
-                <textarea style={{...inp,resize:'vertical',minHeight:70}} value={form.note_vendita} onChange={e=>set('note_vendita',e.target.value)} placeholder="Note aggiuntive..."/>
-              </Campo>
-            </div>
-          )}
-
-          {step===3&&(
             <div style={{display:'flex',flexDirection:'column',gap:12}}>
               <div style={{fontSize:15,fontWeight:700,color:'#f1f5f9',marginBottom:4}}>Riepilogo vendita</div>
               <div style={{padding:'14px 18px',background:'rgba(59,130,246,0.06)',border:'1px solid rgba(59,130,246,0.2)',borderRadius:12}}>
@@ -247,17 +309,27 @@ function WizardVendita({dispositivo,onSalva,onAnnulla}){
                 <div style={{display:'flex',justifyContent:'space-between',padding:'5px 0'}}><span style={{fontSize:13,color:'#94a3b8'}}>IVA da versare (22% su margine)</span><span style={{fontFamily:'monospace',fontWeight:700,color:'#fbbf24'}}>{fmtE(ivaReale)}</span></div>
               </div>
               <div style={{padding:'14px 18px',background:'rgba(168,85,247,0.06)',border:'1px solid rgba(168,85,247,0.2)',borderRadius:12}}>
-                <div style={{fontSize:11,color:'#c084fc',fontWeight:700,marginBottom:6,textTransform:'uppercase'}}>Acquirente - Fattura n {form.fattura_numero}</div>
+                <div style={{fontSize:11,color:'#c084fc',fontWeight:700,marginBottom:6,textTransform:'uppercase'}}>Acquirente</div>
                 <div style={{fontSize:14,fontWeight:600,color:'#f1f5f9'}}>{form.acquirente_tipo==='azienda'?form.acquirente_ragione_sociale:form.acquirente_nome+' '+form.acquirente_cognome}</div>
                 <div style={{fontSize:12,color:'#64748b',marginTop:2}}>{form.acquirente_email} - {form.acquirente_citta}{form.acquirente_provincia?' ('+form.acquirente_provincia+')':''}</div>
                 {(form.acquirente_cf||form.acquirente_piva)&&<div style={{fontSize:12,color:'#64748b'}}>{form.acquirente_cf||form.acquirente_piva}</div>}
               </div>
             </div>
+
+            <div style={{padding:'10px 14px',background:'rgba(251,191,36,0.08)',border:'1px solid rgba(251,191,36,0.25)',borderRadius:8,fontSize:12,color:'#fbbf24',textAlign:'center'}}>
+              N. Ordine: <strong>{form.numero_ordine}</strong>
+            </div>
+            <button onClick={generaPdfVendita}
+              style={{width:'100%',padding:'10px',borderRadius:9,cursor:'pointer',fontSize:13,fontWeight:700,
+                background:'rgba(59,130,246,0.15)',border:'1px solid rgba(59,130,246,0.3)',color:'#60a5fa'}}>
+              📄 Genera documento di vendita (PDF)
+            </button>
+          </div>
           )}
 
           <div style={{display:'flex',justifyContent:'space-between',marginTop:20,paddingTop:16,borderTop:'1px solid rgba(255,255,255,0.07)'}}>
             <button onClick={step===0?onAnnulla:()=>setStep(s=>s-1)} style={btnSec}>{step===0?'Annulla':'Indietro'}</button>
-            {step<3
+            {step<2
               ?<button onClick={avanti} style={btnPrimary}>Avanti</button>
               :<button onClick={conferma} disabled={saving} style={{...btnPrimary,background:saving?'#1e40af':'linear-gradient(135deg,#15803d,#16a34a)',opacity:saving?0.7:1}}>{saving?'Salvataggio...':'Conferma vendita'}</button>
             }
