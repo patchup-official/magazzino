@@ -562,9 +562,9 @@ export default function StoricoDispositivi({showToast,onNavigate}){
         <div style={{textAlign:'center',color:'#475569',padding:60}}>Caricamento...</div>
       ):lista.length===0?(
         <div style={{textAlign:'center',color:'#475569',padding:60,fontSize:14}}>
-          {tab==='magazzino'?'Nessun dispositivo in magazzino — registra il primo acquisto!':'Nessun record trovato per il periodo selezionato'}
+          {tab==='magazzino'?'Nessun dispositivo in magazzino':'Nessun record trovato per il periodo selezionato'}
           <br/>
-          <button onClick={()=>{setEditItem(null);setShowAcq(true)}} style={{...BPRI,marginTop:16,fontSize:13}}>+ Registra acquisto</button>
+          <button onClick={()=>onNavigate&&onNavigate('acquisto')} style={{...BPRI,marginTop:16,fontSize:13}}>+ Vai ad Acquisto Dispositivo</button>
         </div>
       ):(
         <div style={{display:'flex',flexDirection:'column',gap:8}}>
