@@ -439,7 +439,7 @@ function FormAcquisto({onSalva,onAnnulla,editItem}){
 }
 
 // ── MAIN PAGE ──────────────────────────────────────────────
-export default function StoricoDispositivi({showToast}){
+export default function StoricoDispositivi({showToast,onNavigate}){
   const [tab,setTab]=useState('magazzino')
   const [lista,setLista]=useState([])
   const [loading,setLoading]=useState(false)
@@ -507,7 +507,7 @@ export default function StoricoDispositivi({showToast}){
           <h2 style={{fontSize:20,fontWeight:700,color:'#f1f5f9',margin:0}}>Storico Dispositivi</h2>
           <p style={{color:'#64748b',fontSize:13,margin:'4px 0 0'}}>Acquisto da privati · Vendita con fattura · Art.36 margine reale</p>
         </div>
-        <button onClick={()=>{setEditItem(null);setShowAcq(true)}} style={BPRI}>+ Nuovo acquisto</button>
+        <button onClick={()=>onNavigate&&onNavigate('acquisto')} style={BPRI}>+ Acquisto dispositivo</button>
       </div>
 
       <div style={{display:'flex',gap:0,borderBottom:'1px solid rgba(255,255,255,0.07)',marginBottom:20}}>
