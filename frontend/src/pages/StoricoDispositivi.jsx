@@ -320,7 +320,7 @@ ${form.note_vendita?'<div class="section">NOTE</div><p>'+form.note_vendita+'</p>
               <button onClick={generaPdfVendita}
                 style={{width:'100%',padding:'10px',borderRadius:9,cursor:'pointer',fontSize:13,fontWeight:700,
                   background:'rgba(59,130,246,0.15)',border:'1px solid rgba(59,130,246,0.3)',color:'#60a5fa'}}>
-                Genera documento PDF
+                📄 Genera documento di vendita (PDF)
               </button>
             </div>
           )}
