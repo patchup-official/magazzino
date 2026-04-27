@@ -314,17 +314,15 @@ ${form.note_vendita?'<div class="section">NOTE</div><p>'+form.note_vendita+'</p>
                 <div style={{fontSize:12,color:'#64748b',marginTop:2}}>{form.acquirente_email} - {form.acquirente_citta}{form.acquirente_provincia?' ('+form.acquirente_provincia+')':''}</div>
                 {(form.acquirente_cf||form.acquirente_piva)&&<div style={{fontSize:12,color:'#64748b'}}>{form.acquirente_cf||form.acquirente_piva}</div>}
               </div>
+              <div style={{padding:'10px 14px',background:'rgba(251,191,36,0.08)',border:'1px solid rgba(251,191,36,0.25)',borderRadius:8,fontSize:12,color:'#fbbf24',textAlign:'center'}}>
+                N. Ordine: <strong>{form.numero_ordine}</strong>
+              </div>
+              <button onClick={generaPdfVendita}
+                style={{width:'100%',padding:'10px',borderRadius:9,cursor:'pointer',fontSize:13,fontWeight:700,
+                  background:'rgba(59,130,246,0.15)',border:'1px solid rgba(59,130,246,0.3)',color:'#60a5fa'}}>
+                Genera documento PDF
+              </button>
             </div>
-
-            <div style={{padding:'10px 14px',background:'rgba(251,191,36,0.08)',border:'1px solid rgba(251,191,36,0.25)',borderRadius:8,fontSize:12,color:'#fbbf24',textAlign:'center'}}>
-              N. Ordine: <strong>{form.numero_ordine}</strong>
-            </div>
-            <button onClick={generaPdfVendita}
-              style={{width:'100%',padding:'10px',borderRadius:9,cursor:'pointer',fontSize:13,fontWeight:700,
-                background:'rgba(59,130,246,0.15)',border:'1px solid rgba(59,130,246,0.3)',color:'#60a5fa'}}>
-              📄 Genera documento di vendita (PDF)
-            </button>
-          </div>
           )}
 
           <div style={{display:'flex',justifyContent:'space-between',marginTop:20,paddingTop:16,borderTop:'1px solid rgba(255,255,255,0.07)'}}>
