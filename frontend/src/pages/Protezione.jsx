@@ -15,14 +15,9 @@ const TIPI_DISPOSITIVO = [
   { id: 'altro',      label: 'Altro',      emoji: '📦', brands: ['Altro'] },
 ]
 
-const COPERTURE_DISPONIBILI = [
-  { id: 'garanzia',    label: 'Garanzia estesa',       emoji: '🔧' },
-  { id: 'danni',       label: 'Danni accidentali',     emoji: '💥' },
-  { id: 'schermo',     label: 'Rottura schermo',       emoji: '📱' },
-  { id: 'pezzi',       label: 'Sostituzione pezzi',    emoji: '🔩' },
-  { id: 'furto',       label: 'Furto / Smarrimento',   emoji: '🔐' },
-  { id: 'priorita',    label: 'Assistenza prioritaria', emoji: '⚡' },
-]
+const DEFAULT_COPERTURE = ['Garanzia estesa','Danni accidentali','Rottura schermo','Sostituzione pezzi','Furto / Smarrimento','Assistenza prioritaria']
+function loadCoperture(){ try{ const s=localStorage.getItem('coperture_disponibili'); return s?JSON.parse(s):DEFAULT_COPERTURE; }catch{ return DEFAULT_COPERTURE; } }
+function saveCoperture(list){ try{ localStorage.setItem('coperture_disponibili',JSON.stringify(list)); }catch{} }
 
 // ── Componenti UI ────────────────────────────────────────────────────────────
 
@@ -477,7 +472,9 @@ export default function Protezione({ api, showToast }) {
   const [showPianoForm, setShowPianoForm] = useState(false)
   const [pianoForm, setPianoForm] = useState({ nome:'', prezzo:'', durata_mesi:'12', coperture:[] })
   const [savingPiano, setSavingPiano] = useState(false)
-  const COPERTURE_DISPONIBILI = ['Schermo rotto','Danni accidentali','Allagamento','Furto','Batteria','Malfunzionamenti']
+  const [copertureLista, setCopertureLista] = useState(loadCoperture)
+  const [nuovaCopertura, setNuovaCopertura] = useState('')
+  const COPERTURE_DISPONIBILI = copertureLista
 
   useEffect(() => { fetchAll() }, [])
 
@@ -532,6 +529,22 @@ export default function Protezione({ api, showToast }) {
   const toggleCopertura = (c) => {
     setPianoForm(f => ({...f, coperture: f.coperture.includes(c) ? f.coperture.filter(x=>x!==c) : [...f.coperture, c]}))
   }
+  const aggiungiCopertura = () => {
+    const n = nuovaCopertura.trim()
+    if(!n) return
+    if(copertureLista.includes(n)) return showToast('Copertura già presente','error')
+    const nuova = [...copertureLista, n]
+    setCopertureLista(nuova); saveCoperture(nuova); setNuovaCopertura('')
+    showToast('Copertura aggiunta')
+  }
+  const eliminaCopertura = (c) => {
+    if(!confirm('Eliminare la copertura "'+c+'"?')) return
+    const nuova = copertureLista.filter(x=>x!==c)
+    setCopertureLista(nuova); saveCoperture(nuova)
+    // Rimuovi anche dai piani che la usano
+    setPianoForm(f=>({...f, coperture: f.coperture.filter(x=>x!==c)}))
+    showToast('Copertura eliminata')
+  }
   const deleteProtezione = async (id) => {
     if (!confirm('Eliminare questa protezione?')) return
     setProtezioni(prev => prev.filter(p => p.id !== id))
@@ -550,7 +563,7 @@ export default function Protezione({ api, showToast }) {
   return (
     <div className="animate-fade-in">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}}>
         <div>
           <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 3 }}>🛡️ Protezione Dispositivo</div>
           <div style={{ fontSize: 13, color: '#64748b' }}>Gestione protezioni attive per i tuoi clienti</div>
@@ -768,6 +781,40 @@ export default function Protezione({ api, showToast }) {
               </div>
             )}
           </div>
+          {/* Card coperture */}
+          <div style={{padding:'18px 22px',borderRadius:14,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)'}}>
+            <div style={{marginBottom:16}}>
+              <div style={{fontSize:15,fontWeight:700,color:'#f1f5f9'}}>🛡️ Coperture disponibili</div>
+              <div style={{fontSize:12,color:'#64748b',marginTop:3}}>Definisci le coperture selezionabili quando crei o modifichi un piano</div>
+            </div>
+            {/* Lista coperture */}
+            <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:16}}>
+              {copertureLista.map(c=>(
+                <div key={c} style={{display:'flex',alignItems:'center',gap:6,padding:'6px 12px',borderRadius:20,background:'rgba(59,130,246,0.1)',border:'1px solid rgba(59,130,246,0.25)'}}>
+                  <span style={{fontSize:13,color:'#93c5fd'}}>{c}</span>
+                  <button onClick={()=>eliminaCopertura(c)}
+                    style={{background:'none',border:'none',cursor:'pointer',color:'#64748b',fontSize:14,lineHeight:1,padding:'0 2px'}}
+                    title="Elimina">×</button>
+                </div>
+              ))}
+              {copertureLista.length===0&&<span style={{fontSize:13,color:'#475569'}}>Nessuna copertura configurata</span>}
+            </div>
+            {/* Aggiungi nuova */}
+            <div style={{display:'flex',gap:8,alignItems:'center'}}>
+              <input value={nuovaCopertura} onChange={e=>setNuovaCopertura(e.target.value)}
+                onKeyDown={e=>e.key==='Enter'&&aggiungiCopertura()}
+                style={{...inp2,flex:1}} placeholder="Es. Allagamento, Batteria, Ossidazione..."
+                maxLength={50}/>
+              <button onClick={aggiungiCopertura}
+                style={{padding:'9px 18px',borderRadius:9,background:'#3b82f6',border:'none',color:'#fff',fontSize:13,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>
+                + Aggiungi
+              </button>
+            </div>
+            <div style={{fontSize:11,color:'#475569',marginTop:8}}>
+              Premi Invio o clicca Aggiungi. Le coperture vengono salvate localmente in questo browser.
+            </div>
+          </div>
+
           <div style={{padding:'16px 20px',borderRadius:12,background:'rgba(255,255,255,0.02)',border:'1px dashed rgba(255,255,255,0.08)',color:'#475569',fontSize:13,textAlign:'center'}}>
             Altre categorie di impostazioni in arrivo (Notifiche, Template email, Account...)
           </div>
