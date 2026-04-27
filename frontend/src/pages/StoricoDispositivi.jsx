@@ -42,10 +42,7 @@ function buildPdfHtml(disp, form, pa, pv, margine, ivaReale, nom, numOrdine, isR
   const r2='<tr><th>Nome/Ragione Sociale</th><td>'+nom+'</td><th>CF/PIVA</th><td>'+cfp+'</td></tr>'
     +'<tr><th>Indirizzo</th><td>'+addr+'</td><th>Email</th><td>'+email+'</td></tr>'
     +'<tr><th>Tel</th><td colspan="3">'+tel+'</td></tr>'
-  const r3='<tr><th>Prezzo acquisto da privato</th><td style="text-align:right">euro '+pa.toFixed(2)+'</td></tr>'
-    +'<tr><th>Prezzo di vendita</th><td style="text-align:right">euro '+pv.toFixed(2)+'</td></tr>'
-    +'<tr><th>Margine (base imponibile)</th><td style="text-align:right">euro '+margine.toFixed(2)+'</td></tr>'
-    +'<tr class="tot"><th>IVA su margine (22%)</th><td style="text-align:right">euro '+ivaReale.toFixed(2)+'</td></tr>'
+  const r3='<tr><th>Prezzo di acquisto</th><td style="text-align:right;font-weight:bold">euro '+pv.toFixed(2)+'</td></tr>'
   const nb=note?'<div class="sec">NOTE</div><p>'+note+'</p>':''
   const ft='Generato da Enown/Magazzino il '+new Date().toLocaleString('it-IT')+' N.Ordine '+numOrdine
   return '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Doc '+numOrdine+'</title><style>'+css+'</style></head><body>'
@@ -54,7 +51,7 @@ function buildPdfHtml(disp, form, pa, pv, margine, ivaReale, nom, numOrdine, isR
     +'<div class="sec">VENDITORE</div><table><tr><th>Operatore</th><td>'+op+'</td></tr></table>'
     +'<div class="sec">DISPOSITIVO VENDUTO</div><table>'+r1+'</table>'
     +'<div class="sec">ACQUIRENTE</div><table>'+r2+'</table>'
-    +'<div class="sec">RIEPILOGO ECONOMICO (Art. 36)</div><table>'+r3+'</table>'
+    +'<div class="sec">RIEPILOGO ACQUISTO</div><table>'+r3+'</table>'
     +nb
     +'<div class="ft">'+ft+'<br>QUESTO DOCUMENTO NON SOSTITUISCE LA FATTURA FISCALE.</div>'
     +'</body></html>'
