@@ -563,7 +563,7 @@ export default function Protezione({ api, showToast }) {
   return (
     <div className="animate-fade-in">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div>
           <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 3 }}>🛡️ Protezione Dispositivo</div>
           <div style={{ fontSize: 13, color: '#64748b' }}>Gestione protezioni attive per i tuoi clienti</div>
