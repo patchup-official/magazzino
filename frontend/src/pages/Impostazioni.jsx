@@ -129,7 +129,7 @@ function TipiPage({onBack,showToast}){
   </div>)}
 
 // === SOTTOPAGINA PROTEZIONE ===
-function ProtPage({onBack,showToast,api}){
+function ProtPage({onBack,showToast,api,initialTab}){
   const [piani,setPiani]=useState([])
   const [cop,setCop]=useState(()=>load('coperture_disponibili',DEF_COP))
   const [showForm,setShowForm]=useState(false)
@@ -137,9 +137,9 @@ function ProtPage({onBack,showToast,api}){
   const [form,setForm]=useState({nome:'',prezzo:'',durata_mesi:'12',coperture:[]})
   const [saving,setSaving]=useState(false)
   const [newCop,setNewCop]=useState('')
-  const [sub,setSub]=useState('piani')
-  useEffect(()=>{fetch(api+'/piani').then(r=>r.ok?r.json():[]).then(d=>setPiani(Array.isArray(d)?d:[])).catch(()=>{});},[api])
-  const salvaP=async()=>{if(!form.nome||!form.prezzo)return showToast('Campi obbligatori','error');setSaving(true);try{const body=JSON.stringify({...form,prezzo:+form.prezzo,durata_mesi:+form.durata_mesi});if(editItem){await fetch(api+'/piani/'+editItem.id,{method:'PUT',headers:{'Content-Type':'application/json'},body})}else{await fetch(api+'/piani',{method:'POST',headers:{'Content-Type':'application/json'},body})};const res=await fetch(api+'/piani').then(r=>r.json());setPiani(Array.isArray(res)?res:[]);setShowForm(false);setEditItem(null);setForm({nome:'',prezzo:'',durata_mesi:'12',coperture:[]});showToast(editItem?'Piano aggiornato':'Piano creato')}catch{showToast('Errore salvataggio','error')}finally{setSaving(false)}}
+  const [sub,setSub]=useState(initialTab||'piani')
+  useEffect(()=>{fetch(api+'/piani').then(r=>r.ok?r.json():[]).then(setPiani).catch(()=>{});},[api])
+  const salvaP=async()=>{if(!form.nome||!form.prezzo)return showToast('Campi obbligatori','error');setSaving(true);try{const body=JSON.stringify({...form,prezzo:+form.prezzo,durata_mesi:+form.durata_mesi});if(editItem){await fetch(api+'/piani/'+editItem.id,{method:'PUT',headers:{'Content-Type':'application/json'},body})}else{await fetch(api+'/piani',{method:'POST',headers:{'Content-Type':'application/json'},body})};const res=await fetch(api+'/piani').then(r=>r.json());setPiani(res);setShowForm(false);setEditItem(null);setForm({nome:'',prezzo:'',durata_mesi:'12',coperture:[]});showToast(editItem?'Piano aggiornato':'Piano creato')}catch{showToast('Errore salvataggio','error')}finally{setSaving(false)}}
   const delP=async(id)=>{if(!confirm('Eliminare questo piano di protezione?'))return;await fetch(api+'/piani/'+id,{method:'DELETE'});setPiani(piani.filter(p=>p.id!==id));showToast('Piano eliminato')}
   const togC=(c)=>setForm(f=>({...f,coperture:f.coperture.includes(c)?f.coperture.filter(x=>x!==c):[...f.coperture,c]}))
   const addC=()=>{const n=newCop.trim();if(!n)return;if(cop.includes(n))return showToast('Copertura gia presente','error');const nc=[...cop,n];setCop(nc);save('coperture_disponibili',nc);setNewCop('');showToast('Copertura aggiunta')}
@@ -196,8 +196,8 @@ function ProtPage({onBack,showToast,api}){
 // === PAGINA PRINCIPALE ===
 export default function Impostazioni({api,showToast}){
   const [page,setPage]=useState(null)
-  if(page==='tipi-servizio') return <TipiPage onBack={()=>setPage(null)} showToast={showToast}/>
-  if(page==='protezione') return <ProtPage onBack={()=>setPage(null)} showToast={showToast} api={api}/>
+  if(page?.id==='tipi-servizio') return <TipiPage onBack={()=>setPage(null)} showToast={showToast}/>
+  if(page?.id==='protezione') return <ProtPage onBack={()=>setPage(null)} showToast={showToast} api={api} initialTab={page.tab}/>
   const tipiN=load('tipi_servizio',DEF_TIPI).length
   const copN=load('coperture_disponibili',DEF_COP).length
   return(
@@ -219,8 +219,8 @@ export default function Impostazioni({api,showToast}){
       {/* SEZIONE PROTEZIONE */}
       <div style={{fontSize:11,fontWeight:700,color:'#475569',textTransform:'uppercase',letterSpacing:'.1em',padding:'20px 4px 10px',fontFamily:F}}>Protezione Dispositivo</div>
       <Section>
-        <SettRow icon='📋' iconBg='linear-gradient(135deg,#0891b2,#0e7490)' label='Piani di protezione' sub='Crea e modifica i piani offerti ai clienti' onPress={()=>setPage('protezione')}/>
-        <SettRow icon='🛡️' iconBg='linear-gradient(135deg,#059669,#047857)' label='Coperture disponibili' sub='Definisci le coperture selezionabili' badge={copN+' attive'} onPress={()=>setPage('protezione')} last/>
+        <SettRow icon='📋' iconBg='linear-gradient(135deg,#0891b2,#0e7490)' label='Piani di protezione' sub='Crea e modifica i piani offerti ai clienti' onPress={()=>setPage({id:'protezione',tab:'piani'})}/>
+        <SettRow icon='🛡️' iconBg='linear-gradient(135deg,#059669,#047857)' label='Coperture disponibili' sub='Definisci le coperture selezionabili' badge={copN+' attive'} onPress={()=>setPage({id:'protezione',tab:'coperture'})} last/>
       </Section>
 
       {/* SEZIONE NEGOZIO */}
