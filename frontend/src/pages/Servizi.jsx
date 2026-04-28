@@ -7,7 +7,7 @@ import ClienteSelector from '../components/ClienteSelector'
 
 const PRIORITA = { normale:'rgba(100,116,139,0.15)|#94a3b8', alta:'rgba(234,179,8,0.15)|#facc15', urgente:'rgba(239,68,68,0.15)|#f87171' }
 
-const TIPI_SERVIZIO = [
+const DEFAULT_TIPI = [
   { id:'sblocco', icon:'🔓', nome:'Sblocco dispositivo', desc:'Sblocco operatore, codici unlock', prezzo_base:25 },
   { id:'diagnostica', icon:'🔍', nome:'Diagnostica', desc:'Test funzionalità, valutazione problemi', prezzo_base:15 },
   { id:'aggiornamento', icon:'⬆️', nome:'Aggiornamento SW', desc:'iOS, Android, firmware update', prezzo_base:20 },
@@ -17,6 +17,9 @@ const TIPI_SERVIZIO = [
   { id:'configurazione', icon:'⚙️', nome:'Configurazione', desc:'Setup iniziale, trasferimento dati', prezzo_base:25 },
   { id:'altro', icon:'🔧', nome:'Altro servizio', desc:'Servizio personalizzato', prezzo_base:20 }
 ]
+function loadTipi(){ try{ const s=localStorage.getItem('tipi_servizio'); return s?JSON.parse(s):DEFAULT_TIPI; }catch{ return DEFAULT_TIPI; } }
+function saveTipi(list){ try{ localStorage.setItem('tipi_servizio',JSON.stringify(list)); }catch{} }
+let TIPI_SERVIZIO = loadTipi()
 
 const Badge = ({label, color='#475569', bg='rgba(71,85,105,0.15)'}) => (
   <span style={{ background:bg, color, padding:'2px 8px', borderRadius:20, fontSize:11, fontWeight:500 }}>{label}</span>
@@ -188,6 +191,12 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
   const [filter, setFilter] = useState('in_corso')
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState(null)
+  const [mainTab, setMainTab] = useState('servizi')
+  const [tipiLista, setTipiLista] = useState(loadTipi)
+  const [showTipoForm, setShowTipoForm] = useState(false)
+  const [editTipo, setEditTipo] = useState(null)
+  const [tipoForm, setTipoForm] = useState({nome:'',icon:'🔧',desc:'',prezzo_base:''})
+  const EMOJI_OPZIONI = ['🔧','🔓','🔍','💾','🛡️','🧽','⚙️','⬆️','📱','🔋','💡','🖥️','⌨️','🖨️','📷','🎮','🎧','📡','🔌','💳']
 
   const autoActionHandled = useRef(false)
   useEffect(() => {
@@ -199,6 +208,28 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
   }, [autoAction])
 
   useEffect(() => { fetchServizi() }, [])
+
+  const salvaTipo = () => {
+    if(!tipoForm.nome.trim()) return showToast('Nome obbligatorio','error')
+    if(!tipoForm.prezzo_base || +tipoForm.prezzo_base<0) return showToast('Prezzo non valido','error')
+    let nuovi
+    if(editTipo){
+      nuovi = tipiLista.map(t=>t.id===editTipo.id ? {...editTipo,...tipoForm,prezzo_base:+tipoForm.prezzo_base} : t)
+    } else {
+      const id = tipoForm.nome.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'')+'-'+Date.now().toString(36)
+      nuovi = [...tipiLista, {id,...tipoForm,prezzo_base:+tipoForm.prezzo_base}]
+    }
+    setTipiLista(nuovi); saveTipi(nuovi); TIPI_SERVIZIO=nuovi
+    setShowTipoForm(false); setEditTipo(null); setTipoForm({nome:'',icon:'🔧',desc:'',prezzo_base:''})
+    showToast(editTipo?'Tipo aggiornato':'Tipo aggiunto')
+  }
+
+  const eliminaTipo = (id) => {
+    if(!confirm('Eliminare questo tipo di servizio?')) return
+    const nuovi = tipiLista.filter(t=>t.id!==id)
+    setTipiLista(nuovi); saveTipi(nuovi); TIPI_SERVIZIO=nuovi
+    showToast('Tipo eliminato')
+  }
 
   const fetchServizi = async () => {
     try {
@@ -327,6 +358,7 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
           onClose={() => { setModal(false); setEditing(null) }}
         />
       )}
+    </> /* fine tab servizi */}
     </div>
   )
 }
