@@ -15,8 +15,13 @@ export default function Sidebar({currentPage,onNavigate}){
       {navPrincipale.map(n=><Item key={n.id} {...n}/>)}
       <Divider label="Plug Magazzino"/>
       {navMagazzino.map(n=><Item key={n.id} {...n}/>)}
-      <div style={{borderTop:'1px solid rgba(255,255,255,0.07)',marginTop:12,paddingTop:8}}>
-        <Item id="impostazioni" icon="\u2699\uFE0F" label="Impostazioni"/>
+      <div style={{marginTop:'auto',paddingTop:16}}>
+        <div style={{height:'1px',background:'linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent)',marginBottom:12}}/>
+        <button onClick={()=>onNavigate('impostazioni')}
+          style={{width:'100%',display:'flex',alignItems:'center',gap:10,padding:'10px 12px',borderRadius:10,border:'none',cursor:'pointer',background:currentPage==='impostazioni'?'rgba(255,255,255,0.08)':'transparent',transition:'background .15s',fontFamily:'Inter,sans-serif'}}>
+          <div style={{width:28,height:28,borderRadius:7,background:'rgba(100,116,139,0.25)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,flexShrink:0}}>\u2699\uFE0F</div>
+          <span style={{fontSize:13,fontWeight:600,color:currentPage==='impostazioni'?'#f1f5f9':'#64748b'}}>Impostazioni</span>
+        </button>
       </div>
     </div>
   </div>)
