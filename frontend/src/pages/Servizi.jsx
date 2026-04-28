@@ -361,7 +361,7 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
                     </label>
                   )}
                 </div>
-                style={{display:'grid',gridTemplateColumns:'2fr 1fr',gap:12,marginBottom:12}}>
+                <div style={{display:'grid',gridTemplateColumns:'2fr 1fr',gap:12,marginBottom:12}}>
                   <div>
                     <label style={{fontSize:11,color:'rgba(255,255,255,0.4)',fontWeight:600,textTransform:'uppercase',letterSpacing:'.07em',display:'block',marginBottom:5}}>Nome servizio *</label>
                     <input style={{background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:9,padding:'9px 13px',color:'#f1f5f9',fontSize:13.5,width:'100%',boxSizing:'border-box',outline:'none'}} value={tipoForm.nome} onChange={e=>setTipoForm(f=>({...f,nome:e.target.value}))} placeholder="Es. Sostituzione schermo"/>
@@ -414,7 +414,7 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
           </div>
         </div>
       )}
-      {mainTab==='servizi'&&(<>
+      {mainTab==='servizi'&&<>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:24 }}>
         <div>
           <div style={{ fontSize:20, fontWeight:700, marginBottom:3 }}>Servizi</div>
@@ -494,7 +494,7 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
           onClose={() => { setModal(false); setEditing(null) }}
         />
       )}
-    </> /* fine tab servizi */)}
+    </> /* fine tab servizi */}
     </div>
   )
 }
