@@ -13,8 +13,8 @@ const BGRY={padding:'9px 16px',borderRadius:10,background:'rgba(255,255,255,0.06
 const LBL={fontSize:11,color:'rgba(255,255,255,0.35)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.08em',display:'block',marginBottom:6}
 
 // === COMPONENTI UI ===
-function IconBox({emoji,bg,size=44}){
-  return(<div style={{width:size,height:size,borderRadius:size*0.23,background:bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:size*0.48,flexShrink:0,boxShadow:'0 2px 8px rgba(0,0,0,0.3)'}}>
+function IconBox({emoji,bg,size=32}){
+  return(<div style={{width:size,height:size,borderRadius:size*0.28,background:bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:size*0.52,flexShrink:0}}>
     {emoji}
   </div>)
 }
@@ -25,7 +25,7 @@ function SettRow({icon,iconBg,label,sub,value,badge,onPress,last,disabled}){
     onClick={disabled?null:onPress}
     onMouseEnter={()=>!disabled&&setHover(true)}
     onMouseLeave={()=>setHover(false)}
-    style={{display:'flex',alignItems:'center',gap:14,padding:'11px 16px',
+    style={{display:'flex',alignItems:'center',gap:12,padding:'10px 14px',
       background:hover&&!disabled?'rgba(255,255,255,0.05)':'transparent',
       borderBottom:last?'none':'1px solid rgba(255,255,255,0.05)',
       cursor:disabled?'default':'pointer',transition:'background .15s',
@@ -212,31 +212,31 @@ export default function Impostazioni({api,showToast}){
       {/* SEZIONE SERVIZI */}
       <div style={{fontSize:11,fontWeight:700,color:'#475569',textTransform:'uppercase',letterSpacing:'.1em',padding:'0 4px 10px',fontFamily:F}}>Servizi</div>
       <Section>
-        <SettRow icon='🔧' iconBg='linear-gradient(135deg,#2563eb,#1d4ed8)' label='Tipi di servizio' sub='Icone, nomi e prezzi preimpostati per ogni tipo' badge={tipiN+' tipi'} onPress={()=>setPage('tipi-servizio')}/>
-        <SettRow icon='👷' iconBg='linear-gradient(135deg,#7c3aed,#6d28d9)' label='Operatori' sub='Gestisci chi effettua le riparazioni' value='Presto' disabled last/>
+        <SettRow icon='🔧' iconBg='#1e40af' label='Tipi di servizio' sub='Icone, nomi e prezzi preimpostati per ogni tipo' badge={tipiN+' tipi'} onPress={()=>setPage('tipi-servizio')}/>
+        <SettRow icon='👷' iconBg='#4c1d95' label='Operatori' sub='Gestisci chi effettua le riparazioni' value='Presto' disabled last/>
       </Section>
 
       {/* SEZIONE PROTEZIONE */}
       <div style={{fontSize:11,fontWeight:700,color:'#475569',textTransform:'uppercase',letterSpacing:'.1em',padding:'20px 4px 10px',fontFamily:F}}>Protezione Dispositivo</div>
       <Section>
-        <SettRow icon='📋' iconBg='linear-gradient(135deg,#0891b2,#0e7490)' label='Piani di protezione' sub='Crea e modifica i piani offerti ai clienti' onPress={()=>setPage({id:'protezione',tab:'piani'})}/>
-        <SettRow icon='🛡️' iconBg='linear-gradient(135deg,#059669,#047857)' label='Coperture disponibili' sub='Definisci le coperture selezionabili' badge={copN+' attive'} onPress={()=>setPage({id:'protezione',tab:'coperture'})} last/>
+        <SettRow icon='📋' iconBg='#164e63' label='Piani di protezione' sub='Crea e modifica i piani offerti ai clienti' onPress={()=>setPage({id:'protezione',tab:'piani'})}/>
+        <SettRow icon='🛡️' iconBg='#064e3b' label='Coperture disponibili' sub='Definisci le coperture selezionabili' badge={copN+' attive'} onPress={()=>setPage({id:'protezione',tab:'coperture'})} last/>
       </Section>
 
       {/* SEZIONE NEGOZIO */}
       <div style={{fontSize:11,fontWeight:700,color:'#475569',textTransform:'uppercase',letterSpacing:'.1em',padding:'20px 4px 10px',fontFamily:F}}>Negozio</div>
       <Section>
-        <SettRow icon='🏪' iconBg='linear-gradient(135deg,#d97706,#b45309)' label='Informazioni negozio' sub='Nome, indirizzo, partita IVA, logo' value='Presto' disabled/>
-        <SettRow icon='🖨️' iconBg='linear-gradient(135deg,#6366f1,#4f46e5)' label='Stampa e documenti' sub='Template per fatture, ricevute e PDF' value='Presto' disabled/>
-        <SettRow icon='💰' iconBg='linear-gradient(135deg,#16a34a,#15803d)' label='Metodi di pagamento' sub='Contanti, POS, bonifico, rate' value='Presto' disabled last/>
+        <SettRow icon='🏪' iconBg='#78350f' label='Informazioni negozio' sub='Nome, indirizzo, partita IVA, logo' value='Presto' disabled/>
+        <SettRow icon='🖨️' iconBg='#312e81' label='Stampa e documenti' sub='Template per fatture, ricevute e PDF' value='Presto' disabled/>
+        <SettRow icon='💰' iconBg='#14532d' label='Metodi di pagamento' sub='Contanti, POS, bonifico, rate' value='Presto' disabled last/>
       </Section>
 
       {/* SEZIONE ACCOUNT */}
       <div style={{fontSize:11,fontWeight:700,color:'#475569',textTransform:'uppercase',letterSpacing:'.1em',padding:'20px 4px 10px',fontFamily:F}}>Account e sicurezza</div>
       <Section>
-        <SettRow icon='👤' iconBg='linear-gradient(135deg,#64748b,#475569)' label='Profilo' sub='Nome, email, ruolo' value='Presto' disabled/>
-        <SettRow icon='🔔' iconBg='linear-gradient(135deg,#dc2626,#b91c1c)' label='Notifiche' sub='Email, avvisi e promemoria' value='Presto' disabled/>
-        <SettRow icon='🔒' iconBg='linear-gradient(135deg,#374151,#1f2937)' label='Sicurezza' sub='Password, autenticazione, sessioni' value='Presto' disabled last/>
+        <SettRow icon='👤' iconBg='#1e293b' label='Profilo' sub='Nome, email, ruolo' value='Presto' disabled/>
+        <SettRow icon='🔔' iconBg='#7f1d1d' label='Notifiche' sub='Email, avvisi e promemoria' value='Presto' disabled/>
+        <SettRow icon='🔒' iconBg='#111827' label='Sicurezza' sub='Password, autenticazione, sessioni' value='Presto' disabled last/>
       </Section>
 
       <div style={{marginTop:32,padding:'14px 18px',borderRadius:14,background:'rgba(59,130,246,0.05)',border:'1px solid rgba(59,130,246,0.12)',display:'flex',alignItems:'center',gap:12}}>
