@@ -302,22 +302,66 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
             {showTipoForm&&(
               <div style={{padding:'16px 18px',borderRadius:11,background:'rgba(59,130,246,0.08)',border:'1px solid rgba(59,130,246,0.25)',marginBottom:16}}>
                 <div style={{fontSize:13,fontWeight:700,color:'#60a5fa',marginBottom:14}}>{editTipo?'Modifica tipo':'Nuovo tipo di servizio'}</div>
-                <div style={{marginBottom:12}}>
-                  <label style={{fontSize:11,color:'rgba(255,255,255,0.4)',fontWeight:600,textTransform:'uppercase',letterSpacing:'.07em',display:'block',marginBottom:6}}>Icona</label>
-                  <div style={{display:'flex',flexWrap:'wrap',gap:6,alignItems:'center'}}>
-                    {EMOJI_OPZIONI.map(e=>(
-                      <button key={e} onClick={()=>setTipoForm(f=>({...f,icon:e}))}
-                        style={{width:36,height:36,borderRadius:8,fontSize:18,cursor:'pointer',border:'1px solid '+(tipoForm.icon===e?'#3b82f6':'rgba(255,255,255,0.1)'),background:tipoForm.icon===e?'rgba(59,130,246,0.4)':'rgba(255,255,255,0.06)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                        {e}
+                                <div style={{marginBottom:12}}>
+                  <label style={{fontSize:11,color:'rgba(255,255,255,0.4)',fontWeight:600,textTransform:'uppercase',letterSpacing:'.07em',display:'block',marginBottom:6}}>Icona o Immagine</label>
+                  <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:10}}>
+                    <div style={{width:52,height:52,borderRadius:10,background:'rgba(255,255,255,0.08)',border:'2px solid rgba(59,130,246,0.4)',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden',flexShrink:0}}>
+                      {tipoForm.icon&&tipoForm.icon.startsWith('data:')
+                        ?<img src={tipoForm.icon} style={{width:'100%',height:'100%',objectFit:'cover'}} alt="icona"/>
+                        :<span style={{fontSize:26}}>{tipoForm.icon||'🔧'}</span>}
+                    </div>
+                    <div>
+                      <div style={{fontSize:12,color:'#94a3b8',marginBottom:4}}>Anteprima</div>
+                      {tipoForm.icon&&tipoForm.icon.startsWith('data:')&&(
+                        <button onClick={()=>setTipoForm(f=>({...f,icon:'🔧'}))}
+                          style={{padding:'3px 10px',borderRadius:6,background:'rgba(248,113,113,0.1)',border:'1px solid rgba(248,113,113,0.2)',color:'#f87171',fontSize:11,cursor:'pointer'}}>
+                          Rimuovi
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{display:'flex',gap:0,marginBottom:8,borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
+                    {[{k:'emoji',l:'😀 Emoji'},{k:'upload',l:'🖼️ Immagine'}].map(({k,l})=>(
+                      <button key={k} onClick={()=>setTipoForm(f=>({...f,_iconTab:k}))}
+                        style={{padding:'6px 14px',border:'none',cursor:'pointer',fontSize:12,fontWeight:600,background:'transparent',borderBottom:(tipoForm._iconTab||'emoji')===k?'2px solid #3b82f6':'2px solid transparent',color:(tipoForm._iconTab||'emoji')===k?'#60a5fa':'#64748b'}}>
+                        {l}
                       </button>
                     ))}
-                    <input value={tipoForm.icon} onChange={e=>setTipoForm(f=>({...f,icon:e.target.value}))}
-                      style={{width:40,height:36,borderRadius:8,textAlign:'center',fontSize:18,background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.2)',color:'#f1f5f9',outline:'none'}}
-                      maxLength={2}/>
                   </div>
-                  <div style={{fontSize:10,color:'#475569',marginTop:4}}>Seleziona o scrivi la tua emoji nell ultimo campo</div>
+                  {(tipoForm._iconTab||'emoji')==='emoji'&&(
+                    <div>
+                      <div style={{display:'flex',flexWrap:'wrap',gap:6,alignItems:'center'}}>
+                        {EMOJI_OPZIONI.map(e=>(
+                          <button key={e} onClick={()=>setTipoForm(f=>({...f,icon:e}))}
+                            style={{width:36,height:36,borderRadius:8,fontSize:18,cursor:'pointer',border:'1px solid '+(tipoForm.icon===e?'#3b82f6':'rgba(255,255,255,0.1)'),background:tipoForm.icon===e?'rgba(59,130,246,0.4)':'rgba(255,255,255,0.06)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                            {e}
+                          </button>
+                        ))}
+                        <input value={tipoForm.icon&&!tipoForm.icon.startsWith('data:')?tipoForm.icon:''} onChange={e=>setTipoForm(f=>({...f,icon:e.target.value}))}
+                          style={{width:40,height:36,borderRadius:8,textAlign:'center',fontSize:18,background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.2)',color:'#f1f5f9',outline:'none'}}
+                          maxLength={2}/>
+                      </div>
+                      <div style={{fontSize:10,color:'#475569',marginTop:4}}>Seleziona o scrivi la tua emoji</div>
+                    </div>
+                  )}
+                  {(tipoForm._iconTab||'emoji')==='upload'&&(
+                    <label style={{display:'block',padding:'18px',borderRadius:10,border:'2px dashed rgba(59,130,246,0.3)',background:'rgba(59,130,246,0.04)',textAlign:'center',cursor:'pointer'}}>
+                      <input type="file" accept="image/*" style={{display:'none'}}
+                        onChange={e=>{
+                          const file=e.target.files[0];
+                          if(!file)return;
+                          if(file.size>300*1024){alert('Immagine troppo grande. Max 300KB.');return;}
+                          const reader=new FileReader();
+                          reader.onload=ev=>setTipoForm(f=>({...f,icon:ev.target.result,_iconTab:'upload'}));
+                          reader.readAsDataURL(file);
+                        }}/>
+                      <div style={{fontSize:22,marginBottom:4}}>🖼️</div>
+                      <div style={{fontSize:13,color:'#60a5fa',fontWeight:600}}>Clicca per caricare</div>
+                      <div style={{fontSize:11,color:'#475569',marginTop:2}}>PNG, JPG, SVG, WebP — max 300KB</div>
+                    </label>
+                  )}
                 </div>
-                <div style={{display:'grid',gridTemplateColumns:'2fr 1fr',gap:12,marginBottom:12}}>
+                style={{display:'grid',gridTemplateColumns:'2fr 1fr',gap:12,marginBottom:12}}>
                   <div>
                     <label style={{fontSize:11,color:'rgba(255,255,255,0.4)',fontWeight:600,textTransform:'uppercase',letterSpacing:'.07em',display:'block',marginBottom:5}}>Nome servizio *</label>
                     <input style={{background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:9,padding:'9px 13px',color:'#f1f5f9',fontSize:13.5,width:'100%',boxSizing:'border-box',outline:'none'}} value={tipoForm.nome} onChange={e=>setTipoForm(f=>({...f,nome:e.target.value}))} placeholder="Es. Sostituzione schermo"/>
@@ -341,7 +385,9 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
               {tipiLista.map(tipo=>(
                 <div key={tipo.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px',borderRadius:10,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.07)',flexWrap:'wrap',gap:8}}>
                   <div style={{display:'flex',alignItems:'center',gap:14,flex:1}}>
-                    <span style={{fontSize:28}}>{tipo.icon}</span>
+                    {tipo.icon&&tipo.icon.startsWith('data:')
+                      ?<img src={tipo.icon} style={{width:40,height:40,borderRadius:8,objectFit:'cover'}} alt={tipo.nome}/>
+                      :<span style={{fontSize:28}}>{tipo.icon||'🔧'}</span>}
                     <div>
                       <div style={{fontSize:14,fontWeight:700,color:'#f1f5f9'}}>{tipo.nome}</div>
                       <div style={{fontSize:12,color:'#64748b',marginTop:2}}>{tipo.desc}</div>
