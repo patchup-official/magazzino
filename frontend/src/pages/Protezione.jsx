@@ -467,14 +467,6 @@ export default function Protezione({ api, showToast }) {
   const [wizard, setWizard] = useState(false)
   const [successo, setSuccesso] = useState(null)
   const [search, setSearch] = useState('')
-  const [mainTab, setMainTab] = useState('protezioni')
-  const [editPiano, setEditPiano] = useState(null)
-  const [showPianoForm, setShowPianoForm] = useState(false)
-  const [pianoForm, setPianoForm] = useState({ nome:'', prezzo:'', durata_mesi:'12', coperture:[] })
-  const [savingPiano, setSavingPiano] = useState(false)
-  const [copertureLista, setCopertureLista] = useState(loadCoperture)
-  const [nuovaCopertura, setNuovaCopertura] = useState('')
-  const COPERTURE_DISPONIBILI = copertureLista
 
   useEffect(() => { fetchAll() }, [])
 
@@ -502,49 +494,6 @@ export default function Protezione({ api, showToast }) {
     setStats(prev => ({ ...prev, attive: prev.attive + 1, totali: prev.totali + 1 }))
   }
 
-  const savePiano = async () => {
-    if (!pianoForm.nome) return showToast('Nome piano obbligatorio', 'error')
-    if (!pianoForm.prezzo) return showToast('Prezzo obbligatorio', 'error')
-    setSavingPiano(true)
-    try {
-      if (editPiano) {
-        await axios.put(api+'/piani/'+editPiano.id, {...pianoForm, prezzo: +pianoForm.prezzo, durata_mesi: +pianoForm.durata_mesi})
-        showToast('Piano aggiornato')
-      } else {
-        await axios.post(api+'/piani', {...pianoForm, prezzo: +pianoForm.prezzo, durata_mesi: +pianoForm.durata_mesi})
-        showToast('Piano creato')
-      }
-      setShowPianoForm(false); setEditPiano(null)
-      setPianoForm({nome:'',prezzo:'',durata_mesi:'12',coperture:[]})
-      const res = await axios.get(api+'/piani')
-      setPiani(res.data)
-    } catch(e) { showToast('Errore salvataggio', 'error') }
-    finally { setSavingPiano(false) }
-  }
-  const deletePiano = async (id) => {
-    if (!confirm('Eliminare questo piano?')) return
-    try { await axios.delete(api+'/piani/'+id); const res=await axios.get(api+'/piani'); setPiani(res.data); showToast('Piano eliminato') }
-    catch { showToast('Errore eliminazione', 'error') }
-  }
-  const toggleCopertura = (c) => {
-    setPianoForm(f => ({...f, coperture: f.coperture.includes(c) ? f.coperture.filter(x=>x!==c) : [...f.coperture, c]}))
-  }
-  const aggiungiCopertura = () => {
-    const n = nuovaCopertura.trim()
-    if(!n) return
-    if(copertureLista.includes(n)) return showToast('Copertura già presente','error')
-    const nuova = [...copertureLista, n]
-    setCopertureLista(nuova); saveCoperture(nuova); setNuovaCopertura('')
-    showToast('Copertura aggiunta')
-  }
-  const eliminaCopertura = (c) => {
-    if(!confirm('Eliminare la copertura "'+c+'"?')) return
-    const nuova = copertureLista.filter(x=>x!==c)
-    setCopertureLista(nuova); saveCoperture(nuova)
-    // Rimuovi anche dai piani che la usano
-    setPianoForm(f=>({...f, coperture: f.coperture.filter(x=>x!==c)}))
-    showToast('Copertura eliminata')
-  }
   const deleteProtezione = async (id) => {
     if (!confirm('Eliminare questa protezione?')) return
     setProtezioni(prev => prev.filter(p => p.id !== id))
@@ -559,7 +508,6 @@ export default function Protezione({ api, showToast }) {
     return matchStato && matchSearch
   })
 
-  const inp2={background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:9,padding:'9px 13px',color:'#f1f5f9',fontSize:13.5,width:'100%',boxSizing:'border-box',outline:'none'}
   return (
     <div className="animate-fade-in">
       {/* Header */}
@@ -573,18 +521,8 @@ export default function Protezione({ api, showToast }) {
         </button>
       </div>
 
-      {/* Tab nav */}
-      <div style={{display:'flex',gap:0,borderBottom:'1px solid rgba(255,255,255,0.07)',marginBottom:20}}>
-        {[{k:'protezioni',l:'🛡️ Protezioni'},{k:'impostazioni',l:'⚙️ Impostazioni'}].map(({k,l})=>(
-          <button key={k} onClick={()=>setMainTab(k)}
-            style={{padding:'9px 20px',border:'none',cursor:'pointer',fontSize:13,fontWeight:600,
-              background:mainTab===k?'rgba(255,255,255,0.07)':'transparent',
-              borderBottom:mainTab===k?'2px solid #3b82f6':'2px solid transparent',
-              color:mainTab===k?'#e2e8f0':'#64748b'}}>{l}</button>
-        ))}
-      </div>
 
-      {mainTab==='protezioni' && <>
+      
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginBottom: 24 }}>
         {[
@@ -693,133 +631,7 @@ export default function Protezione({ api, showToast }) {
         </div>
       )}
 
-      </> }
 
-      {mainTab==='impostazioni' && (
-        <div style={{display:'flex',flexDirection:'column',gap:20}}>
-          <div style={{padding:'18px 22px',borderRadius:14,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)'}}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-              <div>
-                <div style={{fontSize:15,fontWeight:700,color:'#f1f5f9'}}>📋 Piani di protezione</div>
-                <div style={{fontSize:12,color:'#64748b',marginTop:3}}>Configura i piani che appaiono nel wizard di creazione</div>
-              </div>
-              <button onClick={()=>{setShowPianoForm(true);setEditPiano(null);setPianoForm({nome:'',prezzo:'',durata_mesi:'12',coperture:[]})}}
-                style={{padding:'8px 16px',borderRadius:9,background:'#3b82f6',border:'none',color:'#fff',fontSize:13,fontWeight:600,cursor:'pointer'}}>
-                + Nuovo piano
-              </button>
-            </div>
-            {showPianoForm && (
-              <div style={{padding:'16px 18px',borderRadius:11,background:'rgba(59,130,246,0.08)',border:'1px solid rgba(59,130,246,0.25)',marginBottom:16}}>
-                <div style={{fontSize:13,fontWeight:700,color:'#60a5fa',marginBottom:14}}>{editPiano?'Modifica piano':'Nuovo piano'}</div>
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12,marginBottom:12}}>
-                  <div>
-                    <label style={{fontSize:11,color:'rgba(255,255,255,0.4)',fontWeight:600,textTransform:'uppercase',letterSpacing:'.07em',display:'block',marginBottom:5}}>Nome piano *</label>
-                    <input style={inp2} value={pianoForm.nome} onChange={e=>setPianoForm(f=>({...f,nome:e.target.value}))} placeholder="Es. Protezione Plus"/>
-                  </div>
-                  <div>
-                    <label style={{fontSize:11,color:'rgba(255,255,255,0.4)',fontWeight:600,textTransform:'uppercase',letterSpacing:'.07em',display:'block',marginBottom:5}}>Prezzo euro/anno *</label>
-                    <input type="number" style={inp2} value={pianoForm.prezzo} onChange={e=>setPianoForm(f=>({...f,prezzo:e.target.value}))} placeholder="12.90" step="0.01"/>
-                  </div>
-                  <div>
-                    <label style={{fontSize:11,color:'rgba(255,255,255,0.4)',fontWeight:600,textTransform:'uppercase',letterSpacing:'.07em',display:'block',marginBottom:5}}>Durata</label>
-                    <select style={inp2} value={pianoForm.durata_mesi} onChange={e=>setPianoForm(f=>({...f,durata_mesi:e.target.value}))}>
-                      {[6,12,24,36].map(m=><option key={m} value={m}>{m} mesi</option>)}
-                    </select>
-                  </div>
-                </div>
-                <div style={{marginBottom:14}}>
-                  <label style={{fontSize:11,color:'rgba(255,255,255,0.4)',fontWeight:600,textTransform:'uppercase',letterSpacing:'.07em',display:'block',marginBottom:8}}>Coperture incluse</label>
-                  <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
-                    {COPERTURE_DISPONIBILI.map(c=>(
-                      <button key={c} onClick={()=>toggleCopertura(c)}
-                        style={{padding:'5px 12px',borderRadius:20,fontSize:12,cursor:'pointer',fontWeight:600,
-                          background:pianoForm.coperture.includes(c)?'rgba(59,130,246,0.3)':'rgba(255,255,255,0.06)',
-                          border:'1px solid '+(pianoForm.coperture.includes(c)?'#3b82f6':'rgba(255,255,255,0.1)'),
-                          color:pianoForm.coperture.includes(c)?'#93c5fd':'#94a3b8'}}>
-                        {pianoForm.coperture.includes(c)?'✓ ':''}{c}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div style={{display:'flex',gap:8}}>
-                  <button onClick={savePiano} disabled={savingPiano}
-                    style={{padding:'8px 18px',borderRadius:8,background:'#3b82f6',border:'none',color:'#fff',fontSize:13,fontWeight:700,cursor:'pointer'}}>
-                    {savingPiano?'Salvataggio...':'Salva piano'}
-                  </button>
-                  <button onClick={()=>{setShowPianoForm(false);setEditPiano(null)}}
-                    style={{padding:'8px 14px',borderRadius:8,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',color:'#94a3b8',fontSize:13,cursor:'pointer'}}>
-                    Annulla
-                  </button>
-                </div>
-              </div>
-            )}
-            {piani.length===0 ? (
-              <div style={{textAlign:'center',color:'#475569',padding:30,fontSize:13}}>Nessun piano. Creane uno per iniziare.</div>
-            ) : (
-              <div style={{display:'flex',flexDirection:'column',gap:8}}>
-                {piani.map(p=>(
-                  <div key={p.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px',borderRadius:10,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.07)',flexWrap:'wrap',gap:8}}>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:14,fontWeight:700,color:'#f1f5f9',marginBottom:3}}>{p.nome}</div>
-                      <div style={{fontSize:12,color:'#64748b',display:'flex',gap:12}}>
-                        <span>{Number(p.prezzo||0).toFixed(2)} euro/anno</span>
-                        <span>{p.durata_mesi||12} mesi</span>
-                        {p.coperture?.length>0&&<span>{p.coperture.length} coperture</span>}
-                      </div>
-                      {p.coperture?.length>0&&<div style={{display:'flex',flexWrap:'wrap',gap:5,marginTop:6}}>
-                        {p.coperture.map(c=><span key={c} style={{padding:'2px 8px',borderRadius:12,fontSize:10,background:'rgba(59,130,246,0.15)',color:'#93c5fd',border:'1px solid rgba(59,130,246,0.25)'}}>{c}</span>)}
-                      </div>}
-                    </div>
-                    <div style={{display:'flex',gap:6}}>
-                      <button onClick={()=>{setEditPiano(p);setPianoForm({nome:p.nome,prezzo:String(p.prezzo||''),durata_mesi:String(p.durata_mesi||12),coperture:p.coperture||[]});setShowPianoForm(true)}}
-                        style={{padding:'6px 12px',borderRadius:7,cursor:'pointer',background:'rgba(96,165,250,0.15)',border:'1px solid rgba(96,165,250,0.3)',color:'#60a5fa',fontSize:12}}>Modifica</button>
-                      <button onClick={()=>deletePiano(p.id)}
-                        style={{padding:'6px 10px',borderRadius:7,cursor:'pointer',background:'rgba(248,113,113,0.1)',border:'1px solid rgba(248,113,113,0.2)',color:'#f87171',fontSize:12}}>Elimina</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          {/* Card coperture */}
-          <div style={{padding:'18px 22px',borderRadius:14,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)'}}>
-            <div style={{marginBottom:16}}>
-              <div style={{fontSize:15,fontWeight:700,color:'#f1f5f9'}}>🛡️ Coperture disponibili</div>
-              <div style={{fontSize:12,color:'#64748b',marginTop:3}}>Definisci le coperture selezionabili quando crei o modifichi un piano</div>
-            </div>
-            {/* Lista coperture */}
-            <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:16}}>
-              {copertureLista.map(c=>(
-                <div key={c} style={{display:'flex',alignItems:'center',gap:6,padding:'6px 12px',borderRadius:20,background:'rgba(59,130,246,0.1)',border:'1px solid rgba(59,130,246,0.25)'}}>
-                  <span style={{fontSize:13,color:'#93c5fd'}}>{c}</span>
-                  <button onClick={()=>eliminaCopertura(c)}
-                    style={{background:'none',border:'none',cursor:'pointer',color:'#64748b',fontSize:14,lineHeight:1,padding:'0 2px'}}
-                    title="Elimina">×</button>
-                </div>
-              ))}
-              {copertureLista.length===0&&<span style={{fontSize:13,color:'#475569'}}>Nessuna copertura configurata</span>}
-            </div>
-            {/* Aggiungi nuova */}
-            <div style={{display:'flex',gap:8,alignItems:'center'}}>
-              <input value={nuovaCopertura} onChange={e=>setNuovaCopertura(e.target.value)}
-                onKeyDown={e=>e.key==='Enter'&&aggiungiCopertura()}
-                style={{...inp2,flex:1}} placeholder="Es. Allagamento, Batteria, Ossidazione..."
-                maxLength={50}/>
-              <button onClick={aggiungiCopertura}
-                style={{padding:'9px 18px',borderRadius:9,background:'#3b82f6',border:'none',color:'#fff',fontSize:13,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>
-                + Aggiungi
-              </button>
-            </div>
-            <div style={{fontSize:11,color:'#475569',marginTop:8}}>
-              Premi Invio o clicca Aggiungi. Le coperture vengono salvate localmente in questo browser.
-            </div>
-          </div>
-
-          <div style={{padding:'16px 20px',borderRadius:12,background:'rgba(255,255,255,0.02)',border:'1px dashed rgba(255,255,255,0.08)',color:'#475569',fontSize:13,textAlign:'center'}}>
-            Altre categorie di impostazioni in arrivo (Notifiche, Template email, Account...)
-          </div>
-        </div>
-      )}
 
       {/* Wizard */}
       {wizard && piani.length > 0 && (
