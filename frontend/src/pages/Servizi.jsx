@@ -414,7 +414,7 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
           </div>
         </div>
       )}
-      {mainTab==='servizi'&&<>
+      {mainTab==='servizi'&&(<>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:24 }}>
         <div>
           <div style={{ fontSize:20, fontWeight:700, marginBottom:3 }}>Servizi</div>
@@ -494,7 +494,7 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
           onClose={() => { setModal(false); setEditing(null) }}
         />
       )}
-    </> /* fine tab servizi */}
+    </> /* fine tab servizi */)}
     </div>
   )
 }
