@@ -279,6 +279,96 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
 
   return (
     <div className="animate-fade-in">
+      {/* Tab nav */}
+      <div style={{display:'flex',gap:0,borderBottom:'1px solid rgba(255,255,255,0.07)',marginBottom:20}}>
+        {[{k:'servizi',l:'🔧 Servizi'},{k:'impostazioni',l:'⚙️ Impostazioni'}].map(({k,l})=>(
+          <button key={k} onClick={()=>setMainTab(k)}
+            style={{padding:'9px 20px',border:'none',cursor:'pointer',fontSize:13,fontWeight:600,background:mainTab===k?'rgba(255,255,255,0.07)':'transparent',borderBottom:mainTab===k?'2px solid #3b82f6':'2px solid transparent',color:mainTab===k?'#e2e8f0':'#64748b',fontFamily:'Inter,sans-serif'}}>{l}</button>
+        ))}
+      </div>
+      {mainTab==='impostazioni'&&(
+        <div style={{display:'flex',flexDirection:'column',gap:20}}>
+          <div style={{padding:'18px 22px',borderRadius:14,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+              <div>
+                <div style={{fontSize:15,fontWeight:700,color:'#f1f5f9'}}>🔧 Tipi di servizio</div>
+                <div style={{fontSize:12,color:'#64748b',marginTop:3}}>Configura i servizi con icona personalizzata e prezzo preimpostato</div>
+              </div>
+              <button onClick={()=>{setShowTipoForm(true);setEditTipo(null);setTipoForm({nome:'',icon:'🔧',desc:'',prezzo_base:''})}}
+                style={{padding:'8px 16px',borderRadius:9,background:'#3b82f6',border:'none',color:'#fff',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'Inter,sans-serif'}}>
+                + Nuovo tipo
+              </button>
+            </div>
+            {showTipoForm&&(
+              <div style={{padding:'16px 18px',borderRadius:11,background:'rgba(59,130,246,0.08)',border:'1px solid rgba(59,130,246,0.25)',marginBottom:16}}>
+                <div style={{fontSize:13,fontWeight:700,color:'#60a5fa',marginBottom:14}}>{editTipo?'Modifica tipo':'Nuovo tipo di servizio'}</div>
+                <div style={{marginBottom:12}}>
+                  <label style={{fontSize:11,color:'rgba(255,255,255,0.4)',fontWeight:600,textTransform:'uppercase',letterSpacing:'.07em',display:'block',marginBottom:6}}>Icona</label>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:6,alignItems:'center'}}>
+                    {EMOJI_OPZIONI.map(e=>(
+                      <button key={e} onClick={()=>setTipoForm(f=>({...f,icon:e}))}
+                        style={{width:36,height:36,borderRadius:8,fontSize:18,cursor:'pointer',border:'1px solid '+(tipoForm.icon===e?'#3b82f6':'rgba(255,255,255,0.1)'),background:tipoForm.icon===e?'rgba(59,130,246,0.4)':'rgba(255,255,255,0.06)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                        {e}
+                      </button>
+                    ))}
+                    <input value={tipoForm.icon} onChange={e=>setTipoForm(f=>({...f,icon:e.target.value}))}
+                      style={{width:40,height:36,borderRadius:8,textAlign:'center',fontSize:18,background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.2)',color:'#f1f5f9',outline:'none'}}
+                      maxLength={2}/>
+                  </div>
+                  <div style={{fontSize:10,color:'#475569',marginTop:4}}>Seleziona o scrivi la tua emoji nell ultimo campo</div>
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:'2fr 1fr',gap:12,marginBottom:12}}>
+                  <div>
+                    <label style={{fontSize:11,color:'rgba(255,255,255,0.4)',fontWeight:600,textTransform:'uppercase',letterSpacing:'.07em',display:'block',marginBottom:5}}>Nome servizio *</label>
+                    <input style={{background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:9,padding:'9px 13px',color:'#f1f5f9',fontSize:13.5,width:'100%',boxSizing:'border-box',outline:'none'}} value={tipoForm.nome} onChange={e=>setTipoForm(f=>({...f,nome:e.target.value}))} placeholder="Es. Sostituzione schermo"/>
+                  </div>
+                  <div>
+                    <label style={{fontSize:11,color:'rgba(255,255,255,0.4)',fontWeight:600,textTransform:'uppercase',letterSpacing:'.07em',display:'block',marginBottom:5}}>Prezzo base (euro)</label>
+                    <input type="number" style={{background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:9,padding:'9px 13px',color:'#f1f5f9',fontSize:13.5,width:'100%',boxSizing:'border-box',outline:'none'}} value={tipoForm.prezzo_base} onChange={e=>setTipoForm(f=>({...f,prezzo_base:e.target.value}))} placeholder="0" min="0" step="0.50"/>
+                  </div>
+                </div>
+                <div style={{marginBottom:14}}>
+                  <label style={{fontSize:11,color:'rgba(255,255,255,0.4)',fontWeight:600,textTransform:'uppercase',letterSpacing:'.07em',display:'block',marginBottom:5}}>Descrizione breve</label>
+                  <input style={{background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:9,padding:'9px 13px',color:'#f1f5f9',fontSize:13.5,width:'100%',boxSizing:'border-box',outline:'none'}} value={tipoForm.desc} onChange={e=>setTipoForm(f=>({...f,desc:e.target.value}))} placeholder="Es. Ricambio display originale"/>
+                </div>
+                <div style={{display:'flex',gap:8}}>
+                  <button onClick={salvaTipo} style={{padding:'8px 18px',borderRadius:8,background:'#3b82f6',border:'none',color:'#fff',fontSize:13,fontWeight:700,cursor:'pointer'}}>Salva</button>
+                  <button onClick={()=>{setShowTipoForm(false);setEditTipo(null)}} style={{padding:'8px 14px',borderRadius:8,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',color:'#94a3b8',fontSize:13,cursor:'pointer'}}>Annulla</button>
+                </div>
+              </div>
+            )}
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {tipiLista.map(tipo=>(
+                <div key={tipo.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px',borderRadius:10,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.07)',flexWrap:'wrap',gap:8}}>
+                  <div style={{display:'flex',alignItems:'center',gap:14,flex:1}}>
+                    <span style={{fontSize:28}}>{tipo.icon}</span>
+                    <div>
+                      <div style={{fontSize:14,fontWeight:700,color:'#f1f5f9'}}>{tipo.nome}</div>
+                      <div style={{fontSize:12,color:'#64748b',marginTop:2}}>{tipo.desc}</div>
+                    </div>
+                  </div>
+                  <div style={{display:'flex',alignItems:'center',gap:14}}>
+                    <div style={{textAlign:'right'}}>
+                      <div style={{fontSize:10,color:'#64748b'}}>Prezzo base</div>
+                      <div style={{fontFamily:'monospace',fontWeight:700,color:'#34d399',fontSize:16}}>euro {tipo.prezzo_base}</div>
+                    </div>
+                    <div style={{display:'flex',gap:6}}>
+                      <button onClick={()=>{setEditTipo(tipo);setTipoForm({nome:tipo.nome,icon:tipo.icon,desc:tipo.desc||'',prezzo_base:String(tipo.prezzo_base)});setShowTipoForm(true)}}
+                        style={{padding:'6px 12px',borderRadius:7,cursor:'pointer',background:'rgba(96,165,250,0.15)',border:'1px solid rgba(96,165,250,0.3)',color:'#60a5fa',fontSize:12}}>Modifica</button>
+                      <button onClick={()=>eliminaTipo(tipo.id)}
+                        style={{padding:'6px 10px',borderRadius:7,cursor:'pointer',background:'rgba(248,113,113,0.1)',border:'1px solid rgba(248,113,113,0.2)',color:'#f87171',fontSize:12}}>Elimina</button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{padding:'16px 20px',borderRadius:12,background:'rgba(255,255,255,0.02)',border:'1px dashed rgba(255,255,255,0.08)',color:'#475569',fontSize:13,textAlign:'center'}}>
+            Altre categorie di impostazioni in arrivo (Operatori, Template SMS, Notifiche...)
+          </div>
+        </div>
+      )}
+      {mainTab==='servizi'&&<>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:24 }}>
         <div>
           <div style={{ fontSize:20, fontWeight:700, marginBottom:3 }}>Servizi</div>
