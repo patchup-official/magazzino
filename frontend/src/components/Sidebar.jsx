@@ -15,6 +15,9 @@ export default function Sidebar({currentPage,onNavigate}){
       {navPrincipale.map(n=><Item key={n.id} {...n}/>)}
       <Divider label="Plug Magazzino"/>
       {navMagazzino.map(n=><Item key={n.id} {...n}/>)}
+      <div style={{borderTop:'1px solid rgba(255,255,255,0.07)',marginTop:12,paddingTop:8}}>
+        <Item id="impostazioni" icon="\u2699\uFE0F" label="Impostazioni"/>
+      </div>
     </div>
   </div>)
 }
