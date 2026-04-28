@@ -15,6 +15,7 @@ import ValutazioneDisplay from './pages/ValutazioneDisplay'
 import Noleggio from './pages/Noleggio'
 import Cassa from './pages/Cassa'
 import Protezione from './pages/Protezione'
+import Impostazioni from './pages/Impostazioni'
 import FirmaRemota from './pages/FirmaRemota'
 import Toast from './components/Toast'
 
