@@ -355,7 +355,6 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
           onClose={() => { setModal(false); setEditing(null) }}
         />
       )}
-    </> /* fine tab servizi */}
     </div>
   )
 }
