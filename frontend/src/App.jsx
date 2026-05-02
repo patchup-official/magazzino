@@ -18,6 +18,7 @@ import Protezione from './pages/Protezione'
 import Impostazioni from './pages/Impostazioni'
 import FirmaRemota from './pages/FirmaRemota'
 import Toast from './components/Toast'
+import Calendario from './pages/Calendario'
 
 const INIT_PATH = window.__INIT_PATH__ || window.location.pathname
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3001'
@@ -49,7 +50,7 @@ export default function App() {
       case 'movimento': setCurrentPage('magazzino'); setCreaNuovoAction(null); break
       case 'servizio': setCurrentPage('servizi'); setCreaNuovoAction('nuovo_servizio'); break
       case 'da_privato': setCurrentPage('acquisto'); setCreaNuovoAction(null); break
-      default: showToast('Funzione in sviluppo 🚧'); break
+      default: showToast('Funzione in sviluppo ð§'); break
     }
   }
 
@@ -57,6 +58,7 @@ export default function App() {
     dashboard: 'Homepage', magazzino: 'Magazzino', servizi: 'Servizi',
     acquisto: 'Acquisto dispositivo', riparazioni: 'Riparazioni',
     'storico-dispositivi': 'Storico Dispositivi',
+    calendario: 'Calendario',
     storico: 'Storico acquisti', clienti: 'Clienti',
     importexport: 'Import / Export', protezione: 'Protezione Dispositivo',
     impostazioni: 'Impostazioni',
@@ -69,6 +71,7 @@ export default function App() {
     dashboard: Dashboard, magazzino: Magazzino, servizi: Servizi,
     acquisto: AcquistoPlugin, riparazioni: Riparazioni,
     'storico-dispositivi': StoricoDispositivi,
+    calendario: Calendario,
     storico: Storico, clienti: Clienti,
     importexport: ImportExport, protezione: Protezione, impostazioni: Impostazioni,
     valutazione: ValutazioneDisplay,
@@ -101,9 +104,9 @@ export default function App() {
               background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)',
               borderRadius:8, padding:'5px 12px', cursor:'pointer',
             }}>
-              <span style={{ fontSize:12 }}>▣</span>
+              <span style={{ fontSize:12 }}>â£</span>
               <span style={{ fontSize:12.5, color:'#94a3b8' }}>Negozio principale</span>
-              <span style={{ fontSize:10, color:'#475569' }}>▾</span>
+              <span style={{ fontSize:10, color:'#475569' }}>â¾</span>
             </div>
           </div>
         </div>
@@ -126,16 +129,16 @@ export default function App() {
 
 function CNModal({onClose,onSelect}){
   const A=[
-    {id:'dispositivo',icon:'📱',label:'Nuovo dispositivo',desc:'Aggiungi al magazzino',c:'#3b82f6'},
-    {id:'acquisto_privato',icon:'🤝',label:'Acquisto da privato',desc:'Registra Art.36',c:'#8b5cf6'},
-    {id:'vendita',icon:'💰',label:'Nuova vendita',desc:'Vendi un dispositivo',c:'#10b981'},
-    {id:'riparazione',icon:'🔧',label:'Nuova riparazione',desc:'Apri scheda riparazione',c:'#f97316'},
-    {id:'cliente',icon:'👤',label:'Nuovo cliente',desc:'Aggiungi al database',c:'#06b6d4'},
-    {id:'fornitore',icon:'🏭',label:'Nuovo fornitore',desc:'Registra fornitore',c:'#6366f1'},
-    {id:'ordine',icon:'📦',label:'Ordine ricambi',desc:'Crea ordine ricambi',c:'#ec4899'},
-    {id:'valutazione',icon:'📊',label:'Valutazione dispositivo',desc:'Avvia valutazione',c:'#f59e0b'},
-    {id:'movimento',icon:'🔄',label:'Movimento magazzino',desc:'Entrata o uscita',c:'#84cc16'},
-    {id:'promemoria',icon:'🔔',label:'Attivita / promemoria',desc:'Crea promemoria',c:'#94a3b8'},
+    {id:'dispositivo',icon:'ð±',label:'Nuovo dispositivo',desc:'Aggiungi al magazzino',c:'#3b82f6'},
+    {id:'acquisto_privato',icon:'ð¤',label:'Acquisto da privato',desc:'Registra Art.36',c:'#8b5cf6'},
+    {id:'vendita',icon:'ð°',label:'Nuova vendita',desc:'Vendi un dispositivo',c:'#10b981'},
+    {id:'riparazione',icon:'ð§',label:'Nuova riparazione',desc:'Apri scheda riparazione',c:'#f97316'},
+    {id:'cliente',icon:'ð¤',label:'Nuovo cliente',desc:'Aggiungi al database',c:'#06b6d4'},
+    {id:'fornitore',icon:'ð­',label:'Nuovo fornitore',desc:'Registra fornitore',c:'#6366f1'},
+    {id:'ordine',icon:'ð¦',label:'Ordine ricambi',desc:'Crea ordine ricambi',c:'#ec4899'},
+    {id:'valutazione',icon:'ð',label:'Valutazione dispositivo',desc:'Avvia valutazione',c:'#f59e0b'},
+    {id:'movimento',icon:'ð',label:'Movimento magazzino',desc:'Entrata o uscita',c:'#84cc16'},
+    {id:'promemoria',icon:'ð',label:'Attivita / promemoria',desc:'Crea promemoria',c:'#94a3b8'},
   ]
   return(<div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',backdropFilter:'blur(6px)',zIndex:300,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
     <div onClick={e=>e.stopPropagation()} style={{background:'#0d1526',border:'1px solid rgba(255,255,255,0.1)',borderRadius:20,width:'100%',maxWidth:560,maxHeight:'88vh',overflowY:'auto',fontFamily:'Inter,sans-serif',boxShadow:'0 32px 80px rgba(0,0,0,0.7)'}}>
