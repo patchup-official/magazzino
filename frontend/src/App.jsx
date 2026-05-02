@@ -16,7 +16,6 @@ import Noleggio from './pages/Noleggio'
 import Cassa from './pages/Cassa'
 import Protezione from './pages/Protezione'
 import Impostazioni from './pages/Impostazioni'
-import Calendario from './pages/Calendario'
 import FirmaRemota from './pages/FirmaRemota'
 import Toast from './components/Toast'
 
@@ -61,10 +60,10 @@ export default function App() {
     storico: 'Storico acquisti', clienti: 'Clienti',
     importexport: 'Import / Export', protezione: 'Protezione Dispositivo',
     impostazioni: 'Impostazioni',
-    calendario: 'Calendario',
     valutazione: 'Valutazione Display',
     noleggio: 'Noleggio Subbyx',
     cassa: 'Chiusura Cassa',
+    calendario: 'Calendario',
   }
 
   const pages = {
@@ -76,6 +75,7 @@ export default function App() {
     valutazione: ValutazioneDisplay,
     noleggio: Noleggio,
     cassa: Cassa,
+    calendario: Calendario,
   }
   const PageComponent = pages[currentPage] || Dashboard
 
