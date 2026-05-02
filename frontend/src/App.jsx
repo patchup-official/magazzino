@@ -63,7 +63,6 @@ export default function App() {
     valutazione: 'Valutazione Display',
     noleggio: 'Noleggio Subbyx',
     cassa: 'Chiusura Cassa',
-    calendario: 'Calendario',
   }
 
   const pages = {
@@ -75,7 +74,6 @@ export default function App() {
     valutazione: ValutazioneDisplay,
     noleggio: Noleggio,
     cassa: Cassa,
-    calendario: Calendario,
   }
   const PageComponent = pages[currentPage] || Dashboard
 
