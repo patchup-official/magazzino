@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+undefinedimport { useState, useEffect, useCallback } from 'react'
 const API_BASE=import.meta.env.VITE_API_URL||'https://magazzino-backend-f7vr.onrender.com'
 const TIPI={riparazione:{label:'Riparazione',color:'#ef4444',bg:'rgba(239,68,68,0.15)',icon:'🔧'},servizio:{label:'Servizio',color:'#f97316',bg:'rgba(249,115,22,0.15)',icon:'⚙️'},vendita:{label:'Vendita',color:'#10b981',bg:'rgba(16,185,129,0.15)',icon:'💰'},acquisto:{label:'Acquisto',color:'#8b5cf6',bg:'rgba(139,92,246,0.15)',icon:'🤝'},scadenza:{label:'Scadenza',color:'#3b82f6',bg:'rgba(59,130,246,0.15)',icon:'🛡️'},promemoria:{label:'Promemoria',color:'#f59e0b',bg:'rgba(245,158,11,0.15)',icon:'🔔'}}
 const GIORNI=['Dom','Lun','Mar','Mer','Gio','Ven','Sab']
