@@ -1,5 +1,6 @@
 import { useState } from 'react'
-const navPrincipale=[{id:'dashboard',icon:'⬡',label:'Dashboard'},{id:'clienti',icon:'👥',label:'Clienti'},{id:'riparazioni',icon:'🔧',label:'Riparazioni'},{id:'servizi',icon:'⚙️',label:'Servizi'},{id:'importexport',icon:'📤',label:'Import/Export'}]
+const navPrincipale=[{id:'dashboard',icon:'⬡',label:'Dashboard'},{id:'clienti',icon:'👥',label:'Clienti'},{id:'riparazioni',icon:'🔧',label:'Riparazioni'},{id:'servizi',icon:'⚙️',label:'Servizi'},
+  {id:'calendario',icon:'📅',label:'Calendario'},{id:'importexport',icon:'📤',label:'Import/Export'}]
 const navMagazzino=[{id:'magazzino',icon:'📦',label:'Magazzino'},{id:'cassa',icon:'💰',label:'Cassa'},{id:'acquisto',icon:'◈',label:'Acquisto dispositivo'},{id:'storico-dispositivi',icon:'📱',label:'Storico Acquisti'},{id:'protezione',icon:'🛡️',label:'Protezione'},{id:'valutazione',icon:'📊',label:'Valutazione Display'},{id:'noleggio',icon:'🔄',label:'Noleggio'}]
 
 function EnownLogo({collapsed}){
