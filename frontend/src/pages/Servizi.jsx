@@ -549,3 +549,5 @@ function WizardServizio({ api, editing, onDone, onClose }) {
 
   return <Wizard steps={steps} onComplete={complete} onClose={onClose} title={editing ? 'Modifica servizio' : 'Nuovo servizio'}/>
 }
+
+undefined
