@@ -1,3 +1,4 @@
+// v2
 // Servizi.jsx - Gestione servizi del negozio
 
 import { useState, useEffect, useRef } from 'react'
