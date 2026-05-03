@@ -170,3 +170,182 @@ function WizardProdotto({ api, fornitori, onDone, onClose, editing }) {
 // ══════════════════════════════════════════════
 // WIZARD FORNITORE
 // ══════════════════════════════════════════════
+
+// ââââââââââââââââââââââââââââââââââââââââââââââ
+function WizardFornitore({ api, onDone, onClose, editing }) {
+  const [f, setF] = useState(editing || {nome:'',contatto:'',email:'',telefono:'',piva:'',indirizzo:'',note:''})
+  const upd = c => setF(p=>({...p,...c}))
+
+  const steps = [
+    {
+      title:'Nome azienda',
+      heading:'ð­ Come si chiama il fornitore?',
+      subtitle:'Inserisci il nome dell\'azienda o del fornitore.',
+      validate:()=>{ if(!f.nome.trim()) return 'Il nome del fornitore Ã¨ obbligatorio' },
+      content:(
+        <WizField label="Nome azienda / fornitore" hint="Es. TechSupplies S.r.l., Mario Rossi...">
+          <input {...wizInp} placeholder="Nome azienda" value={f.nome} onChange={e=>upd({nome:e.target.value})} autoFocus style={{...wizInp,width:'100%',boxSizing:'border-box'}}/>
+        </WizField>
+      )
+    },
+    {
+      title:'Contatti',
+      heading:'ð Come lo contatti?',
+      subtitle:'Inserisci i dati di contatto. Tutti i campi sono facoltativi.',
+      content:(
+        <div>
+          <WizField label="Referente (persona di contatto)">
+            <input {...wizInp} placeholder="Es. Mario Rossi" value={f.contatto} onChange={e=>upd({contatto:e.target.value})} style={{...wizInp,width:'100%',boxSizing:'border-box'}}/>
+          </WizField>
+          <WizField label="Telefono">
+            <input {...wizInp} placeholder="+39 333 1234567" value={f.telefono} onChange={e=>upd({telefono:e.target.value})} style={{...wizInp,width:'100%',boxSizing:'border-box'}}/>
+          </WizField>
+          <WizField label="Email">
+            <input {...wizInp} type="email" placeholder="info@fornitore.it" value={f.email} onChange={e=>upd({email:e.target.value})} style={{...wizInp,width:'100%',boxSizing:'border-box'}}/>
+          </WizField>
+        </div>
+      )
+    },
+    {
+      title:'Dati fiscali',
+      heading:'ð Dati fiscali',
+      subtitle:'Facoltativi ma utili per la fatturazione.',
+      content:(
+        <div>
+          <WizField label="P.IVA">
+            <input {...wizInp} placeholder="IT00000000000" value={f.piva} onChange={e=>upd({piva:e.target.value})} style={{...wizInp,width:'100%',boxSizing:'border-box'}}/>
+          </WizField>
+          <WizField label="Indirizzo">
+            <input {...wizInp} placeholder="Via Roma 1, 20100 Milano" value={f.indirizzo} onChange={e=>upd({indirizzo:e.target.value})} style={{...wizInp,width:'100%',boxSizing:'border-box'}}/>
+          </WizField>
+          <WizField label="Note interne">
+            <input {...wizInp} placeholder="Note sul fornitore..." value={f.note} onChange={e=>upd({note:e.target.value})} style={{...wizInp,width:'100%',boxSizing:'border-box'}}/>
+          </WizField>
+        </div>
+      )
+    },
+    {
+      title:'Conferma',
+      heading:'â Tutto ok?',
+      subtitle:'Controlla i dati del fornitore.',
+      content:(
+        <Summary items={[
+          {label:'Nome',      val:f.nome},
+          {label:'Referente', val:f.contatto||'â'},
+          {label:'Telefono',  val:f.telefono||'â'},
+          {label:'Email',     val:f.email||'â'},
+          {label:'P.IVA',     val:f.piva||'â'},
+          {label:'Indirizzo', val:f.indirizzo||'â'},
+        ]}/>
+      )
+    }
+  ]
+
+  const complete = async () => {
+    try {
+      if(editing?.id){ const {data}=await axios.put(`${api}/fornitori/${editing.id}`,f); onDone(data,'edit') }
+      else { const {data}=await axios.post(`${api}/fornitori`,f); onDone(data,'add') }
+    } catch { onDone({...f,id:Date.now().toString()},editing?.id?'edit':'add') }
+    onClose()
+  }
+
+  return <Wizard title={editing?.id?'Modifica fornitore':'Aggiungi fornitore'} steps={steps} onClose={onClose} onComplete={complete}/>
+}
+
+// ââââââââââââââââââââââââââââââââââââââââââââââ
+// WIZARD DISPOSITIVO
+// ââââââââââââââââââââââââââââââââââââââââââââââ
+function WizardDispositivo({ api, fornitori, onDone, onClose }) {
+  const [f, setF] = useState({brand:'Apple',modello:'',storage:'128GB',colore:'',imei:'',condizione:'B',stato:'in_stock',provenienza:'fornitore',prezzo_acq:'',prezzo_vend:'',fornitore_id:''})
+  const upd = c => setF(p=>({...p,...c}))
+
+  const BRANDS = ['Apple','Samsung','Google','Xiaomi','OnePlus','Huawei']
+  const STORAGES = ['32GB','64GB','128GB','256GB','512GB','1TB']
+
+  const steps = [
+    {
+      title:'Brand',
+      heading:'ð± Che marca Ã¨?',
+      subtitle:'Seleziona il produttore del dispositivo.',
+      content:(
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}}>
+          {BRANDS.map(b=>(
+            <OptionCard key={b} label={b} selected={f.brand===b} onClick={()=>upd({brand:b})}
+              icon={{'Apple':'ð','Samsung':'ð²','Google':'ð','Xiaomi':'â¡','OnePlus':'ð´','Huawei':'ð'}[b]}
+            />
+          ))}
+        </div>
+      )
+    },
+    {
+      title:'Modello e storage',
+      heading:`âï¸ Qual Ã¨ il modello?`,
+      subtitle:`Inserisci il modello esatto e la capacitÃ  di memoria.`,
+      validate:()=>{ if(!f.modello.trim()) return 'Il modello Ã¨ obbligatorio' },
+      content:(
+        <div>
+          <WizField label="Modello" hint={`Es. ${f.brand==='Apple'?'iPhone 15 Pro, iPhone 14':f.brand==='Samsung'?'Galaxy S24, Galaxy A54':'Pixel 8, Redmi Note 13...'}`}>
+            <input {...wizInp} placeholder={`Es. ${f.brand==='Apple'?'iPhone 15 Pro':'Galaxy S24'}`} value={f.modello} onChange={e=>upd({modello:e.target.value})} autoFocus style={{...wizInp,width:'100%',boxSizing:'border-box'}}/>
+          </WizField>
+          <WizField label="CapacitÃ  di memoria">
+            <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+              {STORAGES.map(s=>(
+                <button key={s} onClick={()=>upd({storage:s})} style={{padding:'9px 18px',borderRadius:9,fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'Inter,sans-serif',transition:'all 0.15s',background:f.storage===s?'rgba(124,58,237,0.25)':'rgba(255,255,255,0.04)',color:f.storage===s?'#c4b5fd':'rgba(255,255,255,0.5)',border:f.storage===s?'1px solid rgba(124,58,237,0.5)':'1px solid rgba(255,255,255,0.08)'}}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          </WizField>
+          <WizField label="Colore" hint="Lascia vuoto se non lo conosci">
+            <input {...wizInp} placeholder="Es. Nero, Bianco, Oro..." value={f.colore} onChange={e=>upd({colore:e.target.value})} style={{...wizInp,width:'100%',boxSizing:'border-box'}}/>
+          </WizField>
+        </div>
+      )
+    },
+    {
+      title:'Condizione',
+      heading:'ð In che condizioni Ã¨?',
+      subtitle:'Valuta onestamente le condizioni estetiche e funzionali del dispositivo.',
+      content:(
+        <div>
+          {[
+            {val:'A',label:'A â Ottima',icon:'â­',desc:'Come nuovo, nessun segno di usura'},
+            {val:'B',label:'B â Buona', icon:'ð',desc:'Leggeri segni di usura, funziona perfettamente'},
+            {val:'C',label:'C â Discreta',icon:'ð',desc:'Graffi evidenti o piccoli difetti ma funzionante'},
+          ].map(c=>(
+            <OptionCard key={c.val} icon={c.icon} label={c.label} desc={c.desc} selected={f.condizione===c.val} onClick={()=>upd({condizione:c.val})}/>
+          ))}
+          <div style={{marginTop:16}}/>
+          <WizField label="Provenienza">
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+              <OptionCard icon="ð­" label="Fornitore" desc="Acquistato da un grossista" selected={f.provenienza==='fornitore'} onClick={()=>upd({provenienza:'fornitore'})}/>
+              <OptionCard icon="ð¤" label="Privato" desc="Acquistato da un cliente" selected={f.provenienza==='privato'} onClick={()=>upd({provenienza:'privato'})}/>
+            </div>
+          </WizField>
+        </div>
+      )
+    },
+    {
+      title:'IMEI e prezzi',
+      heading:'ð¶ IMEI e prezzi',
+      subtitle:'Inserisci il numero IMEI e i prezzi. Il prezzo di vendita Ã¨ facoltativo.',
+      validate:()=>{ if(!f.prezzo_acq||isNaN(+f.prezzo_acq)||+f.prezzo_acq<=0) return 'Inserisci un prezzo di acquisto valido' },
+      content:(
+        <div>
+          <WizField label="IMEI" hint="Digita *#06# sul telefono per trovarlo">
+            <input {...wizInp} placeholder="356xxxxxxxxxxxxxx" value={f.imei} onChange={e=>upd({imei:e.target.value})} style={{...wizInp,fontFamily:'monospace',fontSize:13,width:'100%',boxSizing:'border-box'}} maxLength={15}/>
+          </WizField>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+            <WizField label="Prezzo acquisto (â¬)">
+              <div style={{position:'relative'}}>
+                <span style={{position:'absolute',left:13,top:'50%',transform:'translateY(-50%)',color:'rgba(255,255,255,0.4)',fontSize:16}}>â¬</span>
+                <input {...wizInp} type="number" step="0.01" min="0" placeholder="200" value={f.prezzo_acq} onChange={e=>upd({prezzo_acq:e.target.value})} style={{...wizInp,paddingLeft:30,width:'100%',boxSizing:'border-box'}}/>
+              </div>
+            </WizField>
+            <WizField label="Prezzo vendita (â¬)" hint="Facoltativo, aggiungi dopo">
+              <div style={{position:'relative'}}>
+                <span style={{position:'absolute',left:13,top:'50%',transform:'translateY(-50%)',color:'rgba(255,255,255,0.4)',fontSize:16}}>â¬</span>
+                <input {...wizInp} type="number" step="0.01" min="0" placeholder="350" value={f.prezzo_vend} onChange={e=>upd({prezzo_vend:e.target.value})} style={{...wizInp,paddingLeft:30,width:'100%',boxSizing:'border-box'}}/>
+              </div>
+            </WizField>
+          </div>
