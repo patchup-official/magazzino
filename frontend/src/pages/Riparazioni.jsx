@@ -223,9 +223,3 @@ export default function Riparazioni({ api, showToast, autoAction, onAutoActionDo
   )
 }
 // Riparazioni.jsx - Design Figma
-
-import { useState, useEffect, useRef } from 'react'
-import axios from 'axios'
-import ClienteSelector from '../components/ClienteSelector'
-
-const PRIOR = { normale:'rgba(100,116,139,0.15)|#94a3b8', alta:'rgba(234,179,8,0.15)|#facc15', urgente:'rgba(239,68,68,0.15)|#f87171' }
