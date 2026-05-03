@@ -349,3 +349,181 @@ function WizardDispositivo({ api, fornitori, onDone, onClose }) {
               </div>
             </WizField>
           </div>
+
+          <WizField label="Fornitore" hint="Da chi hai acquistato questo dispositivo?">
+            <select value={f.fornitore_id||''} onChange={e=>upd({fornitore_id:e.target.value})} style={{...wizSel,width:'100%',boxSizing:'border-box'}}>
+              <option value="">â Nessun fornitore â</option>
+              {fornitori.map(fo=><option key={fo.id} value={fo.id}>{fo.nome}</option>)}
+            </select>
+          </WizField>
+          <WizField label="Stato iniziale">
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+              {[{val:'in_stock',icon:'â',label:'In stock'},{val:'da_testare',icon:'ð¬',label:'Da testare'},{val:'in_riparazione',icon:'ð§',label:'In riparazione'},{val:'venduto',icon:'ð°',label:'Venduto'}].map(s=>(
+                <OptionCard key={s.val} icon={s.icon} label={s.label} selected={f.stato===s.val} onClick={()=>upd({stato:s.val})}/>
+              ))}
+            </div>
+          </WizField>
+        </div>
+      )
+    },
+    {
+      title:'Conferma',
+      heading:'â Tutto ok?',
+      subtitle:'Controlla i dati prima di aggiungere il dispositivo al magazzino.',
+      content:(
+        <Summary items={[
+          {label:'Dispositivo',   val:`${f.brand} ${f.modello}`},
+          {label:'Storage',       val:f.storage},
+          {label:'Colore',        val:f.colore||'â'},
+          {label:'IMEI',          val:f.imei||'Non inserito'},
+          {label:'Condizione',    val:f.condizione},
+          {label:'Provenienza',   val:f.provenienza},
+          {label:'Prezzo acquisto',val:f.prezzo_acq?`â¬${f.prezzo_acq}`:''},
+          {label:'Prezzo vendita', val:f.prezzo_vend?`â¬${f.prezzo_vend}`:'Non impostato'},
+          {label:'Fornitore',      val:fornitori.find(fo=>fo.id===f.fornitore_id)?.nome||'Nessuno'},
+          {label:'Stato',          val:STATO_DEVICE[f.stato]},
+        ]}/>
+      )
+    }
+  ]
+
+  const complete = async () => {
+    const payload = {brand:f.brand,modello:f.modello.trim(),storage:f.storage,colore:f.colore||undefined,imei:f.imei||undefined,condizione:f.condizione,stato:f.stato,provenienza:f.provenienza,prezzo_acq:+f.prezzo_acq,prezzo_vend:f.prezzo_vend?+f.prezzo_vend:0,fornitore_id:f.fornitore_id||undefined}
+    try { const {data}=await axios.post(`${api}/devices`,payload); onDone(data,'add') }
+    catch { onDone({...payload,id:Date.now().toString()},'add') }
+    onClose()
+  }
+
+  return <Wizard title="Aggiungi dispositivo" steps={steps} onClose={onClose} onComplete={complete}/>
+}
+
+// ââââââââââââââââââââââââââââââââââââââââââââââ
+// WIZARD INTERVENTO
+// ââââââââââââââââââââââââââââââââââââââââââââââ
+function WizardIntervento({ api, device, fornitori, onDone, onClose, editing }) {
+  const [f, setF] = useState(editing||{tipo:'sostituzione_batteria',descrizione:'',costo:'',fornitore_id:'',eseguito_da:'interno',data:new Date().toISOString().slice(0,10),note:''})
+  const upd = c => setF(p=>({...p,...c}))
+
+  const steps = [
+    {
+      title:'Tipo intervento',
+      heading:'ð§ Che intervento Ã¨ stato fatto?',
+      subtitle:`Seleziona il tipo di intervento eseguito su ${device.brand} ${device.modello}.`,
+      content:(
+        <div style={{display:'flex',flexDirection:'column',gap:8}}>
+          {TIPI_INT.map(t=>(
+            <OptionCard key={t.val} icon={t.label.split(' ')[0]} label={t.label.slice(t.label.indexOf(' ')+1)} desc={t.desc} selected={f.tipo===t.val} onClick={()=>upd({tipo:t.val})}/>
+          ))}
+        </div>
+      )
+    },
+    {
+      title:'Dettagli',
+      heading:'ð Dettagli intervento',
+      subtitle:'Descrivi cosa Ã¨ stato fatto e inserisci il costo.',
+      content:(
+        <div>
+          <WizField label="Descrizione" hint="Cosa Ã¨ stato fatto esattamente?">
+            <input {...wizInp} placeholder="Es. Batteria originale Apple sostituita, 100% salute..." value={f.descrizione} onChange={e=>upd({descrizione:e.target.value})} style={{...wizInp,width:'100%',boxSizing:'border-box'}}/>
+          </WizField>
+          <WizField label="Costo dell'intervento (â¬)" hint="Costo del ricambio e/o della manodopera">
+            <div style={{position:'relative'}}>
+              <span style={{position:'absolute',left:13,top:'50%',transform:'translateY(-50%)',color:'rgba(255,255,255,0.4)',fontSize:16}}>â¬</span>
+              <input {...wizInp} type="number" step="0.01" min="0" placeholder="0" value={f.costo} onChange={e=>upd({costo:e.target.value})} style={{...wizInp,paddingLeft:30,width:'100%',boxSizing:'border-box'}}/>
+            </div>
+          </WizField>
+          <WizField label="Data intervento">
+            <input {...wizInp} type="date" value={f.data} onChange={e=>upd({data:e.target.value})} style={{...wizInp,width:'100%',boxSizing:'border-box'}}/>
+          </WizField>
+        </div>
+      )
+    },
+    {
+      title:'Chi ha eseguito',
+      heading:'ð¨âð§ Chi ha eseguito l\'intervento?',
+      subtitle:'Specifica se Ã¨ stato fatto internamente o da un fornitore esterno.',
+      content:(
+        <div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:16}}>
+            <OptionCard icon="ð " label="Interno" desc="Eseguito dal nostro tecnico" selected={f.eseguito_da==='interno'} onClick={()=>upd({eseguito_da:'interno'})}/>
+            <OptionCard icon="ð­" label="Fornitore esterno" desc="Inviato a un centro esterno" selected={f.eseguito_da==='fornitore'} onClick={()=>upd({eseguito_da:'fornitore'})}/>
+          </div>
+          {f.eseguito_da==='fornitore'&&(
+            <WizField label="Quale fornitore?">
+              <select value={f.fornitore_id} onChange={e=>upd({fornitore_id:e.target.value})} style={{...wizSel,width:'100%',boxSizing:'border-box'}}>
+                <option value="">â Seleziona fornitore â</option>
+                {fornitori.map(fo=><option key={fo.id} value={fo.id}>{fo.nome}</option>)}
+              </select>
+            </WizField>
+          )}
+          <WizField label="Note aggiuntive" hint="Garanzia, numero d'ordine, ecc.">
+            <input {...wizInp} placeholder="Note..." value={f.note} onChange={e=>upd({note:e.target.value})} style={{...wizInp,width:'100%',boxSizing:'border-box'}}/>
+          </WizField>
+        </div>
+      )
+    },
+    {
+      title:'Conferma',
+      heading:'â Tutto ok?',
+      subtitle:'Riepilogo intervento prima di salvare.',
+      content:(
+        <Summary items={[
+          {label:'Dispositivo',   val:`${device.brand} ${device.modello}`},
+          {label:'Tipo',          val:TIPI_INT.find(t=>t.val===f.tipo)?.label||f.tipo},
+          {label:'Descrizione',   val:f.descrizione||'â'},
+          {label:'Costo',         val:f.costo?`â¬${f.costo}`:'Gratuito'},
+          {label:'Data',          val:f.data?new Date(f.data).toLocaleDateString('it-IT'):'â'},
+          {label:'Eseguito da',   val:f.eseguito_da==='interno'?'Interno':'Fornitore esterno'},
+          {label:'Fornitore',     val:fornitori.find(fo=>fo.id===f.fornitore_id)?.nome||'â'},
+        ]}/>
+      )
+    }
+  ]
+
+  const complete = async () => {
+    const payload = {device_id:device.id,tipo:f.tipo,descrizione:f.descrizione,costo:+f.costo||0,fornitore_id:f.fornitore_id||undefined,eseguito_da:f.eseguito_da,data:f.data,note:f.note}
+    try {
+      if(editing?.id){ const {data}=await axios.put(`${api}/interventi/${editing.id}`,payload); onDone(data,'edit') }
+      else { const {data}=await axios.post(`${api}/interventi`,payload); onDone(data,'add') }
+    } catch { onDone({...payload,id:Date.now().toString()},editing?.id?'edit':'add') }
+    onClose()
+  }
+
+  return <Wizard title={editing?.id?'Modifica intervento':'Nuovo intervento'} steps={steps} onClose={onClose} onComplete={complete}/>
+}
+
+// ââââââââââââââââââââââââââââââââââââââââââââââ
+// WIZARD RICAMBIO
+// ââââââââââââââââââââââââââââââââââââââââââââââ
+function WizardRicambio({ api, fornitori, onDone, onClose, editing }) {
+  const [f, setF] = useState(editing||{nome:'',categoria:'batteria',compatibile:'',fornitore_id:'',qty:'0',qty_minima:'2',prezzo_acq:'',barcode:'',note:''})
+  const upd = c => setF(p=>({...p,...c}))
+
+  const CATS = [{val:'batteria',icon:'ð'},{val:'schermo',icon:'ð±'},{val:'scocca',icon:'ð§'},{val:'altoparlante',icon:'ð'},{val:'fotocamera',icon:'ð·'},{val:'connettore',icon:'ð'},{val:'altro',icon:'ð¦'}]
+
+  const steps = [
+    {
+      title:'Tipo ricambio',
+      heading:'ð§ Che tipo di ricambio Ã¨?',
+      subtitle:'Seleziona la categoria del componente.',
+      content:(
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+          {CATS.map(c=>(
+            <OptionCard key={c.val} icon={c.icon} label={c.val.charAt(0).toUpperCase()+c.val.slice(1)} selected={f.categoria===c.val} onClick={()=>upd({categoria:c.val})}/>
+          ))}
+        </div>
+      )
+    },
+    {
+      title:'Dettagli',
+      heading:'ð Descrivi il ricambio',
+      subtitle:'Nome, compatibilitÃ  e fornitore.',
+      validate:()=>{ if(!f.nome.trim()) return 'Il nome del ricambio Ã¨ obbligatorio' },
+      content:(
+        <div>
+          <WizField label="Nome ricambio" hint="Es. Batteria iPhone 14 3279mAh">
+            <input {...wizInp} placeholder="Nome ricambio..." value={f.nome} onChange={e=>upd({nome:e.target.value})} autoFocus style={{...wizInp,width:'100%',boxSizing:'border-box'}}/>
+          </WizField>
+          <WizField label="Compatibile con" hint="Separa i modelli con una virgola">
+            <input {...wizInp} placeholder="Es. iPhone 13, iPhone 14, iPhone 15" value={f.compatibile} onChange={e=>upd({compatibile:e.target.value})} style={{...wizInp,width:'100%',boxSizing:'border-box'}}/>
+          </WizField>
