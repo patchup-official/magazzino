@@ -148,6 +148,7 @@ async function initDB() {
   try { db.run("ALTER TABLE repairs ADD COLUMN durata_minuti INTEGER") } catch(e) {}
   try { db.run("ALTER TABLE servizi ADD COLUMN ora_inizio TEXT") } catch(e) {}
   try { db.run("ALTER TABLE servizi ADD COLUMN durata_minuti INTEGER") } catch(e) {}
+  try { db.run(`CREATE TABLE IF NOT EXISTS promemoria (id TEXT PRIMARY KEY, titolo TEXT NOT NULL, nota TEXT DEFAULT '', data TEXT NOT NULL, ora TEXT, ricorrenza TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`) } catch(e) {}
 
   app.locals.saveDB = () => {
     fs.writeFileSync(DB_PATH, Buffer.from(db.export()));
@@ -172,7 +173,9 @@ initDB().then(() => {
   app.use('/purchases',           require('./routes/purchases'));
   app.use('/imei',                require('./routes/imei'));
   app.use('/valutazione',         require('./routes/valutazione'));
-  app.use('/fornitori',           require('./routes/fornitori'));
+  app.use('/fornitori',           require('./routes/fornitori')
+const promemoriaRoutes = require('./routes/promemoria')
+app.use('/promemoria', promemoriaRoutes));
   app.use('/interventi',          require('./routes/interventi'));
   app.use('/ricambi',             require('./routes/ricambi'));
   app.use('/servizi',             require('./routes/servizi'));
