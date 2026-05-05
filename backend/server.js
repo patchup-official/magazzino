@@ -172,10 +172,7 @@ initDB().then(() => {
   app.use('/repairs',             require('./routes/repairs'));
   app.use('/purchases',           require('./routes/purchases'));
   app.use('/imei',                require('./routes/imei'));
-  app.use('/valutazione',         require('./routes/valutazione'));
-  app.use('/fornitori',           require('./routes/fornitori')
-const promemoriaRoutes = require('./routes/promemoria')
-app.use('/promemoria', promemoriaRoutes));
+  app.use('/valutazione',         require('./routes/valutazione'));  app.use('/fornitori',           require('./routes/fornitori'));
   app.use('/interventi',          require('./routes/interventi'));
   app.use('/ricambi',             require('./routes/ricambi'));
   app.use('/servizi',             require('./routes/servizi'));
@@ -196,6 +193,7 @@ const storicoDispRoute = require('./routes/storico_dispositivi_route');
   app.use('/storico-dispositivi', storicoDispRoute.router);
   app.use('/cassa', cassaRoute.router);
 
+  app.use('/promemoria', require('./routes/promemoria'));
   app.get('/health', (req, res) => {
     res.json({
       status: 'ok', version: '2.7.0',
