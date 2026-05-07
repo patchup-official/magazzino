@@ -1,4 +1,4 @@
-﻿// App.jsx
+// App.jsx
 
 import { useState, useEffect } from 'react'
 import Sidebar from './components/Sidebar'
@@ -51,7 +51,7 @@ export default function App() {
       case 'movimento': setCurrentPage('magazzino'); setCreaNuovoAction(null); break
       case 'servizio': setCurrentPage('servizi'); setCreaNuovoAction('nuovo_servizio'); break
       case 'da_privato': setCurrentPage('acquisto'); setCreaNuovoAction(null); break
-      default: showToast('Funzione in sviluppo ÃÂ°ÃÂÃÂÃÂ§'); break
+      default: showToast('Funzione in sviluppo Ã°ÃÂÃÂÃÂ§'); break
     }
   }
 
