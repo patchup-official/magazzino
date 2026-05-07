@@ -130,18 +130,17 @@ export default function App() {
 
 function CNModal({onClose,onSelect}){
   const A=[
-    {id:'dispositivo',icon:'ÃÂ°ÃÂÃÂÃÂ±',label:'Nuovo dispositivo',desc:'Aggiungi al magazzino',c:'#3b82f6'},
-    {id:'acquisto_privato',icon:'ÃÂ°ÃÂÃÂ¤ÃÂ',label:'Acquisto da privato',desc:'Registra Art.36',c:'#8b5cf6'},
-    {id:'vendita',icon:'ÃÂ°ÃÂÃÂÃÂ°',label:'Nuova vendita',desc:'Vendi un dispositivo',c:'#10b981'},
-    {id:'riparazione',icon:'ÃÂ°ÃÂÃÂÃÂ§',label:'Nuova riparazione',desc:'Apri scheda riparazione',c:'#f97316'},
-    {id:'cliente',icon:'ÃÂ°ÃÂÃÂÃÂ¤',label:'Nuovo cliente',desc:'Aggiungi al database',c:'#06b6d4'},
-    {id:'fornitore',icon:'ÃÂ°ÃÂÃÂÃÂ­',label:'Nuovo fornitore',desc:'Registra fornitore',c:'#6366f1'},
-    {id:'ordine',icon:'ÃÂ°ÃÂÃÂÃÂ¦',label:'Ordine ricambi',desc:'Crea ordine ricambi',c:'#ec4899'},
-    {id:'valutazione',icon:'ÃÂ°ÃÂÃÂÃÂ',label:'Valutazione dispositivo',desc:'Avvia valutazione',c:'#f59e0b'},
-    {id:'movimento',icon:'ÃÂ°ÃÂÃÂÃÂ',label:'Movimento magazzino',desc:'Entrata o uscita',c:'#84cc16'},
-    {id:'promemoria',icon:'ÃÂ°ÃÂÃÂÃÂ',label:'Attivita / promemoria',desc:'Crea promemoria',c:'#94a3b8'},
+    {id:'dispositivo',icon:'📱',label:'Nuovo dispositivo',desc:'Aggiungi al magazzino',c:'#3b82f6'},
+    {id:'acquisto_privato',icon:'🤝',label:'Acquisto da privato',desc:'Registra Art.36',c:'#8b5cf6'},
+    {id:'vendita',icon:'💰',label:'Nuova vendita',desc:'Vendi un dispositivo',c:'#10b981'},
+    {id:'riparazione',icon:'🔧',label:'Nuova riparazione',desc:'Apri scheda riparazione',c:'#f97316'},
+    {id:'cliente',icon:'👤',label:'Nuovo cliente',desc:'Aggiungi al database',c:'#06b6d4'},
+    {id:'fornitore',icon:'🏭',label:'Nuovo fornitore',desc:'Registra fornitore',c:'#84cc16'},
+    {id:'ricambi',icon:'📦',label:'Ordine ricambi',desc:'Crea ordine ricambi',c:'#f59e0b'},
+    {id:'valutazione',icon:'📊',label:'Valutazione dispositivo',desc:'Avvia valutazione',c:'#6366f1'},
+    {id:'movimento',icon:'🔄',label:'Movimento magazzino',desc:'Entrata o uscita',c:'#64748b'},
+    {id:'promemoria',icon:'📌',label:'Attivita / promemoria',desc:'Crea promemoria',c:'#f59e0b'}
   ]
-  return(<div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',backdropFilter:'blur(6px)',zIndex:300,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
     <div onClick={e=>e.stopPropagation()} style={{background:'#0d1526',border:'1px solid rgba(255,255,255,0.1)',borderRadius:20,width:'100%',maxWidth:560,maxHeight:'88vh',overflowY:'auto',fontFamily:'Inter,sans-serif',boxShadow:'0 32px 80px rgba(0,0,0,0.7)'}}>
       <div style={{padding:'22px 24px 14px',borderBottom:'1px solid rgba(255,255,255,0.07)',display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
         <div>
