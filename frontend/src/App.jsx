@@ -169,7 +169,8 @@ function CNModal({onClose,onSelect}){
         <span style={{fontSize:11,color:'#475569'}}>per chiudere</span>
       </div>
     </div>
-  </div>)
+    </div>
+  )
 }
 
 function Clock() {
