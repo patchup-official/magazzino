@@ -86,7 +86,7 @@ export default function Calendario({api,showToast,onNavigate}){
       })
       if(res.ok){
         setEventi(prev=>prev.map(e=>e.id===ev.id?{...e,ora_inizio:oraInizio,durata_minuti:durataMin}:e))
-        showToast&&showToast('Slot aggiornato â')
+        showToast&&showToast('Slot aggiornato ✓')
         setEditSlot(null)
       }
     }catch(e){}
@@ -241,7 +241,7 @@ export default function Calendario({api,showToast,onNavigate}){
 
       {/* Nessun evento */}
       {evGiorno.length===0&&(<div style={{textAlign:'center',padding:'30px',color:'#475569',fontSize:13,marginTop:8}}>
-        â Nessun impegno per questo giorno
+        ✓ Nessun impegno per questo giorno
       </div>)}
     </div>)}
 
@@ -265,13 +265,13 @@ export default function Calendario({api,showToast,onNavigate}){
           </select>
         </div>
         {editSlot._oraInizio&&<div style={{fontSize:11,color:'#64748b',marginBottom:16,textAlign:'center'}}>
-          {editSlot._oraInizio} â {fromMin(toMin(editSlot._oraInizio)+(editSlot._durata||60))}
+          {editSlot._oraInizio} → {fromMin(toMin(editSlot._oraInizio)+(editSlot._durata||60))}
         </div>}
         <div style={{display:'flex',gap:8}}>
           <button onClick={()=>setEditSlot(null)} style={{flex:1,padding:'10px',borderRadius:9,border:'1px solid rgba(255,255,255,0.1)',background:'transparent',color:'#94a3b8',cursor:'pointer',fontFamily:F,fontSize:13}}>Annulla</button>
           <button onClick={()=>salvaSlot(editSlot,editSlot._oraInizio,editSlot._durata||60)} disabled={savingSlot===editSlot.id}
             style={{flex:2,padding:'10px',borderRadius:9,border:'none',background:'#f97316',color:'#fff',cursor:'pointer',fontFamily:F,fontSize:13,fontWeight:700}}>
-            {savingSlot===editSlot.id?'Salvo...':'â Salva slot'}
+            {savingSlot===editSlot.id?'Salvo...':'✓ Salva slot'}
           </button>
         </div>
       </div>

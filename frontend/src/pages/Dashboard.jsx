@@ -1,4 +1,4 @@
-﻿// Dashboard.jsx - Fedele al Figma (Frame 4): card grandi con icone e gradienti
+// Dashboard.jsx - Fedele al Figma (Frame 4): card grandi con icone e gradienti
 
 import { useState, useEffect } from 'react'
 import axios from 'axios'

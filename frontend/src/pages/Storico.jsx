@@ -1,4 +1,4 @@
-﻿// pages/Storico.jsx - Storico acquisti da privati
+// pages/Storico.jsx - Storico acquisti da privati
 
 import { useState, useEffect } from 'react'
 import axios from 'axios'

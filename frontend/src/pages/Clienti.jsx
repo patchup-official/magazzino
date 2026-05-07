@@ -1,4 +1,4 @@
-﻿// Clienti.jsx - Gestione anagrafica clienti
+// Clienti.jsx - Gestione anagrafica clienti
 
 import { useState, useEffect, useRef } from 'react'
 import axios from 'axios'

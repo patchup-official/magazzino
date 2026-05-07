@@ -1,4 +1,4 @@
-﻿// Servizi.jsx - Gestione servizi del negozio
+// Servizi.jsx - Gestione servizi del negozio
 
 import { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
@@ -52,8 +52,8 @@ function WizardServizio({ api, editing, onDone, onClose }) {
   const steps = [
     {
       label: 'Cliente e dispositivo',
-      heading: 'ð¤ Cliente e dispositivo',
-      subtitle: 'Chi Ã¨ il cliente e su quale dispositivo lavoriamo?',
+      heading: '👤 Cliente e dispositivo',
+      subtitle: 'Chi è il cliente e su quale dispositivo lavoriamo?',
       validate: () => {
         if (!f.cliente.trim()) return 'Inserisci il nome del cliente'
         if (!f.dispositivo.trim()) return 'Inserisci il dispositivo'
@@ -79,7 +79,7 @@ function WizardServizio({ api, editing, onDone, onClose }) {
     },
     {
       label: 'Tipo di servizio',
-      heading: 'ð ï¸ Che servizio serve?',
+      heading: 'ð ️ Che servizio serve?',
       subtitle: 'Scegli il tipo di servizio da erogare.',
       content: (
         <div>
@@ -90,7 +90,7 @@ function WizardServizio({ api, editing, onDone, onClose }) {
                   key={tipo.id}
                   icon={tipo.icon}
                   label={tipo.nome}
-                  sublabel={`â¬${tipo.prezzo_base}`}
+                  sublabel={`€${tipo.prezzo_base}`}
                   selected={f.tipo_servizio === tipo.id}
                   onClick={() => upd({tipo_servizio: tipo.id, prezzo: tipo.prezzo_base.toString()})}
                 />
@@ -104,29 +104,29 @@ function WizardServizio({ api, editing, onDone, onClose }) {
       )
     },
     {
-      label: 'PrioritÃ  e prezzo',
-      heading: 'ð° PrioritÃ  e tariffazione',
-      subtitle: 'Imposta prioritÃ , prezzo e tempistiche.',
+      label: 'Priorità e prezzo',
+      heading: '💰 Priorità e tariffazione',
+      subtitle: 'Imposta priorità, prezzo e tempistiche.',
       validate: () => {
         if (!f.prezzo || isNaN(+f.prezzo) || +f.prezzo <= 0) return 'Inserisci un prezzo valido'
       },
       content: (
         <div>
-          <WizField label="PrioritÃ ">
+          <WizField label="Priorità">
             <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8}}>
               {[
-                {val:'normale', icon:'ð¢', label:'Normale', desc:'Standard'},
-                {val:'alta', icon:'ð¡', label:'Alta', desc:'Prioritaria'},
-                {val:'urgente', icon:'ð´', label:'Urgente', desc:'Immediata'}
+                {val:'normale', icon:'🟢', label:'Normale', desc:'Standard'},
+                {val:'alta', icon:'🟡', label:'Alta', desc:'Prioritaria'},
+                {val:'urgente', icon:'🔴', label:'Urgente', desc:'Immediata'}
               ].map(p => (
                 <OptionCard key={p.val} icon={p.icon} label={p.label} sublabel={p.desc} selected={f.priorita === p.val} onClick={() => upd({priorita: p.val})}/>
               ))}
             </div>
           </WizField>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
-            <WizField label="Prezzo (â¬)">
+            <WizField label="Prezzo (€)">
               <div style={{position:'relative'}}>
-                <span style={{position:'absolute',left:13,top:'50%',transform:'translateY(-50%)',color:'rgba(255,255,255,0.4)',fontSize:16}}>â¬</span>
+                <span style={{position:'absolute',left:13,top:'50%',transform:'translateY(-50%)',color:'rgba(255,255,255,0.4)',fontSize:16}}>€</span>
                 <input type="number" step="0.01" min="0" value={f.prezzo} onChange={e=>upd({prezzo:e.target.value})} style={{background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:8,padding:'9px 12px',color:'#e2e8f0',fontSize:13,paddingLeft:30,width:'100%',boxSizing:'border-box',fontFamily:'Inter,sans-serif'}}/>
               </div>
             </WizField>
@@ -147,11 +147,11 @@ function WizardServizio({ api, editing, onDone, onClose }) {
       content: (
         <Summary items={[
           {label:'Cliente', val:f.cliente},
-          {label:'Telefono', val:f.telefono||'â'},
+          {label:'Telefono', val:f.telefono||'—'},
           {label:'Dispositivo', val:f.dispositivo},
           {label:'Servizio', val:TIPI_SERVIZIO.find(t=>t.id===f.tipo_servizio)?.nome},
-          {label:'PrioritÃ ', val:f.priorita},
-          {label:'Prezzo', val:f.prezzo ? `â¬${f.prezzo}` : 'â'},
+          {label:'Priorità', val:f.priorita},
+          {label:'Prezzo', val:f.prezzo ? `€${f.prezzo}` : '—'},
           {label:'Consegna prevista', val:f.data_consegna_prevista||'Da definire'},
         ]}/>
       )
@@ -195,8 +195,8 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
   const [tipiLista, setTipiLista] = useState(loadTipi)
   const [showTipoForm, setShowTipoForm] = useState(false)
   const [editTipo, setEditTipo] = useState(null)
-  const [tipoForm, setTipoForm] = useState({nome:'',icon:'ð§',desc:'',prezzo_base:''})
-  const EMOJI_OPZIONI = ['ð§','ð','ð','ð¾','ð¡ï¸','ð§½','âï¸','â¬ï¸','ð±','ð','ð¡','ð¥ï¸','â¨ï¸','ð¨ï¸','ð·','ð®','ð§','ð¡','ð','ð³']
+  const [tipoForm, setTipoForm] = useState({nome:'',icon:'🔧',desc:'',prezzo_base:''})
+  const EMOJI_OPZIONI = ['🔧','ð','🔍','💾','🛡️','ð§½','⚙️','⬆️','📱','🔋','💡','🖥️','â¨️','ð¨️','ð·','ð®','🎧','ð¡','ð','💳']
 
   const autoActionHandled = useRef(false)
   useEffect(() => {
@@ -220,7 +220,7 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
       nuovi = [...tipiLista, {id,...tipoForm,prezzo_base:+tipoForm.prezzo_base}]
     }
     setTipiLista(nuovi); saveTipi(nuovi); TIPI_SERVIZIO=nuovi
-    setShowTipoForm(false); setEditTipo(null); setTipoForm({nome:'',icon:'ð§',desc:'',prezzo_base:''})
+    setShowTipoForm(false); setEditTipo(null); setTipoForm({nome:'',icon:'🔧',desc:'',prezzo_base:''})
     showToast(editTipo?'Tipo aggiornato':'Tipo aggiunto')
   }
 
@@ -245,13 +245,13 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
     if (type === 'edit') setServizi(prev => prev.map(s => s.id === data.id ? data : s))
     setModal(false)
     setEditing(null)
-    showToast(type === 'add' ? 'â Servizio creato' : 'â Servizio aggiornato')
+    showToast(type === 'add' ? '✓ Servizio creato' : '✓ Servizio aggiornato')
   }
 
   const completeServizio = async (id) => {
     setServizi(prev => prev.map(s => s.id === id ? {...s, stato:'completato'} : s))
     try { await axios.put(`${api}/servizi/${id}/complete`) } catch {}
-    showToast('â Servizio completato')
+    showToast('✓ Servizio completato')
   }
 
   const deleteServizio = async (id) => {
@@ -281,7 +281,7 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
     <div className="animate-fade-in">
       {/* Tab nav */}
       <div style={{display:'flex',gap:0,borderBottom:'1px solid rgba(255,255,255,0.07)',marginBottom:20}}>
-        {[{k:'servizi',l:'ð§ Servizi'},{k:'impostazioni',l:'âï¸ Impostazioni'}].map(({k,l})=>(
+        {[{k:'servizi',l:'🔧 Servizi'},{k:'impostazioni',l:'⚙️ Impostazioni'}].map(({k,l})=>(
           <button key={k} onClick={()=>setMainTab(k)}
             style={{padding:'9px 20px',border:'none',cursor:'pointer',fontSize:13,fontWeight:600,background:mainTab===k?'rgba(255,255,255,0.07)':'transparent',borderBottom:mainTab===k?'2px solid #3b82f6':'2px solid transparent',color:mainTab===k?'#e2e8f0':'#64748b',fontFamily:'Inter,sans-serif'}}>{l}</button>
         ))}
@@ -291,10 +291,10 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
           <div style={{padding:'18px 22px',borderRadius:14,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
               <div>
-                <div style={{fontSize:15,fontWeight:700,color:'#f1f5f9'}}>ð§ Tipi di servizio</div>
+                <div style={{fontSize:15,fontWeight:700,color:'#f1f5f9'}}>🔧 Tipi di servizio</div>
                 <div style={{fontSize:12,color:'#64748b',marginTop:3}}>Configura i servizi con icona personalizzata e prezzo preimpostato</div>
               </div>
-              <button onClick={()=>{setShowTipoForm(true);setEditTipo(null);setTipoForm({nome:'',icon:'ð§',desc:'',prezzo_base:''})}}
+              <button onClick={()=>{setShowTipoForm(true);setEditTipo(null);setTipoForm({nome:'',icon:'🔧',desc:'',prezzo_base:''})}}
                 style={{padding:'8px 16px',borderRadius:9,background:'#3b82f6',border:'none',color:'#fff',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'Inter,sans-serif'}}>
                 + Nuovo tipo
               </button>
@@ -308,12 +308,12 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
                     <div style={{width:52,height:52,borderRadius:10,background:'rgba(255,255,255,0.08)',border:'2px solid rgba(59,130,246,0.4)',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden',flexShrink:0}}>
                       {tipoForm.icon&&tipoForm.icon.startsWith('data:')
                         ?<img src={tipoForm.icon} style={{width:'100%',height:'100%',objectFit:'cover'}} alt="icona"/>
-                        :<span style={{fontSize:26}}>{tipoForm.icon||'ð§'}</span>}
+                        :<span style={{fontSize:26}}>{tipoForm.icon||'🔧'}</span>}
                     </div>
                     <div>
                       <div style={{fontSize:12,color:'#94a3b8',marginBottom:4}}>Anteprima</div>
                       {tipoForm.icon&&tipoForm.icon.startsWith('data:')&&(
-                        <button onClick={()=>setTipoForm(f=>({...f,icon:'ð§'}))}
+                        <button onClick={()=>setTipoForm(f=>({...f,icon:'🔧'}))}
                           style={{padding:'3px 10px',borderRadius:6,background:'rgba(248,113,113,0.1)',border:'1px solid rgba(248,113,113,0.2)',color:'#f87171',fontSize:11,cursor:'pointer'}}>
                           Rimuovi
                         </button>
@@ -321,7 +321,7 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
                     </div>
                   </div>
                   <div style={{display:'flex',gap:0,marginBottom:8,borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
-                    {[{k:'emoji',l:'ð Emoji'},{k:'upload',l:'ð¼ï¸ Immagine'}].map(({k,l})=>(
+                    {[{k:'emoji',l:'ð Emoji'},{k:'upload',l:'ð¼️ Immagine'}].map(({k,l})=>(
                       <button key={k} onClick={()=>setTipoForm(f=>({...f,_iconTab:k}))}
                         style={{padding:'6px 14px',border:'none',cursor:'pointer',fontSize:12,fontWeight:600,background:'transparent',borderBottom:(tipoForm._iconTab||'emoji')===k?'2px solid #3b82f6':'2px solid transparent',color:(tipoForm._iconTab||'emoji')===k?'#60a5fa':'#64748b'}}>
                         {l}
@@ -355,9 +355,9 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
                           reader.onload=ev=>setTipoForm(f=>({...f,icon:ev.target.result,_iconTab:'upload'}));
                           reader.readAsDataURL(file);
                         }}/>
-                      <div style={{fontSize:22,marginBottom:4}}>ð¼ï¸</div>
+                      <div style={{fontSize:22,marginBottom:4}}>ð¼️</div>
                       <div style={{fontSize:13,color:'#60a5fa',fontWeight:600}}>Clicca per caricare</div>
-                      <div style={{fontSize:11,color:'#475569',marginTop:2}}>PNG, JPG, SVG, WebP â max 300KB</div>
+                      <div style={{fontSize:11,color:'#475569',marginTop:2}}>PNG, JPG, SVG, WebP — max 300KB</div>
                     </label>
                   )}
                 </div>
@@ -387,7 +387,7 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
                   <div style={{display:'flex',alignItems:'center',gap:14,flex:1}}>
                     {tipo.icon&&tipo.icon.startsWith('data:')
                       ?<img src={tipo.icon} style={{width:40,height:40,borderRadius:8,objectFit:'cover'}} alt={tipo.nome}/>
-                      :<span style={{fontSize:28}}>{tipo.icon||'ð§'}</span>}
+                      :<span style={{fontSize:28}}>{tipo.icon||'🔧'}</span>}
                     <div>
                       <div style={{fontSize:14,fontWeight:700,color:'#f1f5f9'}}>{tipo.nome}</div>
                       <div style={{fontSize:12,color:'#64748b',marginTop:2}}>{tipo.desc}</div>
@@ -436,7 +436,7 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(320px,1fr))', gap:14 }}>
         {filtered.length === 0 ? (
           <div style={{ gridColumn:'1/-1', textAlign:'center', padding:'60px 0', color:'#475569' }}>
-            <div style={{ fontSize:32, marginBottom:12, opacity:0.4 }}>ð ï¸</div>
+            <div style={{ fontSize:32, marginBottom:12, opacity:0.4 }}>ð ️</div>
             <div style={{ fontSize:14, color:'#64748b' }}>Nessun servizio {filter === 'in_corso' ? 'in corso' : 'trovato'}</div>
           </div>
         ) : filtered.map(s => (
@@ -464,7 +464,7 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
 
             <div style={{ display:'flex', justifyContent:'space-between', fontSize:11, color:'#475569', marginBottom:12 }}>
               <span>{s.telefono || s.data_richiesta}</span>
-              <span style={{ fontFamily:'monospace', fontWeight:600 }}>â¬{s.prezzo}</span>
+              <span style={{ fontFamily:'monospace', fontWeight:600 }}>€{s.prezzo}</span>
             </div>
 
             {s.data_consegna_prevista && (
@@ -476,11 +476,11 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
             <div style={{ display:'flex', gap:8 }}>
               {s.stato === 'in_corso' && (
                 <button onClick={() => completeServizio(s.id)} style={{ flex:1, background:'rgba(22,163,74,0.15)', border:'1px solid rgba(22,163,74,0.25)', color:'#4ade80', borderRadius:8, padding:'7px 0', fontSize:12, fontWeight:500, cursor:'pointer', fontFamily:'Inter,sans-serif' }}>
-                  â Completato
+                  ✓ Completato
                 </button>
               )}
-              <GBtn small onClick={() => { setEditing(s); setModal(true) }}>âï¸</GBtn>
-              <GBtn small onClick={() => deleteServizio(s.id)}>ðï¸</GBtn>
+              <GBtn small onClick={() => { setEditing(s); setModal(true) }}>✏️</GBtn>
+              <GBtn small onClick={() => deleteServizio(s.id)}>ð️</GBtn>
             </div>
           </div>
         ))}
