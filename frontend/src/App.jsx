@@ -1,4 +1,4 @@
-undefined// App.jsx
+// App.jsx
 
 import { useState, useEffect } from 'react'
 import Sidebar from './components/Sidebar'
@@ -180,4 +180,3 @@ function Clock() {
   }, [])
   return <span style={{ fontSize:12, color:'#475569', fontFamily:'monospace' }}>{time}</span>
 }
-undefined// App.jsx
