@@ -8,14 +8,14 @@ import ClienteSelector from '../components/ClienteSelector'
 const PRIORITA = { normale:'rgba(100,116,139,0.15)|#94a3b8', alta:'rgba(234,179,8,0.15)|#facc15', urgente:'rgba(239,68,68,0.15)|#f87171' }
 
 const DEFAULT_TIPI = [
-  { id:'sblocco', icon:'ð', nome:'Sblocco dispositivo', desc:'Sblocco operatore, codici unlock', prezzo_base:25 },
-  { id:'diagnostica', icon:'ð', nome:'Diagnostica', desc:'Test funzionalitÃ , valutazione problemi', prezzo_base:15 },
-  { id:'aggiornamento', icon:'â¬ï¸', nome:'Aggiornamento SW', desc:'iOS, Android, firmware update', prezzo_base:20 },
-  { id:'backup', icon:'ð¾', nome:'Backup/Ripristino', desc:'Salvataggio e recupero dati', prezzo_base:30 },
-  { id:'pellicola', icon:'ð¡ï¸', nome:'Applicazione pellicola', desc:'Installazione vetri temperati/pellicole', prezzo_base:10 },
-  { id:'pulizia', icon:'ð§½', nome:'Pulizia/Manutenzione', desc:'Pulizia interna/esterna dispositivo', prezzo_base:15 },
-  { id:'configurazione', icon:'âï¸', nome:'Configurazione', desc:'Setup iniziale, trasferimento dati', prezzo_base:25 },
-  { id:'altro', icon:'ð§', nome:'Altro servizio', desc:'Servizio personalizzato', prezzo_base:20 }
+  { id:'sblocco', icon:'🔧', nome:'Sblocco dispositivo', desc:'Sblocco operatore, codici unlock', prezzo_base:25 },
+  { id:'diagnostica', icon:'🔍', nome:'Diagnostica', desc:'Test funzionalita, valutazione problemi', prezzo_base:15 },
+  { id:'aggiornamento', icon:'⬆️', nome:'Aggiornamento SW', desc:'iOS, Android, firmware update', prezzo_base:20 },
+  { id:'backup', icon:'💾', nome:'Backup/Ripristino', desc:'Salvataggio e recupero dati', prezzo_base:30 },
+  { id:'pellicola', icon:'🛡️', nome:'Applicazione pellicola', desc:'Installazione vetri temperati/pellicole', prezzo_base:10 },
+  { id:'pulizia', icon:'🧹', nome:'Pulizia/Manutenzione', desc:'Pulizia interna/esterna dispositivo', prezzo_base:15 },
+  { id:'configurazione', icon:'⚙️', nome:'Configurazione', desc:'Setup iniziale trasferimento dati', prezzo_base:25 },
+  { id:'altro', icon:'🔧', nome:'Altro servizio', desc:'Servizio personalizzato', prezzo_base:0 }
 ]
 function loadTipi(){ try{ const s=localStorage.getItem('tipi_servizio'); return s?JSON.parse(s):DEFAULT_TIPI; }catch{ return DEFAULT_TIPI; } }
 function saveTipi(list){ try{ localStorage.setItem('tipi_servizio',JSON.stringify(list)); }catch{} }
