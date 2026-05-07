@@ -141,6 +141,7 @@ function CNModal({onClose,onSelect}){
     {id:'movimento',icon:'🔄',label:'Movimento magazzino',desc:'Entrata o uscita',c:'#64748b'},
     {id:'promemoria',icon:'📌',label:'Attivita / promemoria',desc:'Crea promemoria',c:'#f59e0b'}
   ]
+  return (
     <div onClick={e=>e.stopPropagation()} style={{background:'#0d1526',border:'1px solid rgba(255,255,255,0.1)',borderRadius:20,width:'100%',maxWidth:560,maxHeight:'88vh',overflowY:'auto',fontFamily:'Inter,sans-serif',boxShadow:'0 32px 80px rgba(0,0,0,0.7)'}}>
       <div style={{padding:'22px 24px 14px',borderBottom:'1px solid rgba(255,255,255,0.07)',display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
         <div>
@@ -178,4 +179,7 @@ function Clock() {
     tick(); const i = setInterval(tick, 1000); return () => clearInterval(i)
   }, [])
   return <span style={{ fontSize:12, color:'#475569', fontFamily:'monospace' }}>{time}</span>
+}
+
+  )
 }
