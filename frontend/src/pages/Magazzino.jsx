@@ -1,4 +1,4 @@
-﻿// Magazzino.jsx v3 â con Wizard guidati step-by-step
+// Magazzino.jsx v3 — con Wizard guidati step-by-step
 
 import { useState, useEffect } from 'react'
 import axios from 'axios'
@@ -29,13 +29,13 @@ const STATO_DEVICE = {in_stock:'In stock',venduto:'Venduto',in_riparazione:'In r
 const COND_COLOR   = {A:'green',B:'amber',C:'red'}
 const STATO_COLOR  = {in_stock:'green',venduto:'gray',in_riparazione:'blue',da_testare:'violet'}
 const TIPI_INT = [
-  {val:'sostituzione_batteria',label:'ð Sostituzione batteria',desc:'Nuova batteria installata'},
-  {val:'sostituzione_schermo', label:'ð± Sostituzione schermo', desc:'Display sostituito'},
-  {val:'sostituzione_scocca',  label:'ð§ Sostituzione scocca',  desc:'Scocca/frame rinnovati'},
-  {val:'pulizia',              label:'ð§¹ Pulizia e sanificazione',desc:'Pulizia interna ed esterna'},
-  {val:'aggiornamento_sw',     label:'ð» Aggiornamento software',desc:'iOS/Android aggiornato'},
-  {val:'rigenerazione',        label:'â»ï¸ Rigenerazione completa',desc:'Ripristino e test completo'},
-  {val:'altro',                label:'ð Altro',                 desc:'Intervento personalizzato'},
+  {val:'sostituzione_batteria',label:'🔋 Sostituzione batteria',desc:'Nuova batteria installata'},
+  {val:'sostituzione_schermo', label:'📱 Sostituzione schermo', desc:'Display sostituito'},
+  {val:'sostituzione_scocca',  label:'🔧 Sostituzione scocca',  desc:'Scocca/frame rinnovati'},
+  {val:'pulizia',              label:'🧹 Pulizia e sanificazione',desc:'Pulizia interna ed esterna'},
+  {val:'aggiornamento_sw',     label:'💻 Aggiornamento software',desc:'iOS/Android aggiornato'},
+  {val:'rigenerazione',        label:'â»️ Rigenerazione completa',desc:'Ripristino e test completo'},
+  {val:'altro',                label:'📝 Altro',                 desc:'Intervento personalizzato'},
 ]
 
 // ââââââââââââââââââââââââââââââââââââââââââââââ
@@ -50,9 +50,9 @@ function WizardProdotto({ api, fornitori, onDone, onClose, editing }) {
   const steps = [
     {
       title: 'Nome e categoria',
-      heading: 'ð¦ Come si chiama il prodotto?',
-      subtitle: 'Inserisci il nome che comparirÃ  in magazzino e scegli la categoria.',
-      validate: () => { if(!f.nome.trim()) return 'Il nome del prodotto Ã¨ obbligatorio'; if(f.nome.trim().length<2) return 'Il nome deve essere di almeno 2 caratteri' },
+      heading: '📦 Come si chiama il prodotto?',
+      subtitle: 'Inserisci il nome che comparirà in magazzino e scegli la categoria.',
+      validate: () => { if(!f.nome.trim()) return 'Il nome del prodotto è obbligatorio'; if(f.nome.trim().length<2) return 'Il nome deve essere di almeno 2 caratteri' },
       content: (
         <div>
           <WizField label="Nome prodotto" hint="Es. Cover iPhone 15 Pro Nera, Cavo USB-C 2m...">
@@ -62,7 +62,7 @@ function WizardProdotto({ api, fornitori, onDone, onClose, editing }) {
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
               {CATS.map(c=>(
                 <OptionCard key={c} label={c} selected={f.categoria===c} onClick={()=>upd({categoria:c})}
-                  icon={{'Cover':'ð¡ï¸','Caricabatterie':'â¡','Cavo':'ð','Auricolari':'ð§','Vetro temperato':'ð²','Accessori':'ð','Prodotto proprio':'â­'}[c]}
+                  icon={{'Cover':'🛡️','Caricabatterie':'⚡','Cavo':'ð','Auricolari':'🎧','Vetro temperato':'ð²','Accessori':'ð','Prodotto proprio':'â­'}[c]}
                 />
               ))}
             </div>
@@ -71,37 +71,37 @@ function WizardProdotto({ api, fornitori, onDone, onClose, editing }) {
       )
     },
     {
-      title: 'Prezzi e quantitÃ ',
+      title: 'Prezzi e quantità',
       heading: 'ð¶ Quanto costa?',
       subtitle: 'Inserisci il prezzo di acquisto dal fornitore e quello di vendita al cliente.',
       validate: () => {
         if(!f.prezzo_acq || isNaN(+f.prezzo_acq) || +f.prezzo_acq<0) return 'Inserisci un prezzo di acquisto valido'
         if(!f.prezzo_vend || isNaN(+f.prezzo_vend) || +f.prezzo_vend<0) return 'Inserisci un prezzo di vendita valido'
-        if(+f.prezzo_vend < +f.prezzo_acq) return 'â ï¸ Il prezzo di vendita Ã¨ inferiore al prezzo di acquisto â controlla prima di continuare'
-        if(!f.qty || isNaN(+f.qty) || +f.qty<0) return 'Inserisci una quantitÃ  valida'
+        if(+f.prezzo_vend < +f.prezzo_acq) return '⚠️ Il prezzo di vendita è inferiore al prezzo di acquisto — controlla prima di continuare'
+        if(!f.qty || isNaN(+f.qty) || +f.qty<0) return 'Inserisci una quantità valida'
       },
       content: (
         <div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
-            <WizField label="Prezzo acquisto (â¬)" hint="Quanto paghi tu il prodotto">
+            <WizField label="Prezzo acquisto (€)" hint="Quanto paghi tu il prodotto">
               <div style={{position:'relative'}}>
-                <span style={{position:'absolute',left:13,top:'50%',transform:'translateY(-50%)',color:'rgba(255,255,255,0.4)',fontSize:16}}>â¬</span>
+                <span style={{position:'absolute',left:13,top:'50%',transform:'translateY(-50%)',color:'rgba(255,255,255,0.4)',fontSize:16}}>€</span>
                 <input {...wizInp} type="number" step="0.01" min="0" placeholder="5.00" value={f.prezzo_acq} onChange={e=>upd({prezzo_acq:e.target.value})} style={{...wizInp,paddingLeft:30,width:'100%',boxSizing:'border-box'}}/>
               </div>
             </WizField>
-            <WizField label="Prezzo vendita (â¬)" hint="Quanto lo vendi al cliente">
+            <WizField label="Prezzo vendita (€)" hint="Quanto lo vendi al cliente">
               <div style={{position:'relative'}}>
-                <span style={{position:'absolute',left:13,top:'50%',transform:'translateY(-50%)',color:'rgba(255,255,255,0.4)',fontSize:16}}>â¬</span>
+                <span style={{position:'absolute',left:13,top:'50%',transform:'translateY(-50%)',color:'rgba(255,255,255,0.4)',fontSize:16}}>€</span>
                 <input {...wizInp} type="number" step="0.01" min="0" placeholder="12.00" value={f.prezzo_vend} onChange={e=>upd({prezzo_vend:e.target.value})} style={{...wizInp,paddingLeft:30,width:'100%',boxSizing:'border-box'}}/>
               </div>
             </WizField>
           </div>
           {f.prezzo_acq&&f.prezzo_vend&&+f.prezzo_vend>+f.prezzo_acq&&(
             <div style={{background:'rgba(34,197,94,0.08)',border:'1px solid rgba(34,197,94,0.2)',borderRadius:8,padding:'10px 14px',marginBottom:14,fontSize:13,color:'#4ade80'}}>
-              â Margine: â¬{(+f.prezzo_vend-+f.prezzo_acq).toFixed(2)} ({Math.round(((+f.prezzo_vend-+f.prezzo_acq)/+f.prezzo_acq)*100)}%)
+              ✓ Margine: €{(+f.prezzo_vend-+f.prezzo_acq).toFixed(2)} ({Math.round(((+f.prezzo_vend-+f.prezzo_acq)/+f.prezzo_acq)*100)}%)
             </div>
           )}
-          <WizField label="QuantitÃ  iniziale" hint="Quanti pezzi hai adesso in magazzino">
+          <WizField label="Quantità iniziale" hint="Quanti pezzi hai adesso in magazzino">
             <input {...wizInp} type="number" min="0" placeholder="1" value={f.qty} onChange={e=>upd({qty:e.target.value})} style={{...wizInp,width:'100%',boxSizing:'border-box'}}/>
           </WizField>
         </div>
@@ -109,7 +109,7 @@ function WizardProdotto({ api, fornitori, onDone, onClose, editing }) {
     },
     {
       title: 'Barcode e fornitore',
-      heading: 'ð Barcode e fornitore',
+      heading: '📋 Barcode e fornitore',
       subtitle: 'Facoltativo ma utile: aggiungi il codice a barre e il fornitore del prodotto.',
       content: (
         <div>
@@ -121,7 +121,7 @@ function WizardProdotto({ api, fornitori, onDone, onClose, editing }) {
           </WizField>
           <WizField label="Fornitore" hint="A chi compri questo prodotto?">
             <select value={f.fornitore_id} onChange={e=>upd({fornitore_id:e.target.value})} style={{...wizSel,width:'100%',boxSizing:'border-box'}}>
-              <option value="">â Nessun fornitore selezionato â</option>
+              <option value="">— Nessun fornitore selezionato —</option>
               {fornitori.map(fo=><option key={fo.id} value={fo.id}>{fo.nome}</option>)}
             </select>
           </WizField>
@@ -139,12 +139,12 @@ function WizardProdotto({ api, fornitori, onDone, onClose, editing }) {
         <Summary items={[
           {label:'Nome', val:f.nome},
           {label:'Categoria', val:f.categoria},
-          {label:'Prezzo acquisto', val:f.prezzo_acq?`â¬${f.prezzo_acq}`:''},
-          {label:'Prezzo vendita', val:f.prezzo_vend?`â¬${f.prezzo_vend}`:''},
-          {label:'QuantitÃ ', val:f.qty},
+          {label:'Prezzo acquisto', val:f.prezzo_acq?`€${f.prezzo_acq}`:''},
+          {label:'Prezzo vendita', val:f.prezzo_vend?`€${f.prezzo_vend}`:''},
+          {label:'Quantità', val:f.qty},
           {label:'Barcode', val:f.barcode||'Non inserito'},
           {label:'Fornitore', val:fornitori.find(fo=>fo.id===f.fornitore_id)?.nome||'Nessuno'},
-          {label:'Note', val:f.note||'â'},
+          {label:'Note', val:f.note||'—'},
         ]}/>
       )
     }
@@ -177,9 +177,9 @@ function WizardFornitore({ api, onDone, onClose, editing }) {
   const steps = [
     {
       title:'Nome azienda',
-      heading:'ð­ Come si chiama il fornitore?',
+      heading:'🏭 Come si chiama il fornitore?',
       subtitle:'Inserisci il nome dell\'azienda o del fornitore.',
-      validate:()=>{ if(!f.nome.trim()) return 'Il nome del fornitore Ã¨ obbligatorio' },
+      validate:()=>{ if(!f.nome.trim()) return 'Il nome del fornitore è obbligatorio' },
       content:(
         <WizField label="Nome azienda / fornitore" hint="Es. TechSupplies S.r.l., Mario Rossi...">
           <input {...wizInp} placeholder="Nome azienda" value={f.nome} onChange={e=>upd({nome:e.target.value})} autoFocus style={{...wizInp,width:'100%',boxSizing:'border-box'}}/>
@@ -229,11 +229,11 @@ function WizardFornitore({ api, onDone, onClose, editing }) {
       content:(
         <Summary items={[
           {label:'Nome',      val:f.nome},
-          {label:'Referente', val:f.contatto||'â'},
-          {label:'Telefono',  val:f.telefono||'â'},
-          {label:'Email',     val:f.email||'â'},
-          {label:'P.IVA',     val:f.piva||'â'},
-          {label:'Indirizzo', val:f.indirizzo||'â'},
+          {label:'Referente', val:f.contatto||'—'},
+          {label:'Telefono',  val:f.telefono||'—'},
+          {label:'Email',     val:f.email||'—'},
+          {label:'P.IVA',     val:f.piva||'—'},
+          {label:'Indirizzo', val:f.indirizzo||'—'},
         ]}/>
       )
     }
@@ -263,13 +263,13 @@ function WizardDispositivo({ api, fornitori, onDone, onClose }) {
   const steps = [
     {
       title:'Brand',
-      heading:'ð± Che marca Ã¨?',
+      heading:'📱 Che marca è?',
       subtitle:'Seleziona il produttore del dispositivo.',
       content:(
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}}>
           {BRANDS.map(b=>(
             <OptionCard key={b} label={b} selected={f.brand===b} onClick={()=>upd({brand:b})}
-              icon={{'Apple':'ð','Samsung':'ð²','Google':'ð','Xiaomi':'â¡','OnePlus':'ð´','Huawei':'ð'}[b]}
+              icon={{'Apple':'ð','Samsung':'ð²','Google':'🔍','Xiaomi':'⚡','OnePlus':'🔴','Huawei':'ð'}[b]}
             />
           ))}
         </div>
@@ -277,15 +277,15 @@ function WizardDispositivo({ api, fornitori, onDone, onClose }) {
     },
     {
       title:'Modello e storage',
-      heading:`âï¸ Qual Ã¨ il modello?`,
-      subtitle:`Inserisci il modello esatto e la capacitÃ  di memoria.`,
-      validate:()=>{ if(!f.modello.trim()) return 'Il modello Ã¨ obbligatorio' },
+      heading:`⚙️ Qual è il modello?`,
+      subtitle:`Inserisci il modello esatto e la capacità di memoria.`,
+      validate:()=>{ if(!f.modello.trim()) return 'Il modello è obbligatorio' },
       content:(
         <div>
           <WizField label="Modello" hint={`Es. ${f.brand==='Apple'?'iPhone 15 Pro, iPhone 14':f.brand==='Samsung'?'Galaxy S24, Galaxy A54':'Pixel 8, Redmi Note 13...'}`}>
             <input {...wizInp} placeholder={`Es. ${f.brand==='Apple'?'iPhone 15 Pro':'Galaxy S24'}`} value={f.modello} onChange={e=>upd({modello:e.target.value})} autoFocus style={{...wizInp,width:'100%',boxSizing:'border-box'}}/>
           </WizField>
-          <WizField label="CapacitÃ  di memoria">
+          <WizField label="Capacità di memoria">
             <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
               {STORAGES.map(s=>(
                 <button key={s} onClick={()=>upd({storage:s})} style={{padding:'9px 18px',borderRadius:9,fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'Inter,sans-serif',transition:'all 0.15s',background:f.storage===s?'rgba(124,58,237,0.25)':'rgba(255,255,255,0.04)',color:f.storage===s?'#c4b5fd':'rgba(255,255,255,0.5)',border:f.storage===s?'1px solid rgba(124,58,237,0.5)':'1px solid rgba(255,255,255,0.08)'}}>
@@ -302,22 +302,22 @@ function WizardDispositivo({ api, fornitori, onDone, onClose }) {
     },
     {
       title:'Condizione',
-      heading:'ð In che condizioni Ã¨?',
+      heading:'🔍 In che condizioni è?',
       subtitle:'Valuta onestamente le condizioni estetiche e funzionali del dispositivo.',
       content:(
         <div>
           {[
-            {val:'A',label:'A â Ottima',icon:'â­',desc:'Come nuovo, nessun segno di usura'},
-            {val:'B',label:'B â Buona', icon:'ð',desc:'Leggeri segni di usura, funziona perfettamente'},
-            {val:'C',label:'C â Discreta',icon:'ð',desc:'Graffi evidenti o piccoli difetti ma funzionante'},
+            {val:'A',label:'A — Ottima',icon:'â­',desc:'Come nuovo, nessun segno di usura'},
+            {val:'B',label:'B — Buona', icon:'ð',desc:'Leggeri segni di usura, funziona perfettamente'},
+            {val:'C',label:'C — Discreta',icon:'ð',desc:'Graffi evidenti o piccoli difetti ma funzionante'},
           ].map(c=>(
             <OptionCard key={c.val} icon={c.icon} label={c.label} desc={c.desc} selected={f.condizione===c.val} onClick={()=>upd({condizione:c.val})}/>
           ))}
           <div style={{marginTop:16}}/>
           <WizField label="Provenienza">
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-              <OptionCard icon="ð­" label="Fornitore" desc="Acquistato da un grossista" selected={f.provenienza==='fornitore'} onClick={()=>upd({provenienza:'fornitore'})}/>
-              <OptionCard icon="ð¤" label="Privato" desc="Acquistato da un cliente" selected={f.provenienza==='privato'} onClick={()=>upd({provenienza:'privato'})}/>
+              <OptionCard icon="🏭" label="Fornitore" desc="Acquistato da un grossista" selected={f.provenienza==='fornitore'} onClick={()=>upd({provenienza:'fornitore'})}/>
+              <OptionCard icon="👤" label="Privato" desc="Acquistato da un cliente" selected={f.provenienza==='privato'} onClick={()=>upd({provenienza:'privato'})}/>
             </div>
           </WizField>
         </div>
@@ -326,7 +326,7 @@ function WizardDispositivo({ api, fornitori, onDone, onClose }) {
     {
       title:'IMEI e prezzi',
       heading:'ð¶ IMEI e prezzi',
-      subtitle:'Inserisci il numero IMEI e i prezzi. Il prezzo di vendita Ã¨ facoltativo.',
+      subtitle:'Inserisci il numero IMEI e i prezzi. Il prezzo di vendita è facoltativo.',
       validate:()=>{ if(!f.prezzo_acq||isNaN(+f.prezzo_acq)||+f.prezzo_acq<=0) return 'Inserisci un prezzo di acquisto valido' },
       content:(
         <div>
@@ -334,28 +334,28 @@ function WizardDispositivo({ api, fornitori, onDone, onClose }) {
             <input {...wizInp} placeholder="356xxxxxxxxxxxxxx" value={f.imei} onChange={e=>upd({imei:e.target.value})} style={{...wizInp,fontFamily:'monospace',fontSize:13,width:'100%',boxSizing:'border-box'}} maxLength={15}/>
           </WizField>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
-            <WizField label="Prezzo acquisto (â¬)">
+            <WizField label="Prezzo acquisto (€)">
               <div style={{position:'relative'}}>
-                <span style={{position:'absolute',left:13,top:'50%',transform:'translateY(-50%)',color:'rgba(255,255,255,0.4)',fontSize:16}}>â¬</span>
+                <span style={{position:'absolute',left:13,top:'50%',transform:'translateY(-50%)',color:'rgba(255,255,255,0.4)',fontSize:16}}>€</span>
                 <input {...wizInp} type="number" step="0.01" min="0" placeholder="200" value={f.prezzo_acq} onChange={e=>upd({prezzo_acq:e.target.value})} style={{...wizInp,paddingLeft:30,width:'100%',boxSizing:'border-box'}}/>
               </div>
             </WizField>
-            <WizField label="Prezzo vendita (â¬)" hint="Facoltativo, aggiungi dopo">
+            <WizField label="Prezzo vendita (€)" hint="Facoltativo, aggiungi dopo">
               <div style={{position:'relative'}}>
-                <span style={{position:'absolute',left:13,top:'50%',transform:'translateY(-50%)',color:'rgba(255,255,255,0.4)',fontSize:16}}>â¬</span>
+                <span style={{position:'absolute',left:13,top:'50%',transform:'translateY(-50%)',color:'rgba(255,255,255,0.4)',fontSize:16}}>€</span>
                 <input {...wizInp} type="number" step="0.01" min="0" placeholder="350" value={f.prezzo_vend} onChange={e=>upd({prezzo_vend:e.target.value})} style={{...wizInp,paddingLeft:30,width:'100%',boxSizing:'border-box'}}/>
               </div>
             </WizField>
           </div>
           <WizField label="Fornitore" hint="Da chi hai acquistato questo dispositivo?">
             <select value={f.fornitore_id||''} onChange={e=>upd({fornitore_id:e.target.value})} style={{...wizSel,width:'100%',boxSizing:'border-box'}}>
-              <option value="">â Nessun fornitore â</option>
+              <option value="">— Nessun fornitore —</option>
               {fornitori.map(fo=><option key={fo.id} value={fo.id}>{fo.nome}</option>)}
             </select>
           </WizField>
           <WizField label="Stato iniziale">
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-              {[{val:'in_stock',icon:'â',label:'In stock'},{val:'da_testare',icon:'ð¬',label:'Da testare'},{val:'in_riparazione',icon:'ð§',label:'In riparazione'},{val:'venduto',icon:'ð°',label:'Venduto'}].map(s=>(
+              {[{val:'in_stock',icon:'â',label:'In stock'},{val:'da_testare',icon:'ð¬',label:'Da testare'},{val:'in_riparazione',icon:'🔧',label:'In riparazione'},{val:'venduto',icon:'💰',label:'Venduto'}].map(s=>(
                 <OptionCard key={s.val} icon={s.icon} label={s.label} selected={f.stato===s.val} onClick={()=>upd({stato:s.val})}/>
               ))}
             </div>
@@ -371,12 +371,12 @@ function WizardDispositivo({ api, fornitori, onDone, onClose }) {
         <Summary items={[
           {label:'Dispositivo',   val:`${f.brand} ${f.modello}`},
           {label:'Storage',       val:f.storage},
-          {label:'Colore',        val:f.colore||'â'},
+          {label:'Colore',        val:f.colore||'—'},
           {label:'IMEI',          val:f.imei||'Non inserito'},
           {label:'Condizione',    val:f.condizione},
           {label:'Provenienza',   val:f.provenienza},
-          {label:'Prezzo acquisto',val:f.prezzo_acq?`â¬${f.prezzo_acq}`:''},
-          {label:'Prezzo vendita', val:f.prezzo_vend?`â¬${f.prezzo_vend}`:'Non impostato'},
+          {label:'Prezzo acquisto',val:f.prezzo_acq?`€${f.prezzo_acq}`:''},
+          {label:'Prezzo vendita', val:f.prezzo_vend?`€${f.prezzo_vend}`:'Non impostato'},
           {label:'Fornitore',      val:fornitori.find(fo=>fo.id===f.fornitore_id)?.nome||'Nessuno'},
           {label:'Stato',          val:STATO_DEVICE[f.stato]},
         ]}/>
@@ -404,7 +404,7 @@ function WizardIntervento({ api, device, fornitori, onDone, onClose, editing }) 
   const steps = [
     {
       title:'Tipo intervento',
-      heading:'ð§ Che intervento Ã¨ stato fatto?',
+      heading:'🔧 Che intervento è stato fatto?',
       subtitle:`Seleziona il tipo di intervento eseguito su ${device.brand} ${device.modello}.`,
       content:(
         <div style={{display:'flex',flexDirection:'column',gap:8}}>
@@ -416,16 +416,16 @@ function WizardIntervento({ api, device, fornitori, onDone, onClose, editing }) 
     },
     {
       title:'Dettagli',
-      heading:'ð Dettagli intervento',
-      subtitle:'Descrivi cosa Ã¨ stato fatto e inserisci il costo.',
+      heading:'📋 Dettagli intervento',
+      subtitle:'Descrivi cosa è stato fatto e inserisci il costo.',
       content:(
         <div>
-          <WizField label="Descrizione" hint="Cosa Ã¨ stato fatto esattamente?">
+          <WizField label="Descrizione" hint="Cosa è stato fatto esattamente?">
             <input {...wizInp} placeholder="Es. Batteria originale Apple sostituita, 100% salute..." value={f.descrizione} onChange={e=>upd({descrizione:e.target.value})} style={{...wizInp,width:'100%',boxSizing:'border-box'}}/>
           </WizField>
-          <WizField label="Costo dell'intervento (â¬)" hint="Costo del ricambio e/o della manodopera">
+          <WizField label="Costo dell'intervento (€)" hint="Costo del ricambio e/o della manodopera">
             <div style={{position:'relative'}}>
-              <span style={{position:'absolute',left:13,top:'50%',transform:'translateY(-50%)',color:'rgba(255,255,255,0.4)',fontSize:16}}>â¬</span>
+              <span style={{position:'absolute',left:13,top:'50%',transform:'translateY(-50%)',color:'rgba(255,255,255,0.4)',fontSize:16}}>€</span>
               <input {...wizInp} type="number" step="0.01" min="0" placeholder="0" value={f.costo} onChange={e=>upd({costo:e.target.value})} style={{...wizInp,paddingLeft:30,width:'100%',boxSizing:'border-box'}}/>
             </div>
           </WizField>
@@ -437,18 +437,18 @@ function WizardIntervento({ api, device, fornitori, onDone, onClose, editing }) 
     },
     {
       title:'Chi ha eseguito',
-      heading:'ð¨âð§ Chi ha eseguito l\'intervento?',
-      subtitle:'Specifica se Ã¨ stato fatto internamente o da un fornitore esterno.',
+      heading:'ð¨â🔧 Chi ha eseguito l\'intervento?',
+      subtitle:'Specifica se è stato fatto internamente o da un fornitore esterno.',
       content:(
         <div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:16}}>
             <OptionCard icon="ð " label="Interno" desc="Eseguito dal nostro tecnico" selected={f.eseguito_da==='interno'} onClick={()=>upd({eseguito_da:'interno'})}/>
-            <OptionCard icon="ð­" label="Fornitore esterno" desc="Inviato a un centro esterno" selected={f.eseguito_da==='fornitore'} onClick={()=>upd({eseguito_da:'fornitore'})}/>
+            <OptionCard icon="🏭" label="Fornitore esterno" desc="Inviato a un centro esterno" selected={f.eseguito_da==='fornitore'} onClick={()=>upd({eseguito_da:'fornitore'})}/>
           </div>
           {f.eseguito_da==='fornitore'&&(
             <WizField label="Quale fornitore?">
               <select value={f.fornitore_id} onChange={e=>upd({fornitore_id:e.target.value})} style={{...wizSel,width:'100%',boxSizing:'border-box'}}>
-                <option value="">â Seleziona fornitore â</option>
+                <option value="">— Seleziona fornitore —</option>
                 {fornitori.map(fo=><option key={fo.id} value={fo.id}>{fo.nome}</option>)}
               </select>
             </WizField>
@@ -467,11 +467,11 @@ function WizardIntervento({ api, device, fornitori, onDone, onClose, editing }) 
         <Summary items={[
           {label:'Dispositivo',   val:`${device.brand} ${device.modello}`},
           {label:'Tipo',          val:TIPI_INT.find(t=>t.val===f.tipo)?.label||f.tipo},
-          {label:'Descrizione',   val:f.descrizione||'â'},
-          {label:'Costo',         val:f.costo?`â¬${f.costo}`:'Gratuito'},
-          {label:'Data',          val:f.data?new Date(f.data).toLocaleDateString('it-IT'):'â'},
+          {label:'Descrizione',   val:f.descrizione||'—'},
+          {label:'Costo',         val:f.costo?`€${f.costo}`:'Gratuito'},
+          {label:'Data',          val:f.data?new Date(f.data).toLocaleDateString('it-IT'):'—'},
           {label:'Eseguito da',   val:f.eseguito_da==='interno'?'Interno':'Fornitore esterno'},
-          {label:'Fornitore',     val:fornitori.find(fo=>fo.id===f.fornitore_id)?.nome||'â'},
+          {label:'Fornitore',     val:fornitori.find(fo=>fo.id===f.fornitore_id)?.nome||'—'},
         ]}/>
       )
     }
@@ -496,12 +496,12 @@ function WizardRicambio({ api, fornitori, onDone, onClose, editing }) {
   const [f, setF] = useState(editing||{nome:'',categoria:'batteria',compatibile:'',fornitore_id:'',qty:'0',qty_minima:'2',prezzo_acq:'',barcode:'',note:''})
   const upd = c => setF(p=>({...p,...c}))
 
-  const CATS = [{val:'batteria',icon:'ð'},{val:'schermo',icon:'ð±'},{val:'scocca',icon:'ð§'},{val:'altoparlante',icon:'ð'},{val:'fotocamera',icon:'ð·'},{val:'connettore',icon:'ð'},{val:'altro',icon:'ð¦'}]
+  const CATS = [{val:'batteria',icon:'🔋'},{val:'schermo',icon:'📱'},{val:'scocca',icon:'🔧'},{val:'altoparlante',icon:'ð'},{val:'fotocamera',icon:'ð·'},{val:'connettore',icon:'ð'},{val:'altro',icon:'📦'}]
 
   const steps = [
     {
       title:'Tipo ricambio',
-      heading:'ð§ Che tipo di ricambio Ã¨?',
+      heading:'🔧 Che tipo di ricambio è?',
       subtitle:'Seleziona la categoria del componente.',
       content:(
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
@@ -513,9 +513,9 @@ function WizardRicambio({ api, fornitori, onDone, onClose, editing }) {
     },
     {
       title:'Dettagli',
-      heading:'ð Descrivi il ricambio',
-      subtitle:'Nome, compatibilitÃ  e fornitore.',
-      validate:()=>{ if(!f.nome.trim()) return 'Il nome del ricambio Ã¨ obbligatorio' },
+      heading:'📋 Descrivi il ricambio',
+      subtitle:'Nome, compatibilità e fornitore.',
+      validate:()=>{ if(!f.nome.trim()) return 'Il nome del ricambio è obbligatorio' },
       content:(
         <div>
           <WizField label="Nome ricambio" hint="Es. Batteria iPhone 14 3279mAh">
@@ -526,7 +526,7 @@ function WizardRicambio({ api, fornitori, onDone, onClose, editing }) {
           </WizField>
           <WizField label="Fornitore">
             <select value={f.fornitore_id} onChange={e=>upd({fornitore_id:e.target.value})} style={{...wizSel,width:'100%',boxSizing:'border-box'}}>
-              <option value="">â Nessuno â</option>
+              <option value="">— Nessuno —</option>
               {fornitori.map(fo=><option key={fo.id} value={fo.id}>{fo.nome}</option>)}
             </select>
           </WizField>
@@ -534,21 +534,21 @@ function WizardRicambio({ api, fornitori, onDone, onClose, editing }) {
       )
     },
     {
-      title:'QuantitÃ  e prezzi',
-      heading:'ð¦ Quanti ne hai?',
-      subtitle:'Imposta la quantitÃ  e un alert per le scorte basse.',
+      title:'Quantità e prezzi',
+      heading:'📦 Quanti ne hai?',
+      subtitle:'Imposta la quantità e un alert per le scorte basse.',
       content:(
         <div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
-            <WizField label="QuantitÃ  attuale">
+            <WizField label="Quantità attuale">
               <input {...wizInp} type="number" min="0" placeholder="0" value={f.qty} onChange={e=>upd({qty:e.target.value})} style={{...wizInp,width:'100%',boxSizing:'border-box'}}/>
             </WizField>
             <WizField label="Soglia alert (scorte minime)" hint="Ti avvisa quando scendi sotto">
               <input {...wizInp} type="number" min="0" placeholder="2" value={f.qty_minima} onChange={e=>upd({qty_minima:e.target.value})} style={{...wizInp,width:'100%',boxSizing:'border-box'}}/>
             </WizField>
-            <WizField label="Prezzo acquisto (â¬)">
+            <WizField label="Prezzo acquisto (€)">
               <div style={{position:'relative'}}>
-                <span style={{position:'absolute',left:13,top:'50%',transform:'translateY(-50%)',color:'rgba(255,255,255,0.4)',fontSize:16}}>â¬</span>
+                <span style={{position:'absolute',left:13,top:'50%',transform:'translateY(-50%)',color:'rgba(255,255,255,0.4)',fontSize:16}}>€</span>
                 <input {...wizInp} type="number" step="0.01" min="0" placeholder="0" value={f.prezzo_acq} onChange={e=>upd({prezzo_acq:e.target.value})} style={{...wizInp,paddingLeft:30,width:'100%',boxSizing:'border-box'}}/>
               </div>
             </WizField>
@@ -566,11 +566,11 @@ function WizardRicambio({ api, fornitori, onDone, onClose, editing }) {
         <Summary items={[
           {label:'Nome',        val:f.nome},
           {label:'Categoria',   val:f.categoria},
-          {label:'Compatibile', val:f.compatibile||'â'},
-          {label:'Fornitore',   val:fornitori.find(fo=>fo.id===f.fornitore_id)?.nome||'â'},
-          {label:'QuantitÃ ',    val:f.qty},
+          {label:'Compatibile', val:f.compatibile||'—'},
+          {label:'Fornitore',   val:fornitori.find(fo=>fo.id===f.fornitore_id)?.nome||'—'},
+          {label:'Quantità',    val:f.qty},
           {label:'Alert sotto', val:f.qty_minima},
-          {label:'Prezzo acq.', val:f.prezzo_acq?`â¬${f.prezzo_acq}`:'â'},
+          {label:'Prezzo acq.', val:f.prezzo_acq?`€${f.prezzo_acq}`:'—'},
           {label:'Barcode',     val:f.barcode||'Non inserito'},
         ]}/>
       )
@@ -583,7 +583,7 @@ function WizardRicambio({ api, fornitori, onDone, onClose, editing }) {
       if(editing?.id){ const {data}=await axios.put(`${api}/ricambi/${editing.id}`,payload); onDone(data,'edit') }
       else { const {data}=await axios.post(`${api}/ricambi`,payload); onDone(data,'add') }
     } catch(e) {
-      if(e.response?.status===409) throw new Error('Barcode giÃ  esistente')
+      if(e.response?.status===409) throw new Error('Barcode già esistente')
       onDone({...payload,id:Date.now().toString()},editing?.id?'edit':'add')
     }
     onClose()
@@ -616,13 +616,13 @@ function TabProdotti({ api, showToast, autoOpen }) {
   const handleProdotto = (data, type) => {
     if(type==='add') setProducts(prev=>[data,...prev])
     else setProducts(prev=>prev.map(p=>p.id===data.id?data:p))
-    showToast(type==='add'?'â Prodotto aggiunto':'â Prodotto aggiornato')
+    showToast(type==='add'?'✓ Prodotto aggiunto':'✓ Prodotto aggiornato')
   }
 
   const handleFornitore = (data, type) => {
     if(type==='add') setFornitori(prev=>[...prev,data])
     else setFornitori(prev=>prev.map(f=>f.id===data.id?data:f))
-    showToast(type==='add'?'â Fornitore aggiunto':'â Fornitore aggiornato')
+    showToast(type==='add'?'✓ Fornitore aggiunto':'✓ Fornitore aggiornato')
   }
 
   const delProdotto = async (id) => {
@@ -638,7 +638,7 @@ function TabProdotti({ api, showToast, autoOpen }) {
   }
 
   const filtered = products.filter(p => !search || p.nome?.toLowerCase().includes(search.toLowerCase()) || p.barcode?.includes(search))
-  const nomeF = (id) => fornitori.find(f=>f.id===id)?.nome||'â'
+  const nomeF = (id) => fornitori.find(f=>f.id===id)?.nome||'—'
 
   return (
     <div>
@@ -646,11 +646,11 @@ function TabProdotti({ api, showToast, autoOpen }) {
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:18}}>
         <div style={{display:'flex',gap:10,alignItems:'center',flex:1}}>
           <div style={{position:'relative',flex:1,maxWidth:300}}>
-            <span style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',opacity:0.4}}>ð</span>
+            <span style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',opacity:0.4}}>🔍</span>
             <input placeholder="Cerca prodotto o barcode..." value={search} onChange={e=>setSearch(e.target.value)}
               style={{...S.sel,padding:'9px 12px 9px 36px',width:'100%',boxSizing:'border-box',borderRadius:9}}/>
           </div>
-          <GBtn small onClick={()=>setShowFornitori(!showFornitori)}>ð­ Fornitori ({fornitori.length})</GBtn>
+          <GBtn small onClick={()=>setShowFornitori(!showFornitori)}>🏭 Fornitori ({fornitori.length})</GBtn>
         </div>
         <PBtn onClick={()=>{ setEditing(null); setWizard('prodotto') }}>+ Aggiungi prodotto</PBtn>
       </div>
@@ -659,11 +659,11 @@ function TabProdotti({ api, showToast, autoOpen }) {
       {showFornitori&&(
         <div style={{...S.card,marginBottom:18,padding:'16px 18px'}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
-            <div style={{fontSize:14,fontWeight:600}}>ð­ Fornitori</div>
+            <div style={{fontSize:14,fontWeight:600}}>🏭 Fornitori</div>
             <PBtn small onClick={()=>{ setEditing(null); setWizard('fornitore') }}>+ Aggiungi fornitore</PBtn>
           </div>
           {fornitori.length===0
-            ? <div style={{fontSize:13,color:'rgba(255,255,255,0.25)',textAlign:'center',padding:'12px 0'}}>Nessun fornitore â aggiungine uno!</div>
+            ? <div style={{fontSize:13,color:'rgba(255,255,255,0.25)',textAlign:'center',padding:'12px 0'}}>Nessun fornitore — aggiungine uno!</div>
             : <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:10}}>
                 {fornitori.map(f=>(
                   <div key={f.id} style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:10,padding:'12px 14px'}}>
@@ -671,8 +671,8 @@ function TabProdotti({ api, showToast, autoOpen }) {
                     {f.piva&&<div style={{fontSize:11,color:'rgba(255,255,255,0.3)'}}>P.IVA: {f.piva}</div>}
                     {f.telefono&&<div style={{fontSize:11,color:'rgba(255,255,255,0.4)',marginTop:2}}>ð {f.telefono}</div>}
                     <div style={{display:'flex',gap:6,marginTop:10}}>
-                      <GBtn small onClick={()=>{ setEditing(f); setWizard('fornitore') }}>âï¸</GBtn>
-                      <GBtn small danger onClick={()=>delFornitore(f.id)}>â</GBtn>
+                      <GBtn small onClick={()=>{ setEditing(f); setWizard('fornitore') }}>✏️</GBtn>
+                      <GBtn small danger onClick={()=>delFornitore(f.id)}>✕</GBtn>
                     </div>
                   </div>
                 ))}
@@ -685,26 +685,26 @@ function TabProdotti({ api, showToast, autoOpen }) {
       <div style={S.card}>
         <div style={{overflowX:'auto'}}>
           <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
-            <thead><tr>{['Nome','Cat.','Barcode','Fornitore','Acq.','Vend.','QtÃ ','Margine',''].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+            <thead><tr>{['Nome','Cat.','Barcode','Fornitore','Acq.','Vend.','Qtà','Margine',''].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
             <tbody>
               {filtered.length===0
-                ? <tr><td colSpan="9" style={{textAlign:'center',padding:'40px 0',color:'rgba(255,255,255,0.2)'}}>ð¦ Nessun prodotto â clicca "+ Aggiungi prodotto" per iniziare</td></tr>
+                ? <tr><td colSpan="9" style={{textAlign:'center',padding:'40px 0',color:'rgba(255,255,255,0.2)'}}>📦 Nessun prodotto — clicca "+ Aggiungi prodotto" per iniziare</td></tr>
                 : filtered.map(p=>{
                     const m=p.prezzo_vend&&p.prezzo_acq?Math.round(((p.prezzo_vend-p.prezzo_acq)/p.prezzo_acq)*100):null
                     return (
                       <tr key={p.id} onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.02)'} onMouseLeave={e=>e.currentTarget.style.background=''}>
                         <td style={{...S.td,color:'white',fontWeight:500}}>{p.nome}</td>
                         <td style={S.td}><Badge label={p.categoria} color="blue"/></td>
-                        <td style={{...S.td,fontFamily:'monospace',fontSize:11,color:'rgba(255,255,255,0.35)'}}>{p.barcode||'â'}</td>
+                        <td style={{...S.td,fontFamily:'monospace',fontSize:11,color:'rgba(255,255,255,0.35)'}}>{p.barcode||'—'}</td>
                         <td style={S.td}>{nomeF(p.fornitore_id)}</td>
-                        <td style={S.td}>â¬{(p.prezzo_acq||0).toFixed(2)}</td>
-                        <td style={S.td}>â¬{(p.prezzo_vend||0).toFixed(2)}</td>
+                        <td style={S.td}>€{(p.prezzo_acq||0).toFixed(2)}</td>
+                        <td style={S.td}>€{(p.prezzo_vend||0).toFixed(2)}</td>
                         <td style={S.td}>{p.qty}</td>
-                        <td style={S.td}>{m!==null?<Badge label={`${m}%`} color={m>0?'green':'red'}/>:'â'}</td>
+                        <td style={S.td}>{m!==null?<Badge label={`${m}%`} color={m>0?'green':'red'}/>:'—'}</td>
                         <td style={{...S.td,whiteSpace:'nowrap'}}>
                           <div style={{display:'flex',gap:6}}>
-                            <GBtn small onClick={()=>{ setEditing(p); setWizard('prodotto') }}>âï¸</GBtn>
-                            <GBtn small danger onClick={()=>delProdotto(p.id)}>â</GBtn>
+                            <GBtn small onClick={()=>{ setEditing(p); setWizard('prodotto') }}>✏️</GBtn>
+                            <GBtn small danger onClick={()=>delProdotto(p.id)}>✕</GBtn>
                           </div>
                         </td>
                       </tr>
@@ -762,12 +762,12 @@ function TabDispositivi({ api, showToast, autoOpen }) {
     showToast('Eliminato')
   }
 
-  const handleDev = (data) => { setDevices(prev=>[data,...prev]); showToast('â Dispositivo aggiunto') }
+  const handleDev = (data) => { setDevices(prev=>[data,...prev]); showToast('✓ Dispositivo aggiunto') }
 
   const handleInt = (data, type) => {
     if(type==='add') setInterventi(prev=>[data,...prev])
     else setInterventi(prev=>prev.map(i=>i.id===data.id?data:i))
-    showToast(type==='add'?'â Intervento aggiunto':'â Intervento aggiornato')
+    showToast(type==='add'?'✓ Intervento aggiunto':'✓ Intervento aggiornato')
   }
 
   const delInt = async (id) => {
@@ -790,7 +790,7 @@ function TabDispositivi({ api, showToast, autoOpen }) {
     <div>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:18}}>
         <div style={{display:'flex',gap:8}}>
-          {[{id:'brand',opts:['','Apple','Samsung','Google','Xiaomi','OnePlus','Huawei'],labels:['Tutti i brand','Apple','Samsung','Google','Xiaomi','OnePlus','Huawei']},{id:'stato',opts:['','in_stock','da_testare','in_riparazione','venduto'],labels:['Tutti gli stati','In stock','Da testare','In riparazione','Venduto']},{id:'cond',opts:['','A','B','C'],labels:['Tutte le cond.','A â Ottima','B â Buona','C â Discreta']}].map(fi=>(
+          {[{id:'brand',opts:['','Apple','Samsung','Google','Xiaomi','OnePlus','Huawei'],labels:['Tutti i brand','Apple','Samsung','Google','Xiaomi','OnePlus','Huawei']},{id:'stato',opts:['','in_stock','da_testare','in_riparazione','venduto'],labels:['Tutti gli stati','In stock','Da testare','In riparazione','Venduto']},{id:'cond',opts:['','A','B','C'],labels:['Tutte le cond.','A — Ottima','B — Buona','C — Discreta']}].map(fi=>(
             <select key={fi.id} value={filters[fi.id]} onChange={e=>setFilters({...filters,[fi.id]:e.target.value})} style={{...S.sel,minWidth:130}}>
               {fi.opts.map((o,i)=><option key={o} value={o}>{fi.labels[i]}</option>)}
             </select>
@@ -805,7 +805,7 @@ function TabDispositivi({ api, showToast, autoOpen }) {
             <thead><tr>{['Dispositivo','Storage','IMEI','Cond.','Stato','Prov.','Acq.','Vend.','Interventi',''].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
             <tbody>
               {filtered.length===0
-                ? <tr><td colSpan="10" style={{textAlign:'center',padding:'40px 0',color:'rgba(255,255,255,0.2)'}}>ð± Nessun dispositivo</td></tr>
+                ? <tr><td colSpan="10" style={{textAlign:'center',padding:'40px 0',color:'rgba(255,255,255,0.2)'}}>📱 Nessun dispositivo</td></tr>
                 : filtered.map(d=>(
                     <tr key={d.id} onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.02)'} onMouseLeave={e=>e.currentTarget.style.background=''}>
                       <td style={{...S.td,color:'white',fontWeight:500}}>
@@ -813,21 +813,21 @@ function TabDispositivi({ api, showToast, autoOpen }) {
                           <span style={{display:'block',fontSize:10,color:'rgba(255,255,255,0.3)'}}>{d.brand}</span>{d.modello}
                         </button>
                       </td>
-                      <td style={{...S.td,fontFamily:'monospace',fontSize:11}}>{d.storage||'â'}</td>
-                      <td style={{...S.td,fontFamily:'monospace',fontSize:10,color:'rgba(255,255,255,0.3)'}}>{d.imei?d.imei.slice(0,8)+'â¦':'â'}</td>
-                      <td style={S.td}><Badge label={d.condizione||'â'} color={COND_COLOR[d.condizione]||'gray'}/></td>
+                      <td style={{...S.td,fontFamily:'monospace',fontSize:11}}>{d.storage||'—'}</td>
+                      <td style={{...S.td,fontFamily:'monospace',fontSize:10,color:'rgba(255,255,255,0.3)'}}>{d.imei?d.imei.slice(0,8)+'â¦':'—'}</td>
+                      <td style={S.td}><Badge label={d.condizione||'—'} color={COND_COLOR[d.condizione]||'gray'}/></td>
                       <td style={S.td}>
                         <select onChange={e=>updStato(d.id,e.target.value)} value={d.stato} style={{...S.sel,fontSize:11,minWidth:110}}>
                           {Object.entries(STATO_DEVICE).map(([v,l])=><option key={v} value={v}>{l}</option>)}
                         </select>
                       </td>
                       <td style={S.td}><Badge label={d.provenienza} color={d.provenienza==='privato'?'teal':'blue'}/></td>
-                      <td style={S.td}>â¬{d.prezzo_acq||0}</td>
-                      <td style={S.td}>{d.prezzo_vend?`â¬${d.prezzo_vend}`:'â'}</td>
+                      <td style={S.td}>€{d.prezzo_acq||0}</td>
+                      <td style={S.td}>{d.prezzo_vend?`€${d.prezzo_vend}`:'—'}</td>
                       <td style={S.td}>
-                        <button onClick={()=>openDev(d)} style={{background:'rgba(124,58,237,0.1)',border:'1px solid rgba(124,58,237,0.2)',color:'#c4b5fd',borderRadius:7,padding:'4px 10px',fontSize:11,cursor:'pointer',fontFamily:'Inter,sans-serif'}}>ð§ Vedi</button>
+                        <button onClick={()=>openDev(d)} style={{background:'rgba(124,58,237,0.1)',border:'1px solid rgba(124,58,237,0.2)',color:'#c4b5fd',borderRadius:7,padding:'4px 10px',fontSize:11,cursor:'pointer',fontFamily:'Inter,sans-serif'}}>🔧 Vedi</button>
                       </td>
-                      <td style={S.td}><GBtn small danger onClick={()=>delDev(d.id)}>â</GBtn></td>
+                      <td style={S.td}><GBtn small danger onClick={()=>delDev(d.id)}>✕</GBtn></td>
                     </tr>
                   ))
               }
@@ -845,18 +845,18 @@ function TabDispositivi({ api, showToast, autoOpen }) {
               <div>
                 <div style={{fontSize:17,fontWeight:700,marginBottom:3}}>{selectedDev.brand} {selectedDev.modello}</div>
                 <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-                  <Badge label={selectedDev.storage||'â'} color="gray"/>
+                  <Badge label={selectedDev.storage||'—'} color="gray"/>
                   <Badge label={selectedDev.condizione} color={COND_COLOR[selectedDev.condizione]}/>
                   <Badge label={STATO_DEVICE[selectedDev.stato]} color={STATO_COLOR[selectedDev.stato]}/>
                   <Badge label={selectedDev.provenienza} color={selectedDev.provenienza==='privato'?'teal':'blue'}/>
                 </div>
               </div>
-              <button onClick={()=>setWizard(null)} style={{background:'rgba(255,255,255,0.07)',border:'none',color:'rgba(255,255,255,0.5)',width:30,height:30,borderRadius:8,cursor:'pointer',fontSize:16,display:'flex',alignItems:'center',justifyContent:'center'}}>â</button>
+              <button onClick={()=>setWizard(null)} style={{background:'rgba(255,255,255,0.07)',border:'none',color:'rgba(255,255,255,0.5)',width:30,height:30,borderRadius:8,cursor:'pointer',fontSize:16,display:'flex',alignItems:'center',justifyContent:'center'}}>✕</button>
             </div>
 
             {/* Info grid */}
             <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,padding:'18px 26px',borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
-              {[['Acquistato','â¬'+(selectedDev.prezzo_acq||0)],['Vendita',selectedDev.prezzo_vend?'â¬'+selectedDev.prezzo_vend:'Non impostato'],['Costo interventi',<span style={{color:'#f87171'}}>â¬{costoTot().toFixed(2)}</span>],['IMEI',<span style={{fontFamily:'monospace',fontSize:11}}>{selectedDev.imei||'â'}</span>],['Colore',selectedDev.colore||'â'],['Cliente',selectedDev.cliente_nome||'â']].map(([l,v])=>(
+              {[['Acquistato','€'+(selectedDev.prezzo_acq||0)],['Vendita',selectedDev.prezzo_vend?'€'+selectedDev.prezzo_vend:'Non impostato'],['Costo interventi',<span style={{color:'#f87171'}}>€{costoTot().toFixed(2)}</span>],['IMEI',<span style={{fontFamily:'monospace',fontSize:11}}>{selectedDev.imei||'—'}</span>],['Colore',selectedDev.colore||'—'],['Cliente',selectedDev.cliente_nome||'—']].map(([l,v])=>(
                 <div key={l} style={{background:'rgba(255,255,255,0.03)',borderRadius:8,padding:'10px 12px'}}>
                   <div style={{fontSize:9.5,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:4,fontWeight:600}}>{l}</div>
                   <div style={{fontSize:13,fontWeight:500}}>{v}</div>
@@ -867,7 +867,7 @@ function TabDispositivi({ api, showToast, autoOpen }) {
             {/* Interventi */}
             <div style={{padding:'18px 26px'}}>
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
-                <div style={{fontSize:14,fontWeight:600}}>ð§ Storico interventi</div>
+                <div style={{fontSize:14,fontWeight:600}}>🔧 Storico interventi</div>
                 <PBtn small onClick={()=>{ setEditingInt(null); setWizard('add_intervento') }}>+ Nuovo intervento</PBtn>
               </div>
 
@@ -883,15 +883,15 @@ function TabDispositivi({ api, showToast, autoOpen }) {
                           <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4,flexWrap:'wrap'}}>
                             <span style={{fontSize:13.5,fontWeight:600}}>{tipoLabel(i.tipo)}</span>
                             <Badge label={i.eseguito_da==='interno'?'Interno':'Esterno'} color={i.eseguito_da==='interno'?'blue':'amber'}/>
-                            {i.costo>0&&<Badge label={`â¬${i.costo}`} color="red"/>}
+                            {i.costo>0&&<Badge label={`€${i.costo}`} color="red"/>}
                           </div>
                           {i.descrizione&&<div style={{fontSize:12,color:'rgba(255,255,255,0.45)',marginBottom:3}}>{i.descrizione}</div>}
                           {i.note&&<div style={{fontSize:11,color:'rgba(255,255,255,0.3)',borderLeft:'2px solid rgba(255,255,255,0.1)',paddingLeft:8,marginBottom:3}}>{i.note}</div>}
                           <div style={{fontSize:10.5,color:'rgba(255,255,255,0.25)'}}>{i.data?new Date(i.data).toLocaleDateString('it-IT'):''}{i.fornitore_nome?` Â· ${i.fornitore_nome}`:''}</div>
                         </div>
                         <div style={{display:'flex',gap:6,flexShrink:0}}>
-                          <GBtn small onClick={()=>{ setEditingInt(i); setWizard('add_intervento') }}>âï¸</GBtn>
-                          <GBtn small danger onClick={()=>delInt(i.id)}>â</GBtn>
+                          <GBtn small onClick={()=>{ setEditingInt(i); setWizard('add_intervento') }}>✏️</GBtn>
+                          <GBtn small danger onClick={()=>delInt(i.id)}>✕</GBtn>
                         </div>
                       </div>
                     ))}
@@ -935,7 +935,7 @@ function TabRicambi({ api, showToast, autoOpen }) {
   const handleRicambio = (data, type) => {
     if(type==='add') setRicambi(prev=>[data,...prev])
     else setRicambi(prev=>prev.map(r=>r.id===data.id?data:r))
-    showToast(type==='add'?'â Ricambio aggiunto':'â Ricambio aggiornato')
+    showToast(type==='add'?'✓ Ricambio aggiunto':'✓ Ricambio aggiornato')
   }
 
   const del = async (id) => {
@@ -949,17 +949,17 @@ function TabRicambi({ api, showToast, autoOpen }) {
     try { await axios.patch(`${api}/ricambi/${id}/qty`,{delta}) } catch {}
   }
 
-  const nomeF = (id) => fornitori.find(f=>f.id===id)?.nome||'â'
+  const nomeF = (id) => fornitori.find(f=>f.id===id)?.nome||'—'
   const filtered = search ? ricambi.filter(r=>r.nome.toLowerCase().includes(search.toLowerCase())||r.barcode===search) : ricambi
-  const CAT_ICON = {batteria:'ð',schermo:'ð±',scocca:'ð§',altoparlante:'ð',fotocamera:'ð·',connettore:'ð',altro:'ð¦'}
+  const CAT_ICON = {batteria:'🔋',schermo:'📱',scocca:'🔧',altoparlante:'ð',fotocamera:'ð·',connettore:'ð',altro:'📦'}
 
   return (
     <div>
       {alerts.length>0&&(
         <div style={{background:'rgba(245,158,11,0.08)',border:'1px solid rgba(245,158,11,0.2)',borderRadius:10,padding:'12px 16px',marginBottom:16,display:'flex',alignItems:'center',gap:10}}>
-          <span style={{fontSize:18}}>â ï¸</span>
+          <span style={{fontSize:18}}>⚠️</span>
           <div>
-            <div style={{fontSize:13,fontWeight:600,color:'#fbbf24',marginBottom:2}}>Scorte basse â rifornisciti!</div>
+            <div style={{fontSize:13,fontWeight:600,color:'#fbbf24',marginBottom:2}}>Scorte basse — rifornisciti!</div>
             <div style={{fontSize:12,color:'rgba(255,255,255,0.45)'}}>{alerts.map(a=>`${a.nome} (${a.qty} pz.)`).join(' Â· ')}</div>
           </div>
         </div>
@@ -967,7 +967,7 @@ function TabRicambi({ api, showToast, autoOpen }) {
 
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:18}}>
         <div style={{position:'relative',maxWidth:280}}>
-          <span style={{position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',opacity:0.4}}>ð</span>
+          <span style={{position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',opacity:0.4}}>🔍</span>
           <input placeholder="Cerca o scansiona barcode..." value={search} onChange={e=>setSearch(e.target.value)}
             style={{...S.sel,padding:'9px 12px 9px 34px',width:280,boxSizing:'border-box',borderRadius:9}}/>
         </div>
@@ -977,19 +977,19 @@ function TabRicambi({ api, showToast, autoOpen }) {
       <div style={S.card}>
         <div style={{overflowX:'auto'}}>
           <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
-            <thead><tr>{['Ricambio','Cat.','Compatibile','Fornitore','Acq.','QtÃ ','Barcode',''].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
+            <thead><tr>{['Ricambio','Cat.','Compatibile','Fornitore','Acq.','Qtà','Barcode',''].map(h=><th key={h} style={S.th}>{h}</th>)}</tr></thead>
             <tbody>
               {filtered.length===0
-                ? <tr><td colSpan="8" style={{textAlign:'center',padding:'40px 0',color:'rgba(255,255,255,0.2)'}}>ð§ Nessun ricambio â aggiungine uno!</td></tr>
+                ? <tr><td colSpan="8" style={{textAlign:'center',padding:'40px 0',color:'rgba(255,255,255,0.2)'}}>🔧 Nessun ricambio — aggiungine uno!</td></tr>
                 : filtered.map(r=>{
                     const low=r.qty<=r.qty_minima
                     return (
                       <tr key={r.id} onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.02)'} onMouseLeave={e=>e.currentTarget.style.background=''}>
-                        <td style={{...S.td,color:'white',fontWeight:500}}>{CAT_ICON[r.categoria]||'ð¦'} {r.nome}</td>
+                        <td style={{...S.td,color:'white',fontWeight:500}}>{CAT_ICON[r.categoria]||'📦'} {r.nome}</td>
                         <td style={S.td}><Badge label={r.categoria} color="blue"/></td>
-                        <td style={{...S.td,fontSize:11,color:'rgba(255,255,255,0.4)',maxWidth:140}}>{r.compatibile||'â'}</td>
+                        <td style={{...S.td,fontSize:11,color:'rgba(255,255,255,0.4)',maxWidth:140}}>{r.compatibile||'—'}</td>
                         <td style={S.td}>{nomeF(r.fornitore_id)}</td>
-                        <td style={S.td}>â¬{r.prezzo_acq||0}</td>
+                        <td style={S.td}>€{r.prezzo_acq||0}</td>
                         <td style={S.td}>
                           <div style={{display:'flex',alignItems:'center',gap:6}}>
                             <button onClick={()=>adjQty(r.id,-1)} style={{background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',color:'white',width:24,height:24,borderRadius:6,cursor:'pointer',fontSize:14,display:'flex',alignItems:'center',justifyContent:'center'}}>â</button>
@@ -998,11 +998,11 @@ function TabRicambi({ api, showToast, autoOpen }) {
                             {low&&<Badge label="Basso" color="amber"/>}
                           </div>
                         </td>
-                        <td style={{...S.td,fontFamily:'monospace',fontSize:11,color:'rgba(255,255,255,0.3)'}}>{r.barcode||'â'}</td>
+                        <td style={{...S.td,fontFamily:'monospace',fontSize:11,color:'rgba(255,255,255,0.3)'}}>{r.barcode||'—'}</td>
                         <td style={S.td}>
                           <div style={{display:'flex',gap:6}}>
-                            <GBtn small onClick={()=>{ setEditing(r); setWizard('ricambio') }}>âï¸</GBtn>
-                            <GBtn small danger onClick={()=>del(r.id)}>â</GBtn>
+                            <GBtn small onClick={()=>{ setEditing(r); setWizard('ricambio') }}>✏️</GBtn>
+                            <GBtn small danger onClick={()=>del(r.id)}>✕</GBtn>
                           </div>
                         </td>
                       </tr>
@@ -1042,7 +1042,7 @@ export default function Magazzino({ api, showToast, autoAction, onAutoActionDone
       </div>
 
       <div style={{display:'flex',gap:3,background:'rgba(255,255,255,0.04)',borderRadius:11,padding:3,width:'fit-content',marginBottom:22}}>
-        {[{id:'prodotti',label:'ð¦ Prodotti'},{id:'dispositivi',label:'ð± Dispositivi'},{id:'ricambi',label:'ð§ Ricambi'}].map(t=>(
+        {[{id:'prodotti',label:'📦 Prodotti'},{id:'dispositivi',label:'📱 Dispositivi'},{id:'ricambi',label:'🔧 Ricambi'}].map(t=>(
           <button key={t.id} onClick={()=>setTab(t.id)} style={{padding:'8px 22px',borderRadius:9,fontSize:13.5,fontWeight:500,cursor:'pointer',border:'none',fontFamily:'Inter,sans-serif',transition:'all 0.15s',background:tab===t.id?'rgba(124,58,237,0.25)':'transparent',color:tab===t.id?'#c4b5fd':'rgba(255,255,255,0.4)',boxShadow:tab===t.id?'0 2px 8px rgba(124,58,237,0.2)':'none'}}>{t.label}</button>
         ))}
       </div>
