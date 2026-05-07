@@ -1,4 +1,4 @@
-// Magazzino.jsx v3 â con Wizard guidati step-by-step
+﻿// Magazzino.jsx v3 â con Wizard guidati step-by-step
 
 import { useState, useEffect } from 'react'
 import axios from 'axios'
