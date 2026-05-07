@@ -1,4 +1,4 @@
-// App.jsx
+﻿// App.jsx
 
 import { useState, useEffect } from 'react'
 import Sidebar from './components/Sidebar'
