@@ -170,6 +170,7 @@ function CNModal({onClose,onSelect}){
       </div>
     </div>
     
+  )
 }
 
 function Clock() {
