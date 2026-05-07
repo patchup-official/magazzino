@@ -181,5 +181,3 @@ function Clock() {
   return <span style={{ fontSize:12, color:'#475569', fontFamily:'monospace' }}>{time}</span>
 }
 undefined// App.jsx
-
-import { useState, useEffect } from 'react'
