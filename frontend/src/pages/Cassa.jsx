@@ -103,6 +103,27 @@ function WizardChiusura({ form, setForm, onSalva, saving }) {
     </div>
   );
 
+
+  // Avvisi pre-salvataggio
+  const avvisiList = [];
+  if(Math.abs(diff)>0.01) avvisiList.push({e:true, t: diff>0
+    ? `⚠️ Gli incassi superano le vendite di ${fmtE(Math.abs(diff))} — verifica i metodi di pagamento.`
+    : `⚠️ Gli incassi sono inferiori alle vendite di ${fmtE(Math.abs(diff))} — manca qualcosa nei metodi di pagamento?`});
+  if(totF < 50) avvisiList.push({e:false, t:`⚠️ Fondo cassa molto basso (${fmtE(totF)}) — hai contato tutte le banconote?`});
+  if(!form.operatore.trim()) avvisiList.push({e:false, t:'⚠️ Nessun operatore indicato — torna al passo 11 e inserisci il tuo nome.'});
+  const avvisiJSX = avvisiList.length > 0 ? (
+    <div style={{marginBottom:16}}>
+      {avvisiList.map((a,i) => (
+        <div key={i} style={{padding:'10px 14px',borderRadius:8,marginBottom:8,
+          background: a.e ? 'rgba(239,68,68,0.12)' : 'rgba(234,179,8,0.1)',
+          border: a.e ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(234,179,8,0.3)',
+          color: a.e ? '#fca5a5' : '#fde68a', fontSize:13, lineHeight:1.5}}>
+          {a.t}
+        </div>
+      ))}
+    </div>
+  ) : null;
+
   let body;
   if (step===0) {
     body = (
@@ -288,26 +309,7 @@ function WizardChiusura({ form, setForm, onSalva, saving }) {
         {form.operatore && <div style={{color:'#64748b',fontSize:13,marginBottom:4}}>Operatore: <b style={{color:'#f1f5f9'}}>{form.operatore}</b></div>}
         {form.note && <div style={{color:'#64748b',fontSize:13,marginBottom:12}}>Note: <span style={{color:'#f1f5f9'}}>{form.note}</span></div>}
         
-        {(() => {
-          const avvisi = [];
-          if(Math.abs(diff)>0.01) avvisi.push({tipo:'errore', testo: diff>0 ? `⚠️ Gli incassi superano le vendite di ${fmtE(Math.abs(diff))} — verifica i metodi di pagamento.` : `⚠️ Gli incassi sono inferiori alle vendite di ${fmtE(Math.abs(diff))} — manca qualcosa nei metodi di pagamento?`});
-          if(totF<50) avvisi.push({tipo:'warning', testo:`⚠️ Fondo cassa molto basso (${fmtE(totF)}) — hai contato tutte le banconote?`});
-          if(!form.operatore.trim()) avvisi.push({tipo:'warning', testo:'⚠️ Nessun operatore indicato — torna indietro e inserisci il tuo nome.'});
-          if(avvisi.length===0) return null;
-          return (
-            <div style={{marginBottom:16}}>
-              {avvisi.map((a,i)=>(
-                <div key={i} style={{padding:'10px 14px',borderRadius:8,marginBottom:8,
-                  background: a.tipo==='errore' ? 'rgba(239,68,68,0.12)' : 'rgba(234,179,8,0.1)',
-                  border: `1px solid ${a.tipo==='errore' ? 'rgba(239,68,68,0.3)' : 'rgba(234,179,8,0.3)'}`,
-                  color: a.tipo==='errore' ? '#fca5a5' : '#fde68a',
-                  fontSize:13, lineHeight:1.5}}>
-                  {a.testo}
-                </div>
-              ))}
-            </div>
-          );
-        })()}
+        {avvisiJSX}}
         <BtnRow>
           <BtnS onClick={in_}>← Modifica</BtnS>
           <BtnP onClick={onSalva} disabled={saving}>{saving?'⏳ Salvataggio...':'💾 Salva chiusura'}</BtnP>
@@ -322,7 +324,6 @@ function WizardChiusura({ form, setForm, onSalva, saving }) {
       {body}
     </div>
   );
-}
 
 // ── Componente principale ─────────────────────────────────────────────────────
 export default function Cassa() {
