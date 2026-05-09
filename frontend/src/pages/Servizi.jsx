@@ -79,7 +79,7 @@ function WizardServizio({ api, editing, onDone, onClose }) {
     },
     {
       label: 'Tipo di servizio',
-      heading: 'ð ️ Che servizio serve?',
+      heading: 'Che servizio serve?',
       subtitle: 'Scegli il tipo di servizio da erogare.',
       content: (
         <div>
@@ -142,7 +142,7 @@ function WizardServizio({ api, editing, onDone, onClose }) {
     },
     {
       label: 'Conferma',
-      heading: 'â Tutto ok?',
+      heading: 'Tutto ok?',
       subtitle: 'Controlla i dati prima di creare il servizio.',
       content: (
         <Summary items={[
@@ -196,7 +196,7 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
   const [showTipoForm, setShowTipoForm] = useState(false)
   const [editTipo, setEditTipo] = useState(null)
   const [tipoForm, setTipoForm] = useState({nome:'',icon:'🔧',desc:'',prezzo_base:''})
-  const EMOJI_OPZIONI = ['🔧','ð','🔍','💾','🛡️','ð§½','⚙️','⬆️','📱','🔋','💡','🖥️','â¨️','ð¨️','ð·','ð®','🎧','ð¡','ð','💳']
+const EMOJI_OPZIONI = ['🔧','🔍','💾','🛡️','⚙️','⬆️','📱','🔋','💡','🖥️','🎧','📦','🖱️','🔌']
 
   const autoActionHandled = useRef(false)
   useEffect(() => {
@@ -321,7 +321,7 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
                     </div>
                   </div>
                   <div style={{display:'flex',gap:0,marginBottom:8,borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
-                    {[{k:'emoji',l:'ð Emoji'},{k:'upload',l:'ð¼️ Immagine'}].map(({k,l})=>(
+                    {[{k:'emoji',l:'Emoji'},{k:'upload',l:'Immagine'}].map(({k,l})=>(
                       <button key={k} onClick={()=>setTipoForm(f=>({...f,_iconTab:k}))}
                         style={{padding:'6px 14px',border:'none',cursor:'pointer',fontSize:12,fontWeight:600,background:'transparent',borderBottom:(tipoForm._iconTab||'emoji')===k?'2px solid #3b82f6':'2px solid transparent',color:(tipoForm._iconTab||'emoji')===k?'#60a5fa':'#64748b'}}>
                         {l}
@@ -355,7 +355,7 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
                           reader.onload=ev=>setTipoForm(f=>({...f,icon:ev.target.result,_iconTab:'upload'}));
                           reader.readAsDataURL(file);
                         }}/>
-                      <div style={{fontSize:22,marginBottom:4}}>ð¼️</div>
+
                       <div style={{fontSize:13,color:'#60a5fa',fontWeight:600}}>Clicca per caricare</div>
                       <div style={{fontSize:11,color:'#475569',marginTop:2}}>PNG, JPG, SVG, WebP — max 300KB</div>
                     </label>
@@ -436,7 +436,7 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(320px,1fr))', gap:14 }}>
         {filtered.length === 0 ? (
           <div style={{ gridColumn:'1/-1', textAlign:'center', padding:'60px 0', color:'#475569' }}>
-            <div style={{ fontSize:32, marginBottom:12, opacity:0.4 }}>ð ️</div>
+
             <div style={{ fontSize:14, color:'#64748b' }}>Nessun servizio {filter === 'in_corso' ? 'in corso' : 'trovato'}</div>
           </div>
         ) : filtered.map(s => (
@@ -469,7 +469,7 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
 
             {s.data_consegna_prevista && (
               <div style={{ fontSize:11, color:'#64748b', marginBottom:12 }}>
-                ð Consegna: {new Date(s.data_consegna_prevista).toLocaleDateString('it-IT')}
+                Consegna: {new Date(s.data_consegna_prevista).toLocaleDateString('it-IT')}
               </div>
             )}
 
@@ -480,7 +480,7 @@ export default function Servizi({ api, showToast, autoAction, onAutoActionDone }
                 </button>
               )}
               <GBtn small onClick={() => { setEditing(s); setModal(true) }}>✏️</GBtn>
-              <GBtn small onClick={() => deleteServizio(s.id)}>ð️</GBtn>
+              <GBtn small onClick={() => deleteServizio(s.id)}>Elimina</GBtn>
             </div>
           </div>
         ))}
