@@ -39,7 +39,7 @@ export default function App() {
   }
 
   const handleCreaNuovo = (id) => {
-    setShowCN(false)
+    setShowCN(true)
     switch(id) {
       case 'dispositivo': setCurrentPage('magazzino'); setCreaNuovoAction('nuovo_prodotto'); break
       case 'acquisto_privato': setCurrentPage('storico-dispositivi'); setCreaNuovoAction(null); break
@@ -51,7 +51,7 @@ export default function App() {
       case 'movimento': setCurrentPage('magazzino'); setCreaNuovoAction(null); break
       case 'servizio': setCurrentPage('servizi'); setCreaNuovoAction('nuovo_servizio'); break
       case 'da_privato': setCurrentPage('acquisto'); setCreaNuovoAction(null); break
-      default: showToast('Funzione in sviluppo Ã°ÃÂÃÂÃÂ§'); break
+      default: showToast('Funzione in sviluppo'); break
     }
   }
 
@@ -105,9 +105,9 @@ export default function App() {
               background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)',
               borderRadius:8, padding:'5px 12px', cursor:'pointer',
             }}>
-              <span style={{ fontSize:12 }}>ÃÂ¢ÃÂÃÂ£</span>
+              
               <span style={{ fontSize:12.5, color:'#94a3b8' }}>Negozio principale</span>
-              <span style={{ fontSize:10, color:'#475569' }}>ÃÂ¢ÃÂÃÂ¾</span>
+              
             </div>
           </div>
         </div>
