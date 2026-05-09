@@ -121,195 +121,11 @@ function Nav({step,setStep,total=6,onSave,saving,canSave=true}){
 // WIZARD
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ─── WIZARD CONVERSAZIONALE ────────────────────────────────────────────────
 
-const DOMANDE = [
-  // 0 - Conferma data
-  ({ form, set, avanti, MESI }) => {
-    const d = new Date(form.data);
-    const giorno = d.getDate().toString().padStart(2,'0');
-    const mese = MESI[d.getMonth()];
-    const anno = d.getFullYear();
-    return (
-      <Card>
-        <Domanda>Vuoi inserire la chiusura cassa per il <b>{giorno} {mese} {anno}</b>?</Domanda>
-        <Hint>Se è la data di oggi puoi procedere. Altrimenti modifica la data qui sotto.</Hint>
-        <div style={{display:'flex', gap:10, marginBottom:16}}>
-          <input type="date" value={form.data} onChange={e=>set('data',e.target.value)}
-            style={{background:'#1e293b',border:'1px solid #334155',borderRadius:8,padding:'8px 12px',color:'#f1f5f9',fontSize:14}} />
-        </div>
-        <BtnRow>
-          <BtnSi onClick={avanti}>✅ Sì, procedo</BtnSi>
-        </BtnRow>
-      </Card>
-    );
-  },
-  // 1 - Chiusura fiscale
-  ({ form, set, avanti, indietro }) => (
-    <Card>
-      <Domanda>Inserisci la <b>chiusura fiscale</b> riportata sullo scontrino di chiusura del registratore di cassa.</Domanda>
-      <Hint>È il totale giornaliero stampato dal registratore fiscale a fine giornata. Se non hai emesso scontrini oggi, inserisci 0.</Hint>
-      <CampoEuro label="Chiusura fiscale (scontrini)" valore={form.chiusura_fiscale} onChange={v=>set('chiusura_fiscale',v)} />
-      <BtnRow>
-        <BtnNo onClick={indietro}>← Indietro</BtnNo>
-        <BtnSi onClick={avanti}>Avanti →</BtnSi>
-      </BtnRow>
-    </Card>
-  ),
-  // 2 - Fatturato (no art.36)
-  ({ form, set, avanti, indietro }) => (
-    <Card>
-      <Domanda>Inserisci il <b>totale fatturato della giornata</b> (fatture emesse, escluso Art. 36).</Domanda>
-      <Hint>Somma gli importi di tutte le fatture emesse oggi, IVA inclusa. Non includere le vendite Art. 36 — quelle vanno nel campo successivo. Se non hai emesso fatture, inserisci 0.</Hint>
-      <CampoEuro label="Fatturato (fatture, no Art. 36)" valore={form.fatturato} onChange={v=>set('fatturato',v)} />
-      <BtnRow>
-        <BtnNo onClick={indietro}>← Indietro</BtnNo>
-        <BtnSi onClick={avanti}>Avanti →</BtnSi>
-      </BtnRow>
-    </Card>
-  ),
-  // 3 - Fatturato art.36
-  ({ form, set, avanti, indietro }) => (
-    <Card>
-      <Domanda>Inserisci il <b>totale vendite Art. 36</b> della giornata.</Domanda>
-      <Hint>Sono le vendite di dispositivi usati acquistati da privati. L'IVA viene calcolata solo sul margine (prezzo vendita meno costo acquisto). Se non ne hai fatte, inserisci 0.</Hint>
-      <CampoEuro label="Vendite Art. 36 (usato da privati)" valore={form.fatturato_art36} onChange={v=>set('fatturato_art36',v)} />
-      <BtnRow>
-        <BtnNo onClick={indietro}>← Indietro</BtnNo>
-        <BtnSi onClick={avanti}>Avanti →</BtnSi>
-      </BtnRow>
-    </Card>
-  ),
-  // 4 - Contanti
-  ({ form, set, avanti, indietro }) => (
-    <Card>
-      <Domanda>Quanti <b>contanti</b> hai incassato oggi?</Domanda>
-      <Hint>Inserisci il totale del denaro fisico ricevuto dai clienti durante la giornata.</Hint>
-      <CampoEuro label="Contanti" valore={form.contanti} onChange={v=>set('contanti',v)} />
-      <BtnRow>
-        <BtnNo onClick={indietro}>← Indietro</BtnNo>
-        <BtnSi onClick={avanti}>Avanti →</BtnSi>
-      </BtnRow>
-    </Card>
-  ),
-  // 5 - POS / Carte
-  ({ form, set, avanti, indietro }) => (
-    <Card>
-      <Domanda>Quanti incassi tramite <b>POS / Carte</b> di credito o debito hai avuto oggi?</Domanda>
-      <Hint>Guarda il totale giornaliero sul tuo terminale POS. Se non hai avuto pagamenti con carta, inserisci 0.</Hint>
-      <CampoEuro label="POS / Carte" valore={form.pos} onChange={v=>set('pos',v)} />
-      <BtnRow>
-        <BtnNo onClick={indietro}>← Indietro</BtnNo>
-        <BtnSi onClick={avanti}>Avanti →</BtnSi>
-      </BtnRow>
-    </Card>
-  ),
-  // 6 - Altri metodi
-  ({ form, set, avanti, indietro }) => (
-    <Card>
-      <Domanda>Hai incassato tramite altri metodi di pagamento oggi?</Domanda>
-      <Hint>Compila solo i campi relativi ai metodi che hai usato. Lascia a 0 quelli non utilizzati.</Hint>
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
-        <CampoEuro label="Satispay" valore={form.satispay} onChange={v=>set('satispay',v)} />
-        <CampoEuro label="Bonifico" valore={form.bonifico} onChange={v=>set('bonifico',v)} />
-        <CampoEuro label="Assegni" valore={form.assegni} onChange={v=>set('assegni',v)} />
-        <CampoEuro label="Compass (Agenzia)" valore={form.compass} onChange={v=>set('compass',v)} />
-        <CampoEuro label="Stripe (Online)" valore={form.stripe} onChange={v=>set('stripe',v)} />
-        <CampoEuro label="Enwon Pay" valore={form.enwon_pay} onChange={v=>set('enwon_pay',v)} />
-      </div>
-      <BtnRow>
-        <BtnNo onClick={indietro}>← Indietro</BtnNo>
-        <BtnSi onClick={avanti}>Avanti →</BtnSi>
-      </BtnRow>
-    </Card>
-  ),
-  // 7 - Note credito / resi
-  ({ form, set, avanti, indietro }) => (
-    <Card>
-      <Domanda>Hai emesso <b>note di credito o resi</b> oggi?</Domanda>
-      <Hint>Inserisci il totale dei rimborsi o resi effettuati. Questo importo verrà sottratto dal totale incassato. Se non ce ne sono, inserisci 0 e prosegui.</Hint>
-      <CampoEuro label="Note credito / Resi (sottratti)" valore={form.note_credito} onChange={v=>set('note_credito',v)} />
-      <BtnRow>
-        <BtnNo onClick={indietro}>← Indietro</BtnNo>
-        <BtnSi onClick={avanti}>Avanti →</BtnSi>
-      </BtnRow>
-    </Card>
-  ),
-  // 8 - Uscite di cassa
-  ({ form, set, avanti, indietro }) => (
-    <Card>
-      <Domanda>Hai fatto <b>uscite di cassa</b> oggi?</Domanda>
-      <Hint>Sono le spese pagate dal fondo cassa: acquisto ricambi, pagamento fornitore, acquisto dispositivo da privato, spese varie. Indica l'importo per tipo di pagamento usato.</Hint>
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12}}>
-        <CampoEuro label="Uscite contante" valore={form.uscite_contante} onChange={v=>set('uscite_contante',v)} />
-        <CampoEuro label="Uscite bonifico" valore={form.uscite_bonifico} onChange={v=>set('uscite_bonifico',v)} />
-        <CampoEuro label="Uscite POS" valore={form.uscite_pos} onChange={v=>set('uscite_pos',v)} />
-      </div>
-      <BtnRow>
-        <BtnNo onClick={indietro}>← Indietro</BtnNo>
-        <BtnSi onClick={avanti}>Avanti →</BtnSi>
-      </BtnRow>
-    </Card>
-  ),
-  // 9 - Fondo cassa banconote
-  ({ form, set, avanti, indietro, TAGLIE_FC, nv, fmt }) => {
-    const totFondo = TAGLIE_FC.reduce((s,t) => s + (nv(form.fondo_cassa[t.key])||0)*t.val, 0);
-    return (
-      <Card>
-        <Domanda>Conta le <b>banconote e monete</b> nel cassetto della cassa e inserisci quante ne hai per ogni taglio.</Domanda>
-        <Hint>Esempio: se hai 3 banconote da €50, scrivi "3" nella casella €50. Il totale viene calcolato automaticamente.</Hint>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:12}}>
-          {TAGLIE_FC.map(t => (
-            <div key={t.key} style={{background:'#1e293b',borderRadius:8,padding:'8px 10px'}}>
-              <div style={{color:'#64748b',fontSize:11,marginBottom:4}}>{t.label}</div>
-              <input type="number" min="0" placeholder="0"
-                value={form.fondo_cassa[t.key]||''}
-                onChange={e=>set('fondo_cassa',{...form.fondo_cassa,[t.key]:e.target.value})}
-                style={{width:'100%',background:'transparent',border:'none',color:'#f1f5f9',fontSize:16,fontWeight:700,outline:'none'}} />
-            </div>
-          ))}
-        </div>
-        <div style={{background:'#0f172a',borderRadius:8,padding:'10px 14px',marginBottom:16,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-          <span style={{color:'#94a3b8',fontSize:13}}>Totale fondo cassa</span>
-          <span style={{color:'#22c55e',fontWeight:700,fontSize:18}}>{fmt(totFondo)}</span>
-        </div>
-        <BtnRow>
-          <BtnNo onClick={indietro}>← Indietro</BtnNo>
-          <BtnSi onClick={avanti}>Avanti →</BtnSi>
-        </BtnRow>
-      </Card>
-    );
-  },
-  // 10 - Operatore e note
-  ({ form, set, avanti, indietro }) => (
-    <Card>
-      <Domanda>Chi ha fatto la chiusura cassa oggi?</Domanda>
-      <Hint>Inserisci il tuo nome o il nome dell'operatore che ha compilato questa chiusura. Le note sono opzionali — usale per segnalare anomalie, differenze di cassa o qualsiasi cosa da ricordare.</Hint>
-      <div style={{display:'flex',flexDirection:'column',gap:12}}>
-        <div>
-          <div style={{color:'#94a3b8',fontSize:12,marginBottom:6}}>OPERATORE</div>
-          <input placeholder="Nome operatore" value={form.operatore}
-            onChange={e=>set('operatore',e.target.value)}
-            style={{width:'100%',background:'#1e293b',border:'1px solid #334155',borderRadius:8,padding:'10px 14px',color:'#f1f5f9',fontSize:14,boxSizing:'border-box'}} />
-        </div>
-        <div>
-          <div style={{color:'#94a3b8',fontSize:12,marginBottom:6}}>NOTE (opzionale)</div>
-          <textarea placeholder="Anomalie, differenze, memo..." value={form.note}
-            onChange={e=>set('note',e.target.value)} rows={3}
-            style={{width:'100%',background:'#1e293b',border:'1px solid #334155',borderRadius:8,padding:'10px 14px',color:'#f1f5f9',fontSize:14,boxSizing:'border-box',resize:'vertical'}} />
-        </div>
-      </div>
-      <BtnRow>
-        <BtnNo onClick={indietro}>← Indietro</BtnNo>
-        <BtnSi onClick={avanti}>Vai al riepilogo →</BtnSi>
-      </BtnRow>
-    </Card>
-  ),
-];
+// ─── UI HELPERS ────────────────────────────────────────────────────────────
 
-// Sotto-componenti UI
 const Card = ({children}) => (
-  <div style={{background:'#0f172a',border:'1px solid #1e293b',borderRadius:14,padding:'28px 32px',maxWidth:640,margin:'0 auto'}}>
+  <div style={{background:'#0f172a',border:'1px solid #1e293b',borderRadius:14,padding:'28px 32px'}}>
     {children}
   </div>
 );
@@ -322,13 +138,13 @@ const Hint = ({children}) => (
 const BtnRow = ({children}) => (
   <div style={{display:'flex',justifyContent:'flex-end',gap:10,marginTop:24}}>{children}</div>
 );
-const BtnSi = ({onClick,children}) => (
-  <button onClick={onClick} style={{background:'#3b82f6',color:'#fff',border:'none',borderRadius:8,padding:'10px 22px',fontWeight:600,fontSize:14,cursor:'pointer'}}>{children}</button>
+const BtnPrimary = ({onClick,children,disabled}) => (
+  <button onClick={onClick} disabled={disabled} style={{background:disabled?'#334155':'#3b82f6',color:'#fff',border:'none',borderRadius:8,padding:'10px 22px',fontWeight:600,fontSize:14,cursor:disabled?'default':'pointer'}}>{children}</button>
 );
-const BtnNo = ({onClick,children}) => (
+const BtnSecondary = ({onClick,children}) => (
   <button onClick={onClick} style={{background:'transparent',color:'#64748b',border:'1px solid #334155',borderRadius:8,padding:'10px 18px',fontWeight:500,fontSize:14,cursor:'pointer'}}>{children}</button>
 );
-const CampoEuro = ({label, valore, onChange}) => (
+const CampoEuro = ({label,valore,onChange}) => (
   <div>
     <div style={{color:'#94a3b8',fontSize:11,marginBottom:6,textTransform:'uppercase',letterSpacing:0.5}}>{label}</div>
     <div style={{display:'flex',alignItems:'center',background:'#1e293b',border:'1px solid #334155',borderRadius:8,padding:'8px 12px'}}>
@@ -340,27 +156,27 @@ const CampoEuro = ({label, valore, onChange}) => (
     </div>
   </div>
 );
-
-// ProgressBar step
-const ProgressWizard = ({step, total}) => (
+const ProgressBar = ({step,total}) => (
   <div style={{marginBottom:24}}>
     <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
-      <span style={{color:'#64748b',fontSize:12}}>Domanda {step+1} di {total}</span>
-      <span style={{color:'#3b82f6',fontSize:12}}>{Math.round((step/total)*100)}% completato</span>
+      <span style={{color:'#64748b',fontSize:12}}>Passo {step} di {total}</span>
+      <span style={{color:'#3b82f6',fontSize:12,fontWeight:600}}>{Math.round((step/total)*100)}%</span>
     </div>
     <div style={{height:4,background:'#1e293b',borderRadius:2}}>
-      <div style={{height:4,background:'#3b82f6',borderRadius:2,width:((step/total)*100)+'%',transition:'width 0.3s'}} />
+      <div style={{height:4,background:'#3b82f6',borderRadius:2,width:Math.round((step/total)*100)+'%',transition:'width 0.3s'}} />
     </div>
   </div>
 );
 
+// ─── WIZARD ────────────────────────────────────────────────────────────────
+
 function WizardChiusura({ form, setForm, onSalva, saving, TAGLIE_FC, nv, fmt, fmtE, MESI }) {
   const [step, setStep] = useState(0);
+  const TOTAL = 11;
   const set = (k, v) => setForm(f => ({...f, [k]: v}));
-  const avanti = () => setStep(s => Math.min(s+1, DOMANDE.length));
-  const indietro = () => setStep(s => Math.max(s-1, 0));
+  const avanti = () => setStep(s => s + 1);
+  const indietro = () => setStep(s => s - 1);
 
-  // Calcolo riepilogo
   const totVendite = nv(form.chiusura_fiscale) + nv(form.fatturato) + nv(form.fatturato_art36);
   const totIncassi = nv(form.contanti) + nv(form.pos) + nv(form.satispay) + nv(form.bonifico) + nv(form.assegni) + nv(form.compass) + nv(form.stripe) + nv(form.enwon_pay) - nv(form.note_credito);
   const totUscite = nv(form.uscite_contante) + nv(form.uscite_bonifico) + nv(form.uscite_pos);
@@ -368,68 +184,235 @@ function WizardChiusura({ form, setForm, onSalva, saving, TAGLIE_FC, nv, fmt, fm
   const contanteDaVersare = nv(form.contanti) - nv(form.uscite_contante) - totFondo;
   const diff = totIncassi - totVendite;
 
-  const RigaRiepilogo = ({label, valore, color, bold}) => (
-    <div style={{display:'flex',justifyContent:'space-between',padding:'7px 0',borderBottom:'1px solid #1e293b'}}>
-      <span style={{color:'#94a3b8',fontSize:13}}>{label}</span>
-      <span style={{color: color||'#f1f5f9', fontWeight: bold?700:400, fontSize:14}}>{fmtE(valore)}</span>
-    </div>
-  );
+  const d = new Date(form.data + 'T12:00:00');
+  const dataFormattata = d.getDate().toString().padStart(2,'0') + ' ' + MESI[d.getMonth()] + ' ' + d.getFullYear();
 
-  // Riepilogo finale (step === DOMANDE.length)
-  if (step === DOMANDE.length) {
-    return (
-      <div style={{maxWidth:640,margin:'0 auto'}}>
-        <ProgressWizard step={DOMANDE.length} total={DOMANDE.length} />
-        <Card>
-          <Domanda>📋 Riepilogo chiusura — tutto ok?</Domanda>
-          <Hint>Controlla i dati prima di salvare. Puoi tornare indietro per correggere qualsiasi campo.</Hint>
-          <div style={{marginBottom:20}}>
-            <div style={{color:'#64748b',fontSize:11,textTransform:'uppercase',letterSpacing:1,marginBottom:8}}>Vendite</div>
-            <RigaRiepilogo label="Chiusura fiscale (scontrini)" valore={nv(form.chiusura_fiscale)} />
-            <RigaRiepilogo label="Fatturato (fatture, no Art.36)" valore={nv(form.fatturato)} />
-            <RigaRiepilogo label="Vendite Art. 36" valore={nv(form.fatturato_art36)} />
-            <RigaRiepilogo label="TOTALE VENDITE" valore={totVendite} color="#f1f5f9" bold />
-          </div>
-          <div style={{marginBottom:20}}>
-            <div style={{color:'#64748b',fontSize:11,textTransform:'uppercase',letterSpacing:1,marginBottom:8}}>Incassi</div>
-            <RigaRiepilogo label="Contanti" valore={nv(form.contanti)} />
-            <RigaRiepilogo label="POS / Carte" valore={nv(form.pos)} />
-            {nv(form.satispay)>0 && <RigaRiepilogo label="Satispay" valore={nv(form.satispay)} />}
-            {nv(form.bonifico)>0 && <RigaRiepilogo label="Bonifico" valore={nv(form.bonifico)} />}
-            {nv(form.assegni)>0 && <RigaRiepilogo label="Assegni" valore={nv(form.assegni)} />}
-            {nv(form.compass)>0 && <RigaRiepilogo label="Compass (Agenzia)" valore={nv(form.compass)} />}
-            {nv(form.stripe)>0 && <RigaRiepilogo label="Stripe" valore={nv(form.stripe)} />}
-            {nv(form.enwon_pay)>0 && <RigaRiepilogo label="Enwon Pay" valore={nv(form.enwon_pay)} />}
-            {nv(form.note_credito)>0 && <RigaRiepilogo label="Note credito / Resi" valore={-nv(form.note_credito)} color="#f87171" />}
-            <RigaRiepilogo label="TOTALE INCASSATO" valore={totIncassi} color="#f1f5f9" bold />
-            <div style={{marginTop:8,padding:'8px 12px',borderRadius:8,background: Math.abs(diff)<0.01 ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',color: Math.abs(diff)<0.01 ? '#22c55e' : '#ef4444',fontSize:13,fontWeight:600}}>
-              {Math.abs(diff)<0.01 ? '✅ Incassi e vendite coincidono' : (diff>0 ? '⚠️ Incassi superiori di ' : '⚠️ Incassi inferiori di ') + fmtE(Math.abs(diff))}
+  let contenuto = null;
+
+  if (step === 0) {
+    contenuto = (
+      <Card>
+        <Domanda>Vuoi inserire la chiusura cassa per il <b style={{color:'#60a5fa'}}>{dataFormattata}</b>?</Domanda>
+        <Hint>Se è la data corretta procedi. Altrimenti modifica la data qui sotto prima di continuare.</Hint>
+        <div style={{marginBottom:20}}>
+          <div style={{color:'#94a3b8',fontSize:11,marginBottom:6,textTransform:'uppercase',letterSpacing:0.5}}>Data chiusura</div>
+          <input type="date" value={form.data} onChange={e=>set('data',e.target.value)}
+            style={{background:'#1e293b',border:'1px solid #334155',borderRadius:8,padding:'10px 14px',color:'#f1f5f9',fontSize:14}} />
+        </div>
+        <BtnRow><BtnPrimary onClick={avanti}>✅ Sì, procedo →</BtnPrimary></BtnRow>
+      </Card>
+    );
+  } else if (step === 1) {
+    contenuto = (
+      <Card>
+        <Domanda>Inserisci la <b>chiusura fiscale</b> riportata sullo scontrino di chiusura del registratore di cassa.</Domanda>
+        <Hint>È il totale giornaliero stampato dal registratore fiscale a fine giornata (lo scontrino di chiusura Z). Se non hai emesso scontrini oggi, inserisci 0 e vai avanti.</Hint>
+        <CampoEuro label="Chiusura fiscale (scontrini)" valore={form.chiusura_fiscale} onChange={v=>set('chiusura_fiscale',v)} />
+        <BtnRow>
+          <BtnSecondary onClick={indietro}>← Indietro</BtnSecondary>
+          <BtnPrimary onClick={avanti}>Avanti →</BtnPrimary>
+        </BtnRow>
+      </Card>
+    );
+  } else if (step === 2) {
+    contenuto = (
+      <Card>
+        <Domanda>Inserisci il <b>totale fatturato della giornata</b> (solo fatture emesse, escluso Art. 36).</Domanda>
+        <Hint>Somma gli importi di tutte le fatture emesse oggi, IVA inclusa. Non includere le vendite Art. 36 — quelle vanno nel passo successivo. Se non hai emesso fatture, inserisci 0.</Hint>
+        <CampoEuro label="Fatturato (fatture, no Art. 36)" valore={form.fatturato} onChange={v=>set('fatturato',v)} />
+        <BtnRow>
+          <BtnSecondary onClick={indietro}>← Indietro</BtnSecondary>
+          <BtnPrimary onClick={avanti}>Avanti →</BtnPrimary>
+        </BtnRow>
+      </Card>
+    );
+  } else if (step === 3) {
+    contenuto = (
+      <Card>
+        <Domanda>Inserisci il <b>totale vendite Art. 36</b> della giornata.</Domanda>
+        <Hint>Sono le vendite di dispositivi usati acquistati da privati. L'IVA si calcola solo sul margine (prezzo vendita meno costo di acquisto). Se non ne hai fatte oggi, inserisci 0.</Hint>
+        <CampoEuro label="Vendite Art. 36 (usato da privati)" valore={form.fatturato_art36} onChange={v=>set('fatturato_art36',v)} />
+        <BtnRow>
+          <BtnSecondary onClick={indietro}>← Indietro</BtnSecondary>
+          <BtnPrimary onClick={avanti}>Avanti →</BtnPrimary>
+        </BtnRow>
+      </Card>
+    );
+  } else if (step === 4) {
+    contenuto = (
+      <Card>
+        <Domanda>Quanti <b>contanti</b> hai incassato oggi?</Domanda>
+        <Hint>Inserisci il totale del denaro fisico ricevuto dai clienti. Se non hai incassato nulla in contanti, inserisci 0.</Hint>
+        <CampoEuro label="Contanti" valore={form.contanti} onChange={v=>set('contanti',v)} />
+        <BtnRow>
+          <BtnSecondary onClick={indietro}>← Indietro</BtnSecondary>
+          <BtnPrimary onClick={avanti}>Avanti →</BtnPrimary>
+        </BtnRow>
+      </Card>
+    );
+  } else if (step === 5) {
+    contenuto = (
+      <Card>
+        <Domanda>Quanti incassi tramite <b>POS / Carte</b> hai avuto oggi?</Domanda>
+        <Hint>Guarda il totale giornaliero sul tuo terminale POS. Se non hai avuto pagamenti con carta, inserisci 0.</Hint>
+        <CampoEuro label="POS / Carte" valore={form.pos} onChange={v=>set('pos',v)} />
+        <BtnRow>
+          <BtnSecondary onClick={indietro}>← Indietro</BtnSecondary>
+          <BtnPrimary onClick={avanti}>Avanti →</BtnPrimary>
+        </BtnRow>
+      </Card>
+    );
+  } else if (step === 6) {
+    contenuto = (
+      <Card>
+        <Domanda>Hai incassato tramite <b>altri metodi</b> di pagamento oggi?</Domanda>
+        <Hint>Compila solo i campi che hai usato. Lascia a 0 i metodi non utilizzati oggi.</Hint>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+          <CampoEuro label="Satispay" valore={form.satispay} onChange={v=>set('satispay',v)} />
+          <CampoEuro label="Bonifico" valore={form.bonifico} onChange={v=>set('bonifico',v)} />
+          <CampoEuro label="Assegni" valore={form.assegni} onChange={v=>set('assegni',v)} />
+          <CampoEuro label="Compass (Agenzia)" valore={form.compass} onChange={v=>set('compass',v)} />
+          <CampoEuro label="Stripe (Online)" valore={form.stripe} onChange={v=>set('stripe',v)} />
+          <CampoEuro label="Enwon Pay" valore={form.enwon_pay} onChange={v=>set('enwon_pay',v)} />
+        </div>
+        <BtnRow>
+          <BtnSecondary onClick={indietro}>← Indietro</BtnSecondary>
+          <BtnPrimary onClick={avanti}>Avanti →</BtnPrimary>
+        </BtnRow>
+      </Card>
+    );
+  } else if (step === 7) {
+    contenuto = (
+      <Card>
+        <Domanda>Hai emesso <b>note di credito o resi</b> oggi?</Domanda>
+        <Hint>Inserisci il totale dei rimborsi o resi effettuati — verrà sottratto dal totale incassato. Se non ce ne sono, lascia 0 e vai avanti.</Hint>
+        <CampoEuro label="Note credito / Resi (sottratti)" valore={form.note_credito} onChange={v=>set('note_credito',v)} />
+        <BtnRow>
+          <BtnSecondary onClick={indietro}>← Indietro</BtnSecondary>
+          <BtnPrimary onClick={avanti}>Avanti →</BtnPrimary>
+        </BtnRow>
+      </Card>
+    );
+  } else if (step === 8) {
+    contenuto = (
+      <Card>
+        <Domanda>Hai fatto <b>uscite di cassa</b> oggi?</Domanda>
+        <Hint>Sono le spese pagate dal fondo cassa: ricambi, fornitori, acquisto dispositivo da privato, spese varie. Indica l'importo per tipo di pagamento. Se non ce ne sono, lascia tutto a 0.</Hint>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12}}>
+          <CampoEuro label="Uscite contante" valore={form.uscite_contante} onChange={v=>set('uscite_contante',v)} />
+          <CampoEuro label="Uscite bonifico" valore={form.uscite_bonifico} onChange={v=>set('uscite_bonifico',v)} />
+          <CampoEuro label="Uscite POS" valore={form.uscite_pos} onChange={v=>set('uscite_pos',v)} />
+        </div>
+        <BtnRow>
+          <BtnSecondary onClick={indietro}>← Indietro</BtnSecondary>
+          <BtnPrimary onClick={avanti}>Avanti →</BtnPrimary>
+        </BtnRow>
+      </Card>
+    );
+  } else if (step === 9) {
+    contenuto = (
+      <Card>
+        <Domanda>Conta le <b>banconote e monete</b> nel cassetto e inserisci quante ne hai per ogni taglio.</Domanda>
+        <Hint>Esempio: se hai 3 banconote da €50, scrivi "3" nella casella €50. Il totale viene calcolato automaticamente.</Hint>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:12}}>
+          {TAGLIE_FC.map(t => (
+            <div key={t.key} style={{background:'#1e293b',borderRadius:8,padding:'8px 10px'}}>
+              <div style={{color:'#64748b',fontSize:11,marginBottom:4}}>{t.label}</div>
+              <input type="number" min="0" placeholder="0"
+                value={form.fondo_cassa[t.key]||''}
+                onChange={e=>set('fondo_cassa',{...form.fondo_cassa,[t.key]:e.target.value})}
+                style={{width:'100%',background:'transparent',border:'none',color:'#f1f5f9',fontSize:16,fontWeight:700,outline:'none'}} />
             </div>
+          ))}
+        </div>
+        <div style={{background:'#0f172a',border:'1px solid #1e293b',borderRadius:8,padding:'10px 14px',marginBottom:8,display:'flex',justifyContent:'space-between'}}>
+          <span style={{color:'#94a3b8',fontSize:13}}>Totale fondo cassa</span>
+          <span style={{color:'#22c55e',fontWeight:700,fontSize:16}}>{fmtE(totFondo)}</span>
+        </div>
+        <BtnRow>
+          <BtnSecondary onClick={indietro}>← Indietro</BtnSecondary>
+          <BtnPrimary onClick={avanti}>Avanti →</BtnPrimary>
+        </BtnRow>
+      </Card>
+    );
+  } else if (step === 10) {
+    contenuto = (
+      <Card>
+        <Domanda>Chi ha fatto la <b>chiusura cassa</b> oggi?</Domanda>
+        <Hint>Inserisci il nome dell'operatore. Le note sono opzionali — usale per segnalare anomalie, differenze o qualsiasi cosa da ricordare.</Hint>
+        <div style={{display:'flex',flexDirection:'column',gap:12,marginBottom:4}}>
+          <div>
+            <div style={{color:'#94a3b8',fontSize:11,marginBottom:6,textTransform:'uppercase',letterSpacing:0.5}}>Operatore</div>
+            <input placeholder="Il tuo nome" value={form.operatore} onChange={e=>set('operatore',e.target.value)}
+              style={{width:'100%',background:'#1e293b',border:'1px solid #334155',borderRadius:8,padding:'10px 14px',color:'#f1f5f9',fontSize:14,boxSizing:'border-box'}} />
           </div>
-          <div style={{marginBottom:20}}>
-            <div style={{color:'#64748b',fontSize:11,textTransform:'uppercase',letterSpacing:1,marginBottom:8}}>Uscite & Fondo</div>
-            <RigaRiepilogo label="Uscite totali" valore={totUscite} color="#f87171" />
-            <RigaRiepilogo label="Fondo cassa contato" valore={totFondo} />
-            <RigaRiepilogo label="Contante da versare" valore={Math.max(0,contanteDaVersare)} color="#22c55e" bold />
+          <div>
+            <div style={{color:'#94a3b8',fontSize:11,marginBottom:6,textTransform:'uppercase',letterSpacing:0.5}}>Note (opzionale)</div>
+            <textarea placeholder="Anomalie, differenze di cassa, memo..." value={form.note} onChange={e=>set('note',e.target.value)} rows={3}
+              style={{width:'100%',background:'#1e293b',border:'1px solid #334155',borderRadius:8,padding:'10px 14px',color:'#f1f5f9',fontSize:14,boxSizing:'border-box',resize:'vertical'}} />
           </div>
-          {form.operatore && <div style={{color:'#64748b',fontSize:13,marginBottom:4}}>Operatore: <span style={{color:'#f1f5f9'}}>{form.operatore}</span></div>}
-          {form.note && <div style={{color:'#64748b',fontSize:13,marginBottom:12}}>Note: <span style={{color:'#f1f5f9'}}>{form.note}</span></div>}
-          <BtnRow>
-            <BtnNo onClick={indietro}>← Modifica</BtnNo>
-            <BtnSi onClick={onSalva} disabled={saving}>
-              {saving ? '⏳ Salvataggio...' : '💾 Salva chiusura'}
-            </BtnSi>
-          </BtnRow>
-        </Card>
+        </div>
+        <BtnRow>
+          <BtnSecondary onClick={indietro}>← Indietro</BtnSecondary>
+          <BtnPrimary onClick={avanti}>Vai al riepilogo →</BtnPrimary>
+        </BtnRow>
+      </Card>
+    );
+  } else {
+    // RIEPILOGO FINALE
+    const RR = ({label,valore,color,bold}) => (
+      <div style={{display:'flex',justifyContent:'space-between',padding:'6px 0',borderBottom:'1px solid #1e293b'}}>
+        <span style={{color:'#94a3b8',fontSize:13}}>{label}</span>
+        <span style={{color:color||'#f1f5f9',fontWeight:bold?700:400,fontSize:13}}>{fmtE(valore)}</span>
       </div>
+    );
+    contenuto = (
+      <Card>
+        <Domanda>📋 Riepilogo — tutto corretto?</Domanda>
+        <Hint>Controlla i dati prima di salvare. Puoi tornare indietro per modificare qualsiasi campo.</Hint>
+        <div style={{marginBottom:16}}>
+          <div style={{color:'#64748b',fontSize:11,textTransform:'uppercase',letterSpacing:1,marginBottom:6}}>Vendite del giorno</div>
+          <RR label="Chiusura fiscale (scontrini)" valore={nv(form.chiusura_fiscale)} />
+          <RR label="Fatturato (fatture, no Art.36)" valore={nv(form.fatturato)} />
+          <RR label="Vendite Art. 36" valore={nv(form.fatturato_art36)} />
+          <RR label="Totale vendite" valore={totVendite} bold />
+        </div>
+        <div style={{marginBottom:16}}>
+          <div style={{color:'#64748b',fontSize:11,textTransform:'uppercase',letterSpacing:1,marginBottom:6}}>Incassi</div>
+          <RR label="Contanti" valore={nv(form.contanti)} />
+          <RR label="POS / Carte" valore={nv(form.pos)} />
+          {nv(form.satispay)>0 && <RR label="Satispay" valore={nv(form.satispay)} />}
+          {nv(form.bonifico)>0 && <RR label="Bonifico" valore={nv(form.bonifico)} />}
+          {nv(form.assegni)>0 && <RR label="Assegni" valore={nv(form.assegni)} />}
+          {nv(form.compass)>0 && <RR label="Compass" valore={nv(form.compass)} />}
+          {nv(form.stripe)>0 && <RR label="Stripe" valore={nv(form.stripe)} />}
+          {nv(form.enwon_pay)>0 && <RR label="Enwon Pay" valore={nv(form.enwon_pay)} />}
+          {nv(form.note_credito)>0 && <RR label="Note credito / Resi" valore={-nv(form.note_credito)} color="#f87171" />}
+          <RR label="Totale incassato" valore={totIncassi} bold />
+          <div style={{marginTop:8,padding:'8px 12px',borderRadius:8,background:Math.abs(diff)<0.01?'rgba(34,197,94,0.1)':'rgba(239,68,68,0.1)',color:Math.abs(diff)<0.01?'#22c55e':'#ef4444',fontSize:13,fontWeight:600}}>
+            {Math.abs(diff)<0.01 ? '✅ Incassi e vendite coincidono' : (diff>0?'⚠️ Incassi superiori di ':'⚠️ Incassi inferiori di ') + fmtE(Math.abs(diff))}
+          </div>
+        </div>
+        <div style={{marginBottom:16}}>
+          <div style={{color:'#64748b',fontSize:11,textTransform:'uppercase',letterSpacing:1,marginBottom:6}}>Uscite e fondo cassa</div>
+          {totUscite>0 && <RR label="Uscite totali" valore={totUscite} color="#f87171" />}
+          <RR label="Fondo cassa contato" valore={totFondo} />
+          <RR label="Contante da versare" valore={Math.max(0,contanteDaVersare)} color="#22c55e" bold />
+        </div>
+        {form.operatore && <div style={{color:'#64748b',fontSize:13,marginBottom:4}}>Operatore: <b style={{color:'#f1f5f9'}}>{form.operatore}</b></div>}
+        {form.note && <div style={{color:'#64748b',fontSize:13,marginBottom:12}}>Note: <span style={{color:'#f1f5f9'}}>{form.note}</span></div>}
+        <BtnRow>
+          <BtnSecondary onClick={indietro}>← Modifica</BtnSecondary>
+          <BtnPrimary onClick={onSalva} disabled={saving}>{saving?'⏳ Salvataggio...':'💾 Salva chiusura'}</BtnPrimary>
+        </BtnRow>
+      </Card>
     );
   }
 
-  const StepComponent = DOMANDE[step];
   return (
     <div style={{maxWidth:640,margin:'0 auto'}}>
-      <ProgressWizard step={step} total={DOMANDE.length} />
-      <StepComponent form={form} set={set} avanti={avanti} indietro={indietro} MESI={MESI} TAGLIE_FC={TAGLIE_FC} nv={nv} fmt={fmt} />
+      <ProgressBar step={Math.min(step+1,TOTAL+1)} total={TOTAL+1} />
+      {contenuto}
     </div>
   );
 }
