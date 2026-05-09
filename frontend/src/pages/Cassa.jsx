@@ -247,6 +247,13 @@ function WizardChiusura({ form, setForm, onSalva, saving }) {
       <Card>
         <Domanda>📋 Riepilogo — tutto corretto?</Domanda>
         <Hint>Controlla i dati prima di salvare. Puoi tornare indietro per modificare qualsiasi campo.</Hint>
+        {msg && !msg.ok && (
+          <div style={{padding:'10px 14px',borderRadius:8,marginBottom:16,
+            background:'rgba(239,68,68,0.12)',border:'1px solid rgba(239,68,68,0.3)',
+            color:'#fca5a5',fontSize:13,fontWeight:500}}>
+            {msg.text}
+          </div>
+        )}
         <div style={{marginBottom:14}}>
           <div style={{color:'#64748b',fontSize:11,textTransform:'uppercase',letterSpacing:1,marginBottom:6}}>Vendite</div>
           <RR label="Chiusura fiscale (scontrini)" val={nv(form.chiusura_fiscale)} />
@@ -280,6 +287,27 @@ function WizardChiusura({ form, setForm, onSalva, saving }) {
         </div>
         {form.operatore && <div style={{color:'#64748b',fontSize:13,marginBottom:4}}>Operatore: <b style={{color:'#f1f5f9'}}>{form.operatore}</b></div>}
         {form.note && <div style={{color:'#64748b',fontSize:13,marginBottom:12}}>Note: <span style={{color:'#f1f5f9'}}>{form.note}</span></div>}
+        
+        {(() => {
+          const avvisi = [];
+          if(Math.abs(diff)>0.01) avvisi.push({tipo:'errore', testo: diff>0 ? `⚠️ Gli incassi superano le vendite di ${fmtE(Math.abs(diff))} — verifica i metodi di pagamento.` : `⚠️ Gli incassi sono inferiori alle vendite di ${fmtE(Math.abs(diff))} — manca qualcosa nei metodi di pagamento?`});
+          if(totF<50) avvisi.push({tipo:'warning', testo:`⚠️ Fondo cassa molto basso (${fmtE(totF)}) — hai contato tutte le banconote?`});
+          if(!form.operatore.trim()) avvisi.push({tipo:'warning', testo:'⚠️ Nessun operatore indicato — torna indietro e inserisci il tuo nome.'});
+          if(avvisi.length===0) return null;
+          return (
+            <div style={{marginBottom:16}}>
+              {avvisi.map((a,i)=>(
+                <div key={i} style={{padding:'10px 14px',borderRadius:8,marginBottom:8,
+                  background: a.tipo==='errore' ? 'rgba(239,68,68,0.12)' : 'rgba(234,179,8,0.1)',
+                  border: `1px solid ${a.tipo==='errore' ? 'rgba(239,68,68,0.3)' : 'rgba(234,179,8,0.3)'}`,
+                  color: a.tipo==='errore' ? '#fca5a5' : '#fde68a',
+                  fontSize:13, lineHeight:1.5}}>
+                  {a.testo}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
         <BtnRow>
           <BtnS onClick={in_}>← Modifica</BtnS>
           <BtnP onClick={onSalva} disabled={saving}>{saving?'⏳ Salvataggio...':'💾 Salva chiusura'}</BtnP>
@@ -331,7 +359,10 @@ export default function Cassa() {
         setForm(EMPTY());
         setTab('storico');
       } else {
-        setMsg({ok:false, text:'❌ ' + (d.error||'Errore durante il salvataggio')});
+        const errMsg = r.status === 409
+          ? '❌ Esiste già una chiusura per questa data. Torna al passo 1 e modifica la data.'
+          : '❌ ' + (d.error || 'Errore durante il salvataggio. Riprova.');
+        setMsg({ok:false, text: errMsg});
       }
     } catch(e) {
       setMsg({ok:false, text:'❌ Errore di rete: '+e.message});
