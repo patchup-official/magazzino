@@ -6,7 +6,14 @@ import { useState, useEffect, useCallback } from 'react';
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const IVA = 0.22;
 const MESI = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
-const fmt  = n => Number(n||0).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmt  = n =>
+          <BoxIstruzioni titolo="Come si compila - Fondo cassa" passi={[
+            "Conta fisicamente i soldi nel cassetto della cassa e inserisci quante banconote/monete hai per ogni taglio.",
+            "Esempio: se hai 3 banconote da 50€, scrivi '3' nella casella '€ 50'.",
+            "Il sistema calcola automaticamente il totale del fondo.",
+            "OPERATORE: inserisci il tuo nome — serve per sapere chi ha fatto la chiusura.",
+            "NOTE: campo opzionale per annotare qualsiasi anomalia della giornata (es. errore di resto, differenza di cassa, ecc.)."
+          ]} /> Number(n||0).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtE = n => '€ ' + fmt(n);
 function nv(x){ return parseFloat(x)||0; }
 function scorporaIva(lordo){ return lordo / (1+IVA); }
@@ -196,6 +203,11 @@ function WizardChiusura({showToast,onComplete}){
       {/* STEP 0 — Data */}
       {step===0&&(
         <Sezione title="📅 Data chiusura" color="#6366f1">
+          <BoxIstruzioni titolo="Come si compila - Step Data" passi={[
+            "Seleziona la data del giorno a cui si riferisce questa chiusura cassa.",
+            "Di solito è oggi — ma puoi inserire anche chiusure arretrate.",
+            "Non puoi salvare due chiusure per la stessa data: se esiste già, il sistema te lo segnala."
+          ]} />
           <div style={{marginBottom:4}}>
             <div style={{fontSize:11,color:'rgba(255,255,255,0.4)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:8}}>DATA</div>
             <div style={{display:'flex',gap:10,alignItems:'center'}}>
@@ -227,6 +239,12 @@ function WizardChiusura({showToast,onComplete}){
       {/* STEP 1 — Vendite */}
       {step===1&&(
         <Sezione title="🧾 Vendite del giorno" color="#8b5cf6">
+          <BoxIstruzioni titolo="Come si compila - Vendite del giorno" passi={[
+            "CHIUSURA FISCALE (SCONTRINI): inserisci il totale del registratore di cassa (il 'totale giornaliero' stampato sul foglio di chiusura fiscale). Include tutte le vendite fatte con scontrino.",
+            "FATTURATO (FATTURE EMESSE): inserisci il totale delle fatture emesse oggi (somma degli importi delle fatture, IVA inclusa).",
+            "VENDITE ART. 36: inserisci il totale delle vendite di dispositivi usati acquistati da privati. L'IVA viene calcolata solo sul margine (vendita meno costo acquisto).",
+            "Se non hai vendite in una categoria, lascia il campo a zero — non è obbligatorio compilare tutto."
+          ]} />
           <Campo label="Chiusura fiscale (scontrini)" value={form.chiusura_fiscale} onChange={v=>set('chiusura_fiscale',v)}/>
           <Campo label="Fatturato (fatture emesse)" value={form.fatturato} onChange={v=>set('fatturato',v)}/>
           <Campo label="Vendite Art. 36 (usato da privati)" value={form.fatturato_art36} onChange={v=>set('fatturato_art36',v)}
@@ -242,6 +260,16 @@ function WizardChiusura({showToast,onComplete}){
       {/* STEP 2 — Incassi */}
       {step===2&&(
         <Sezione title="💳 Come è stato incassato?" color="#0ea5e9">
+          <BoxIstruzioni titolo="Come si compila - Incassi" passi={[
+            "Inserisci come sono stati incassati i soldi oggi — divisi per metodo di pagamento.",
+            "CONTANTI: tutto il denaro fisico ricevuto dai clienti.",
+            "POS / CARTE: pagamenti con carta di credito/debito tramite il lettore POS.",
+            "SATISPAY, STRIPE, ENWON PAY: inserisci gli importi da ciascuna app/piattaforma.",
+            "BONIFICO: eventuali bonifici ricevuti oggi (es. acconto su riparazione).",
+            "COMPASS (AGENZIA): importi incassati tramite finanziarie o agenzie.",
+            "NOTE CREDITO / RESI: inserisci il totale dei rimborsi o resi fatti oggi (verrà sottratto).",
+            "Il totale incassato deve coincidere con il totale vendite — la barra verde/rossa indica se quadra."
+          ]} />
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0 16px'}}>
             <Campo label="Contanti" value={form.contanti} onChange={v=>set('contanti',v)}/>
             <Campo label="POS / Carte" value={form.pos} onChange={v=>set('pos',v)}/>
@@ -271,6 +299,13 @@ function WizardChiusura({showToast,onComplete}){
       {/* STEP 3 — Uscite */}
       {step===3&&(
         <Sezione title="📤 Uscite del giorno" color="#f59e0b">
+          <BoxIstruzioni titolo="Come si compila - Uscite di cassa" passi={[
+            "Registra qui le spese pagate dal fondo cassa oggi.",
+            "Esempi di uscite: acquisto ricambi pagato in contanti, spese di trasporto, pagamento fornitore, acquisto dispositivo da privato.",
+            "Per ogni uscita indica: descrizione, importo e tipo di pagamento (contante, bonifico o POS).",
+            "Le uscite in contanti vengono sottratte automaticamente dal contante da versare.",
+            "Se non ci sono uscite, clicca 'No, continua' per passare allo step successivo."
+          ]} />
 
           {/* Lista voci già inserite */}
           {usciteVoci.length>0&&(
@@ -1173,6 +1208,16 @@ function TabStorico(){
     </div>
   );
 }
+
+
+const BoxIstruzioni = ({ titolo, passi }) => (
+  <div style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: 10, padding: '12px 16px', marginBottom: 18 }}>
+    <div style={{ color: '#93c5fd', fontWeight: 600, fontSize: 12, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>📋 {titolo}</div>
+    <ul style={{ margin: 0, padding: '0 0 0 16px', color: '#cbd5e1', fontSize: 13, lineHeight: 1.7 }}>
+      {passi.map((p, i) => <li key={i}>{p}</li>)}
+    </ul>
+  </div>
+);
 
 export default function Cassa({showToast}){
   const [tab,setTab]=useState('wizard');
