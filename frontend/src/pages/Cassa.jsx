@@ -39,6 +39,13 @@ const Q = ({children}) => (
 const Hint = ({children}) => (
   <div style={{color:'#64748b',fontSize:13,marginBottom:20,lineHeight:1.6,background:'rgba(148,163,184,0.06)',borderLeft:'3px solid #334155',padding:'8px 12px',borderRadius:'0 6px 6px 0'}}>{children}</div>
 );
+const Errore = ({testo}) => testo ? (
+  <div style={{padding:'12px 16px',borderRadius:8,marginTop:16,
+    background:'rgba(239,68,68,0.12)',border:'1px solid rgba(239,68,68,0.35)',
+    color:'#fca5a5',fontSize:14,fontWeight:500,lineHeight:1.5}}>
+    ⚠️ {testo}
+  </div>
+) : null;
 const Row = ({children}) => (
   <div style={{display:'flex',justifyContent:'flex-end',gap:10,marginTop:24}}>{children}</div>
 );
@@ -80,10 +87,9 @@ const Barra = ({step,total}) => (
 // ── Wizard ────────────────────────────────────────────────────────────────────
 function WizardChiusura({ form, setForm, onSalva, saving, msg }) {
   const [step, setStep] = useState(0);
+  const [errStep, setErrStep] = useState('');
   const TOTAL = 12;
-  const set = (k,v) => setForm(f => ({...f,[k]:v}));
-  const av = () => setStep(s => s+1);
-  const bk = () => setStep(s => s-1);
+  const set = (k,v) => { setForm(f => ({...f,[k]:v})); setErrStep(''); };
 
   const totV = nv(form.chiusura_fiscale)+nv(form.fatturato)+nv(form.fatturato_art36);
   const totI = nv(form.contanti)+nv(form.pos)+nv(form.satispay)+nv(form.bonifico)+nv(form.assegni)+nv(form.compass)+nv(form.stripe)+nv(form.enwon_pay)-nv(form.note_credito);
@@ -92,21 +98,37 @@ function WizardChiusura({ form, setForm, onSalva, saving, msg }) {
   const cdv  = Math.max(0, nv(form.contanti)-nv(form.uscite_contante)-totF);
   const diff = totI-totV;
 
+  const avanti = () => {
+    setErrStep('');
+    // Validazione per step
+    if (step === 7) {
+      // Dopo note credito: verifica che incassi = vendite
+      if (Math.abs(diff) > 0.01) {
+        setErrStep(
+          diff > 0
+            ? 'Gli incassi (' + fmtE(totI) + ') superano le vendite (' + fmtE(totV) + ') di ' + fmtE(Math.abs(diff)) + '. Controlla i metodi di pagamento prima di continuare.'
+            : 'Gli incassi (' + fmtE(totI) + ') sono inferiori alle vendite (' + fmtE(totV) + ') di ' + fmtE(Math.abs(diff)) + '. Manca qualcosa nei metodi di pagamento?'
+        );
+        return;
+      }
+    }
+    if (step === 9) {
+      // Dopo fondo cassa: avvisa se fondo è 0
+      if (totF === 0) {
+        setErrStep('Hai inserito un fondo cassa di € 0,00. Sei sicuro di non avere banconote nel cassetto? Se è corretto, clicca di nuovo Avanti per procedere.');
+        // Secondo click passa comunque
+        setStep(s => s+1);
+        return;
+      }
+    }
+    setStep(s => s+1);
+  };
+
+  const bk = () => { setStep(s => s-1); setErrStep(''); };
+
   const d = new Date(form.data+'T12:00:00');
   const dataStr = d.getDate().toString().padStart(2,'0')+' '+MESI[d.getMonth()]+' '+d.getFullYear();
 
-  // Avvisi pre-salvataggio
-  const avvisi = [];
-  if (Math.abs(diff) > 0.01) {
-    avvisi.push({e:true, t: diff > 0
-      ? 'Gli incassi superano le vendite di '+fmtE(Math.abs(diff))+' — verifica i metodi di pagamento.'
-      : 'Gli incassi sono inferiori alle vendite di '+fmtE(Math.abs(diff))+' — manca qualcosa nei metodi di pagamento?'
-    });
-  }
-  if (totF < 50) avvisi.push({e:false, t:'Fondo cassa molto basso ('+fmtE(totF)+') — hai contato tutte le banconote?'});
-  if (!form.operatore.trim()) avvisi.push({e:false, t:'Nessun operatore indicato — torna al passo 11 e inserisci il tuo nome.'});
-
-  // Riga riepilogo
   const RR = ({label,val,color,bold}) => (
     <div style={{display:'flex',justifyContent:'space-between',padding:'5px 0',borderBottom:'1px solid #1e293b'}}>
       <span style={{color:'#94a3b8',fontSize:13}}>{label}</span>
@@ -126,7 +148,7 @@ function WizardChiusura({ form, setForm, onSalva, saving, msg }) {
           <input type="date" value={form.data} onChange={e=>set('data',e.target.value)}
             style={{background:'#1e293b',border:'1px solid #334155',borderRadius:8,padding:'10px 14px',color:'#f1f5f9',fontSize:14}} />
         </div>
-        <Row><BtnP onClick={av}>✅ Sì, procedo →</BtnP></Row>
+        <Row><BtnP onClick={avanti}>✅ Sì, procedo →</BtnP></Row>
       </Card>
     );
   } else if (step === 1) {
@@ -135,7 +157,8 @@ function WizardChiusura({ form, setForm, onSalva, saving, msg }) {
         <Q>Inserisci la <b>chiusura fiscale</b> riportata sullo scontrino Z del registratore di cassa.</Q>
         <Hint>Il totale giornaliero stampato dal registratore fiscale a fine giornata. Se non hai emesso scontrini oggi, inserisci 0.</Hint>
         <Euro label="Chiusura fiscale (scontrini)" val={form.chiusura_fiscale} onChange={v=>set('chiusura_fiscale',v)} />
-        <Row><BtnS onClick={bk}>← Indietro</BtnS><BtnP onClick={av}>Avanti →</BtnP></Row>
+        <Errore testo={errStep} />
+        <Row><BtnS onClick={bk}>← Indietro</BtnS><BtnP onClick={avanti}>Avanti →</BtnP></Row>
       </Card>
     );
   } else if (step === 2) {
@@ -144,25 +167,28 @@ function WizardChiusura({ form, setForm, onSalva, saving, msg }) {
         <Q>Inserisci il <b>totale fatturato della giornata</b> — solo fatture emesse, escluso Art. 36.</Q>
         <Hint>Somma gli importi di tutte le fatture emesse oggi (IVA inclusa). Non includere le vendite Art. 36. Se non hai emesso fatture, inserisci 0.</Hint>
         <Euro label="Fatturato (fatture, no Art. 36)" val={form.fatturato} onChange={v=>set('fatturato',v)} />
-        <Row><BtnS onClick={bk}>← Indietro</BtnS><BtnP onClick={av}>Avanti →</BtnP></Row>
+        <Errore testo={errStep} />
+        <Row><BtnS onClick={bk}>← Indietro</BtnS><BtnP onClick={avanti}>Avanti →</BtnP></Row>
       </Card>
     );
   } else if (step === 3) {
     body = (
       <Card>
         <Q>Inserisci il <b>totale vendite Art. 36</b> della giornata.</Q>
-        <Hint>Vendite di dispositivi usati acquistati da privati. L'IVA si calcola solo sul margine (prezzo vendita meno costo acquisto). Se non ne hai fatte, inserisci 0.</Hint>
+        <Hint>Vendite di dispositivi usati acquistati da privati. L'IVA si calcola solo sul margine. Se non ne hai fatte, inserisci 0.</Hint>
         <Euro label="Vendite Art. 36 (usato da privati)" val={form.fatturato_art36} onChange={v=>set('fatturato_art36',v)} />
-        <Row><BtnS onClick={bk}>← Indietro</BtnS><BtnP onClick={av}>Avanti →</BtnP></Row>
+        <Errore testo={errStep} />
+        <Row><BtnS onClick={bk}>← Indietro</BtnS><BtnP onClick={avanti}>Avanti →</BtnP></Row>
       </Card>
     );
   } else if (step === 4) {
     body = (
       <Card>
         <Q>Quanti <b>contanti</b> hai incassato oggi?</Q>
-        <Hint>Totale del denaro fisico ricevuto dai clienti durante la giornata. Se non hai incassato nulla in contanti, inserisci 0.</Hint>
+        <Hint>Totale del denaro fisico ricevuto dai clienti. Se non hai incassato nulla in contanti, inserisci 0.</Hint>
         <Euro label="Contanti" val={form.contanti} onChange={v=>set('contanti',v)} />
-        <Row><BtnS onClick={bk}>← Indietro</BtnS><BtnP onClick={av}>Avanti →</BtnP></Row>
+        <Errore testo={errStep} />
+        <Row><BtnS onClick={bk}>← Indietro</BtnS><BtnP onClick={avanti}>Avanti →</BtnP></Row>
       </Card>
     );
   } else if (step === 5) {
@@ -171,7 +197,8 @@ function WizardChiusura({ form, setForm, onSalva, saving, msg }) {
         <Q>Quanti incassi tramite <b>POS / Carte</b> hai avuto oggi?</Q>
         <Hint>Guarda il totale giornaliero sul terminale POS. Se non hai avuto pagamenti con carta, inserisci 0.</Hint>
         <Euro label="POS / Carte" val={form.pos} onChange={v=>set('pos',v)} />
-        <Row><BtnS onClick={bk}>← Indietro</BtnS><BtnP onClick={av}>Avanti →</BtnP></Row>
+        <Errore testo={errStep} />
+        <Row><BtnS onClick={bk}>← Indietro</BtnS><BtnP onClick={avanti}>Avanti →</BtnP></Row>
       </Card>
     );
   } else if (step === 6) {
@@ -187,29 +214,50 @@ function WizardChiusura({ form, setForm, onSalva, saving, msg }) {
           <Euro label="Stripe (Online)" val={form.stripe} onChange={v=>set('stripe',v)} />
           <Euro label="Enwon Pay" val={form.enwon_pay} onChange={v=>set('enwon_pay',v)} />
         </div>
-        <Row><BtnS onClick={bk}>← Indietro</BtnS><BtnP onClick={av}>Avanti →</BtnP></Row>
+        <Errore testo={errStep} />
+        <Row><BtnS onClick={bk}>← Indietro</BtnS><BtnP onClick={avanti}>Avanti →</BtnP></Row>
       </Card>
     );
   } else if (step === 7) {
     body = (
       <Card>
         <Q>Hai emesso <b>note di credito o resi</b> oggi?</Q>
-        <Hint>Totale dei rimborsi o resi effettuati — verrà sottratto dal totale incassato. Se non ce ne sono, inserisci 0 e vai avanti.</Hint>
+        <Hint>Totale dei rimborsi o resi effettuati — verrà sottratto dal totale incassato. Se non ce ne sono, inserisci 0.</Hint>
         <Euro label="Note credito / Resi (sottratti)" val={form.note_credito} onChange={v=>set('note_credito',v)} />
-        <Row><BtnS onClick={bk}>← Indietro</BtnS><BtnP onClick={av}>Avanti →</BtnP></Row>
+        <div style={{marginTop:16,padding:'10px 14px',borderRadius:8,
+          background: Math.abs(diff)<0.01 ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)',
+          border: Math.abs(diff)<0.01 ? '1px solid rgba(34,197,94,0.25)' : '1px solid rgba(239,68,68,0.25)'}}>
+          <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
+            <span style={{color:'#94a3b8',fontSize:12}}>Totale vendite</span>
+            <span style={{color:'#f1f5f9',fontSize:13,fontWeight:600}}>{fmtE(totV)}</span>
+          </div>
+          <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
+            <span style={{color:'#94a3b8',fontSize:12}}>Totale incassato</span>
+            <span style={{color:'#f1f5f9',fontSize:13,fontWeight:600}}>{fmtE(totI)}</span>
+          </div>
+          <div style={{display:'flex',justifyContent:'space-between',borderTop:'1px solid #1e293b',paddingTop:6}}>
+            <span style={{color:'#94a3b8',fontSize:12}}>Differenza</span>
+            <span style={{color:Math.abs(diff)<0.01?'#22c55e':'#ef4444',fontSize:13,fontWeight:700}}>
+              {Math.abs(diff)<0.01 ? '✅ Quadra' : (diff>0?'+':'')+fmtE(diff)}
+            </span>
+          </div>
+        </div>
+        <Errore testo={errStep} />
+        <Row><BtnS onClick={bk}>← Indietro</BtnS><BtnP onClick={avanti}>Avanti →</BtnP></Row>
       </Card>
     );
   } else if (step === 8) {
     body = (
       <Card>
         <Q>Hai fatto <b>uscite di cassa</b> oggi?</Q>
-        <Hint>Spese pagate dal fondo cassa: acquisto ricambi, fornitori, acquisto dispositivo da privato, spese varie. Indica l'importo per tipo. Se non ce ne sono, lascia tutto a 0.</Hint>
+        <Hint>Spese pagate dal fondo cassa: acquisto ricambi, fornitori, acquisto dispositivo da privato, spese varie. Se non ce ne sono, lascia tutto a 0.</Hint>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12}}>
           <Euro label="Uscite contante" val={form.uscite_contante} onChange={v=>set('uscite_contante',v)} />
           <Euro label="Uscite bonifico" val={form.uscite_bonifico} onChange={v=>set('uscite_bonifico',v)} />
           <Euro label="Uscite POS" val={form.uscite_pos} onChange={v=>set('uscite_pos',v)} />
         </div>
-        <Row><BtnS onClick={bk}>← Indietro</BtnS><BtnP onClick={av}>Avanti →</BtnP></Row>
+        <Errore testo={errStep} />
+        <Row><BtnS onClick={bk}>← Indietro</BtnS><BtnP onClick={avanti}>Avanti →</BtnP></Row>
       </Card>
     );
   } else if (step === 9) {
@@ -231,7 +279,8 @@ function WizardChiusura({ form, setForm, onSalva, saving, msg }) {
           <span style={{color:'#94a3b8',fontSize:13}}>Totale fondo cassa</span>
           <span style={{color:'#22c55e',fontWeight:700,fontSize:16}}>{fmtE(totF)}</span>
         </div>
-        <Row><BtnS onClick={bk}>← Indietro</BtnS><BtnP onClick={av}>Avanti →</BtnP></Row>
+        <Errore testo={errStep} />
+        <Row><BtnS onClick={bk}>← Indietro</BtnS><BtnP onClick={avanti}>Avanti →</BtnP></Row>
       </Card>
     );
   } else if (step === 10) {
@@ -251,7 +300,8 @@ function WizardChiusura({ form, setForm, onSalva, saving, msg }) {
               style={{width:'100%',background:'#1e293b',border:'1px solid #334155',borderRadius:8,padding:'10px 14px',color:'#f1f5f9',fontSize:14,boxSizing:'border-box',resize:'vertical'}} />
           </div>
         </div>
-        <Row><BtnS onClick={bk}>← Indietro</BtnS><BtnP onClick={av}>Vai al riepilogo →</BtnP></Row>
+        <Errore testo={errStep} />
+        <Row><BtnS onClick={bk}>← Indietro</BtnS><BtnP onClick={avanti}>Vai al riepilogo →</BtnP></Row>
       </Card>
     );
   } else {
@@ -262,18 +312,6 @@ function WizardChiusura({ form, setForm, onSalva, saving, msg }) {
         {msg && !msg.ok && (
           <div style={{padding:'10px 14px',borderRadius:8,marginBottom:16,background:'rgba(239,68,68,0.12)',border:'1px solid rgba(239,68,68,0.3)',color:'#fca5a5',fontSize:13,fontWeight:500}}>
             {msg.text}
-          </div>
-        )}
-        {avvisi.length > 0 && (
-          <div style={{marginBottom:16}}>
-            {avvisi.map((a,i) => (
-              <div key={i} style={{padding:'10px 14px',borderRadius:8,marginBottom:8,
-                background:a.e?'rgba(239,68,68,0.12)':'rgba(234,179,8,0.1)',
-                border:a.e?'1px solid rgba(239,68,68,0.3)':'1px solid rgba(234,179,8,0.3)',
-                color:a.e?'#fca5a5':'#fde68a',fontSize:13,lineHeight:1.5}}>
-                {a.e ? '⚠️ Attenzione: ' : '⚠️ '}{a.t}
-              </div>
-            ))}
           </div>
         )}
         <div style={{marginBottom:14}}>
