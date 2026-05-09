@@ -6,14 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const IVA = 0.22;
 const MESI = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
-const fmt  = n =>
-          <BoxIstruzioni titolo="Come si compila - Fondo cassa" passi={[
-            "Conta fisicamente i soldi nel cassetto della cassa e inserisci quante banconote/monete hai per ogni taglio.",
-            "Esempio: se hai 3 banconote da 50€, scrivi '3' nella casella '€ 50'.",
-            "Il sistema calcola automaticamente il totale del fondo.",
-            "OPERATORE: inserisci il tuo nome — serve per sapere chi ha fatto la chiusura.",
-            "NOTE: campo opzionale per annotare qualsiasi anomalia della giornata (es. errore di resto, differenza di cassa, ecc.)."
-          ]} /> Number(n||0).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmt  = n => Number(n||0).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtE = n => '€ ' + fmt(n);
 function nv(x){ return parseFloat(x)||0; }
 function scorporaIva(lordo){ return lordo / (1+IVA); }
@@ -463,6 +456,13 @@ function WizardChiusura({showToast,onComplete}){
       {step===4&&(
         <Sezione title="🪙 Fondo Cassa" color="#10b981">
           <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:16}}>
+            <BoxIstruzioni titolo="Come si compila - Fondo cassa" passi={[
+              "Conta fisicamente le banconote e monete nel cassetto della cassa.",
+              "Inserisci il numero di pezzi per ogni taglio — es. se hai 3 banconote da €50, scrivi '3' nella casella €50.",
+              "Il totale viene calcolato automaticamente.",
+              "OPERATORE: inserisci il tuo nome (serve per tracciare chi ha fatto la chiusura).",
+              "NOTE: campo opzionale per segnalare anomalie della giornata (differenze, errori, ecc.)."
+            ]} />
             {TAGLIE_FC.map(t=>{
               const val = t.val || parseInt(t.key.replace('fc_',''));
               return (
