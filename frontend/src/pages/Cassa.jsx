@@ -375,7 +375,7 @@ export default function Cassa() {
   const caricaStorico = useCallback(async () => {
     setLoadingStorico(true);
     try {
-      const r = await fetch(`${API}/api/cassa`);
+      const r = await fetch(`${API}/cassa`);
       const d = await r.json();
       setStorico(Array.isArray(d) ? d : []);
     } catch(e) { setStorico([]); }
@@ -387,7 +387,7 @@ export default function Cassa() {
   const salva = async () => {
     setSaving(true); setMsg(null);
     try {
-      const r = await fetch(`${API}/api/cassa`, {
+      const r = await fetch(`${API}/cassa`, {
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify(form),
