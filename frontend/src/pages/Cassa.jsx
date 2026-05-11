@@ -1,4 +1,4 @@
-// pages/Cassa.jsx — Chiusura Cassa · Wizard conversazionale
+// pages/Cassa.jsx — Chiusura Cassa · Wizard conversazionale + Report
 import { useState, useEffect, useCallback } from 'react';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -6,6 +6,7 @@ const MESI = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','
 const fmt  = n => Number(n||0).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtE = n => '€ ' + fmt(n);
 const nv   = x => parseFloat(x)||0;
+const IVA  = 0.22;
 
 const TAGLIE_FC = [
   {key:'fc_100',label:'€ 100',val:100},{key:'fc_50',label:'€ 50',val:50},
@@ -28,8 +29,8 @@ const EMPTY = () => ({
 });
 
 // ── Atoms ─────────────────────────────────────────────────────────────────────
-const Card = ({children}) => (
-  <div style={{background:'#0f172a',border:'1px solid #1e293b',borderRadius:14,padding:'28px 32px',marginBottom:8}}>
+const Card = ({children,style}) => (
+  <div style={{background:'#0f172a',border:'1px solid #1e293b',borderRadius:14,padding:'28px 32px',marginBottom:8,...style}}>
     {children}
   </div>
 );
@@ -100,9 +101,7 @@ function WizardChiusura({ form, setForm, onSalva, saving, msg }) {
 
   const avanti = () => {
     setErrStep('');
-    // Validazione per step
     if (step === 7) {
-      // Dopo note credito: verifica che incassi = vendite
       if (Math.abs(diff) > 0.01) {
         setErrStep(
           diff > 0
@@ -113,10 +112,8 @@ function WizardChiusura({ form, setForm, onSalva, saving, msg }) {
       }
     }
     if (step === 9) {
-      // Dopo fondo cassa: avvisa se fondo è 0
       if (totF === 0) {
         setErrStep('Hai inserito un fondo cassa di € 0,00. Sei sicuro di non avere banconote nel cassetto? Se è corretto, clicca di nuovo Avanti per procedere.');
-        // Secondo click passa comunque
         setStep(s => s+1);
         return;
       }
@@ -297,7 +294,7 @@ function WizardChiusura({ form, setForm, onSalva, saving, msg }) {
           <div>
             <div style={{color:'#94a3b8',fontSize:11,marginBottom:5,textTransform:'uppercase',letterSpacing:0.5}}>Note (opzionale)</div>
             <textarea placeholder="Anomalie, differenze di cassa, memo..." value={form.note} onChange={e=>set('note',e.target.value)} rows={3}
-              style={{width:'100%',background:'#1e293b',border:'1px solid #334155',borderRadius:8,padding:'10px 14px',color:'#f1f5f9',fontSize:14,boxSizing:'border-box',resize:'vertical'}} />
+              style={{width:'100%',background:'#1e293b',border:'1px solid #334155',borderRadius:8,padding:'10px 14px',color:'|f1f5f9',fontSize:14,boxSizing:'border-box',resize:'vertical'}} />
           </div>
         </div>
         <Errore testo={errStep} />
@@ -363,7 +360,154 @@ function WizardChiusura({ form, setForm, onSalva, saving, msg }) {
   );
 }
 
-// ── Componente principale ─────────────────────────────────────────────────────
+// ── REPORT ────────────────────────────────────────────────────────────────────
+function calcolaReport(chiusure, accantonato, costo_art36) {
+  const acc = nv(accantonato);
+  const costoA36 = nv(costo_art36);
+  let fiscale_lordo = 0, fatturato_lordo = 0, art36_lordo = 0;
+  let contanti_tot = 0, uscite_contante_tot = 0, uscite_bonifico_tot = 0, uscite_pos_tot = 0;
+  let note_credito_tot = 0, fondo_cassa_ultimo = 0;
+  let pos_tot = 0, satispay_tot = 0, bonifico_tot = 0, assegni_tot = 0;
+  let compass_tot = 0, stripe_tot = 0, enwon_pay_tot = 0;
+  chiusure.forEach(s => {
+    fiscale_lordo     += nv(s.chiusura_fiscale);
+    fatturato_lordo   += nv(s.fatturato);
+    art36_lordo       += nv(s.fatturato_art36);
+    contanti_tot      += nv(s.contanti);
+    uscite_contante_tot += nv(s.uscite_contante);
+    uscite_bonifico_tot += nv(s.uscite_bonifico);
+    uscite_pos_tot    += nv(s.uscite_pos);
+    note_credito_tot  += nv(s.note_credito);
+    pos_tot           += nv(s.pos);
+    satispay_tot      += nv(s.satispay);
+    bonifico_tot      += nv(s.bonifico);
+    assegni_tot       += nv(s.assegni);
+    compass_tot       += nv(s.compass);
+    stripe_tot        += nv(s.stripe);
+    enwon_pay_tot     += nv(s.enwon_pay);
+    const fc_json = s.fondo_cassa;
+    let fc = 0;
+    if (fc_json) { try { const obj = typeof fc_json === 'string' ? JSON.parse(fc_json) : fc_json; fc = TAGLIE_FC.reduce((sum,t) => sum+(nv(obj[t.key])||0)*t.val,0); } catch(e){} }
+    if (fc > 0) fondo_cassa_ultimo = fc;
+  });
+  const fiscale_iva = fiscale_lordo * 0.22 / 1.22;
+  const fiscale_netto = fiscale_lordo - fiscale_iva;
+  const fatturato_iva = fatturato_lordo * 0.22 / 1.22;
+  const fatturato_netto = fatturato_lordo - fatturato_iva;
+  const margine_art36 = Math.max(0, art36_lordo - costoA36);
+  const iva_art36 = margine_art36 * 0.22 / 1.22;
+  const art36_netto = art36_lordo - iva_art36;
+  const totale_lordo = fiscale_lordo + fatturato_lordo + art36_lordo;
+  const iva_totale = fiscale_iva + fatturato_iva + iva_art36;
+  const totale_netto = fiscale_netto + fatturato_netto + art36_netto;
+  const contante_da_versare = Math.max(0, contanti_tot - uscite_contante_tot - acc);
+  const bonifici_agenzie = compass_tot + stripe_tot + enwon_pay_tot;
+  return { fiscale_lordo, fiscale_iva, fiscale_netto, fatturato_lordo, fatturato_iva, fatturato_netto, art36_lordo, costoA36, margine_art36, iva_art36, art36_netto, totale_lordo, iva_totale, totale_netto, contanti_tot, uscite_contante_tot, uscite_bonifico_tot, uscite_pos_tot, accantonato: acc, contante_da_versare, fondo_cassa_ultimo, note_credito_tot, bonifici_agenzie, compass_tot, stripe_tot, enwon_pay_tot, pos_tot, satispay_tot, bonifico_tot, assegni_tot };
+}
+
+function RigaReport({ label, valore, colore, bold, sub, nota }) {
+  return (
+    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start',
+      padding: sub ? '4px 0 4px 16px' : '7px 0', borderBottom: '1px solid #1e293b' }}>
+      <div>
+        <span style={{ color: sub ? '#64748b' : '#94a3b8', fontSize: sub ? 12 : 13 }}>{label}</span>
+        {nota && <div style={{ color:'#475569', fontSize:11, marginTop:2 }}>{nota}</div>}
+      </div>
+      <span style={{ color: colore || '#f1f5f9', fontWeight: bold ? 700 : 400, fontSize: bold ? 14 : 13, whiteSpace:'nowrap', marginLeft:12 }}>{fmtE(valore)}</span>
+    </div>
+  );
+}
+
+function SezioneReport({ titolo, emoji, children, highlight }) {
+  return (
+    <div style={{ background: highlight ? 'rgba(59,130,246,0.04)' : '#0f172a', border: highlight ? '1px solid rgba(59,130,246,0.25)' : '1px solid #1e293b', borderRadius:12, marginBottom:16, overflow:'hidden' }}>
+      <div style={{ padding:'12px 20px', borderBottom:'1px solid #1e293b', background: highlight ? 'rgba(59,130,246,0.08)' : 'rgba(255,255,255,0.02)', display:'flex', alignItems:'center', gap:8 }}>
+        <span style={{fontSize:16}}>{emoji}</span>
+        <span style={{ color:'#e2e8f0', fontWeight:600, fontSize:14 }}>{titolo}</span>
+      </div>
+      <div style={{ padding:'4px 20px 12px' }}>{children}</div>
+    </div>
+  );
+}
+
+function KpiCard({ label, valore, sub, colore, icon }) {
+  return (
+    <div style={{ background:'#0f172a', border:'1px solid #1e293b', borderRadius:10, padding:'14px 18px', display:'flex', flexDirection:'column', gap:4 }}>
+      <div style={{ color:'#475569', fontSize:11, textTransform:'uppercase', letterSpacing:0.5, display:'flex', alignItems:'center', gap:5 }}>
+        {icon && <span>{icon}</span>}{label}
+      </div>
+      <div style={{ color: colore||'#f1f5f9', fontWeight:700, fontSize:18 }}>{fmtE(valore)}</div>
+      {sub && <div style={{ color:'#475569', fontSize:11 }}>{sub}</div>}
+    </div>
+  );
+}
+
+function TabReport({ storico }) {
+  const oggi = new Date();
+  const [mese, setMese] = useState(oggi.getMonth());
+  const [anno, setAnno] = useState(oggi.getFullYear());
+  const [accantonato, setAccantonato] = useState('');
+  const [costoArt36, setCostoArt36] = useState('');
+  const [periodo, setPeriodo] = useState('mese');
+  const chiusureFiltrate = storico.filter(s => {
+    if (!s.data) return false;
+    const d = new Date(s.data + 'T12:00:00');
+    if (periodo === 'anno') return d.getFullYear() === anno;
+    return d.getMonth() === mese && d.getFullYear() === anno;
+  });
+  const r = calcolaReport(chiusureFiltrate, accantonato, costoArt36);
+  const anniDisp = [...new Set(storico.map(s => s.data ? new Date(s.data+'T12:00:00').getFullYear() : null).filter(Boolean))].sort((a,b)=>b-a);
+  return (
+    <div style={{ maxWidth:820, margin:'0 auto' }}>
+      <div style={{ display:'flex', gap:10, marginBottom:20, flexWrap:'wrap', alignItems:'center' }}>
+        <div style={{ display:'flex', gap:4, background:'#111827', borderRadius:8, padding:3 }}>
+          {['mese','anno'].map(p => (
+            <button key={p} onClick={() => setPeriodo(p)} style={{ padding:'6px 16px', borderRadius:6, border:'none', cursor:'pointer', fontWeight:500, fontSize:13, background: periodo===p ? '#3b82f6' : 'transparent', color: periodo===p ? '#fff' : '#64748b' }}>{p==='mese'?'Mese':'Anno'}</button>
+          ))}
+        </div>
+        {periodo === 'mese' && (
+          <select value={mese} onChange={e => setMese(Number(e.target.value))} style={{ background:'#1e293b', border:'1px solid #334155', borderRadius:8, padding:'6px 12px', color:'#f1f5f9', fontSize:13 }}>
+            {MESI.map((m, i) => <option key={i} value={i}>{m}</option>)}
+          </select>
+        )}
+        <select value={anno} onChange={e => setAnno(Number(e.target.value))} style={{ background:'#1e293b', border:'1px solid #334155', borderRadius:8, padding:'6px 12px', color:'#f1f5f9', fontSize:13 }}>
+          {(anniDisp.length ? anniDisp : [oggi.getFullYear()]).map(a => <option key={a} value={a}>{a}</option>)}
+        </select>
+        <span style={{ color:'#475569', fontSize:12, marginLeft:4 }}>{chiusureFiltrate.length} chiusur{chiusureFiltrate.length===1?'a':'e'} nel periodo</span>
+      </div>
+      {chiusureFiltrate.length === 0 ? (
+        <div style={{ padding:'40px 20px', textAlign:'center', color:'#475569', fontSize:14 }}>Nessuna chiusura trovata per il periodo selezionato.</div>
+      ) : (
+        <>
+          <div style={{ background:'rgba(245,158,11,0.06)', border:'1px solid rgba(245,158,11,0.2)', borderRadius:10, padding:'14px 20px', marginBottom:20, display:'flex', gap:20, flexWrap:'wrap', alignItems:'center' }}>
+            <div style={{ color:'#fbbf24', fontSize:13, fontWeight:600, minWidth:200 }}>ₙ️ Parametri periodo</div>
+            <div style={{ flex:1, minWidth:180 }}>
+              <div style={{ color:'#94a3b8', fontSize:11, marginBottom:4, textTransform:'uppercase', letterSpacing:0.4 }}>Accantonato periodo (€)</div>
+              <div style={{ display:'flex', alignItems:'center', background:'#1e293b', border:'1px solid #334155', borderRadius:7, padding:'6px 10px' }}>
+                <span style={{ color:'#64748b', marginRight:5, fontSize:13 }}>€</span>
+                <input type="number" min="0" step="0.01" placeholder="0,00" value={accantonato} onChange={e => setAccantonato(e.target.value)} style={{ flex:1, background:'transparent', border:'none', color:'#f1f5f9', fontSize:14, outline:'none' }} />
+              </div>
+              <div style={{ color:'#475569', fontSize:10, marginTop:3 }}>Denaro tenuto in negozio come riserva</div>
+            </div>
+            <div style={{ flex:1, minWidth:180 }}>
+              <div style={{ color:'#94a3b8', fontSize:11, marginBottom:4, textTransform:'uppercase', letterSpacing:0.4 }}>Investimento Art. 36 — acquisti da privati (€)</div>
+              <div style={{ display:'flex', alignItems:'center', background:'#1e293b', border:'1px solid #334155', borderRadius:7, padding:'6px 10px' }}>
+                <span style={{ color:'#64748b', marginRight:5, fontSize:13 }}>€</span>
+                <input type="number" min="0" step="0.01" placeholder="0,00" value={costoArt36} onChange={e => setCostoArt36(e.target.value)} style={{ flex:1, background:'transparent', border:'none', color:'#f1f5f9', fontSize:14, outline:'none' }} />
+              </div>
+              <div style={{ color:'#475569', fontSize:10, marginTop:3 }}>Totale pagato ai privati per acquisto dispositivi usati</div>
+            </div>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))', gap:10, marginBottom:20 }}>
+            <KpiCard icon="💈"> {} </KpiCard>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Componente principale ──────────────────────────────────────────────────────
 export default function Cassa() {
   const [tab, setTab] = useState('wizard');
   const [form, setForm] = useState(EMPTY());
@@ -371,91 +515,56 @@ export default function Cassa() {
   const [msg, setMsg] = useState(null);
   const [storico, setStorico] = useState([]);
   const [loadingStorico, setLoadingStorico] = useState(false);
-
   const caricaStorico = useCallback(async () => {
     setLoadingStorico(true);
-    try {
-      const r = await fetch(`${API}/cassa`);
-      const d = await r.json();
-      setStorico(Array.isArray(d) ? d : []);
-    } catch(e) { setStorico([]); }
+    try { const r = await fetch(`${API}/cassa`); const d = await r.json(); setStorico(Array.isArray(d) ? d : []); } catch(e) { setStorico([]); }
     setLoadingStorico(false);
   }, []);
-
-  useEffect(() => { if(tab==='storico') caricaStorico(); }, [tab, caricaStorico]);
-
+  useEffect(() => { if (tab === 'storico' || tab === 'report') caricaStorico(); }, [tab, caricaStorico]);
   const salva = async () => {
     setSaving(true); setMsg(null);
     try {
-      const r = await fetch(`${API}/cassa`, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify(form),
-      });
+      const r = await fetch(`${API}/cassa`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(form) });
       const d = await r.json();
-      if (r.ok) {
-        setMsg({ok:true, text:'✅ Chiusura salvata correttamente!'});
-        setForm(EMPTY());
-        setTab('storico');
-      } else {
-        setMsg({ok:false, text: r.status===409
-          ? '❌ Esiste già una chiusura per questa data. Torna al passo 1 e modifica la data.'
-          : '❌ ' + (d.error||'Errore durante il salvataggio. Riprova.')});
-      }
-    } catch(e) {
-      setMsg({ok:false, text:'❌ Errore di rete: '+e.message});
-    }
+      if (r.ok) { setMsg({ok:true, text:'✅ Chiusura salvata correttamente!'}); setForm(EMPTY()); setTab('storico'); }
+      else { setMsg({ok:false, text: r.status===409 ? '❌ Esiste già una chiusura per questa data.' : '❌ ' + (d.error||'Errore durante il salvataggio.')}); }
+    } catch(e) { setMsg({ok:false, text:'❌ Errore di rete: '+e.message}); }
     setSaving(false);
   };
-
-  const TS = (active) => ({
-    padding:'8px 20px',borderRadius:8,border:'none',cursor:'pointer',fontWeight:500,fontSize:13,
-    background:active?'#3b82f6':'transparent',color:active?'#fff':'#64748b',
-  });
-
+  const TS = (active) => ({ padding:'8px 20px', borderRadius:8, border:'none', cursor:'pointer', fontWeight:500, fontSize:13, background:active?'#3b82f6':'transparent', color:active?'#fff':'#64748b' });
   return (
-    <div style={{padding:'24px 32px',minHeight:'100vh',background:'#0a0f1e',color:'#f1f5f9'}}>
-      <div style={{marginBottom:24}}>
-        <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:4}}>
-          <span style={{fontSize:24}}>💰</span>
-          <h1 style={{margin:0,fontSize:22,fontWeight:700}}>Chiusura Cassa</h1>
+    <div style={{ padding:'24px 32px', minHeight:'100vh', background:'#0a0f1e', color:'#f1f5f9' }}>
+      <div style={{ marginBottom:24 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:4 }}>
+          <span style={{ fontSize:24 }}>💰</span>
+          <h1 style={{ margin:0, fontSize:22, fontWeight:700 }}>Chiusura Cassa</h1>
         </div>
-        <p style={{margin:0,color:'#64748b',fontSize:13}}>Chiusura giornaliera · Riepilogo IVA · Contante da versare</p>
+        <p style={{ margin:0, color:'#64748b', fontSize:13 }}>Chiusura giornaliera · Riepilogo IVA · Contante da versare</p>
       </div>
-      <div style={{display:'flex',gap:6,marginBottom:28,background:'#111827',borderRadius:10,padding:4,width:'fit-content'}}>
-        <button style={TS(tab==='wizard')} onClick={()=>setTab('wizard')}>📝 Inserimento guidato</button>
-        <button style={TS(tab==='storico')} onClick={()=>setTab('storico')}>📋 Storico</button>
+      <div style={{ display:'flex', gap:6, marginBottom:28, background:'#111827', borderRadius:10, padding:4, width:'fit-content' }}>
+        <button style={TS(tab==='wizard')} onClick={() => setTab('wizard')}>📝 Inserimento guidato</button>
+        <button style={TS(tab==='report')} onClick={() => setTab('report')}>📊 Report</button>
+        <button style={TS(tab==='storico')} onClick={() => setTab('storico')}>📋 Storico</button>
       </div>
       {msg && msg.ok && (
-        <div style={{padding:'12px 16px',borderRadius:8,marginBottom:20,background:'rgba(34,197,94,0.1)',color:'#22c55e',fontSize:14,fontWeight:500}}>
-          {msg.text}
-        </div>
+        <div style={{ padding:'12px 16px', borderRadius:8, marginBottom:20, background:'rgba(34,197,94,0.1)', color:'#22c55e', fontSize:14, fontWeight:500 }}>{msg.text}</div>
       )}
-      {tab==='wizard' && (
-        <WizardChiusura form={form} setForm={setForm} onSalva={salva} saving={saving} msg={msg} />
-      )}
+      {tab==='wizard' && <WizardChiusura form={form} setForm={setForm} onSalva={salva} saving={saving} msg={msg} />}
+      {tab==='report' && (loadingStorico ? <p style={{color:'#64748b'}}>Caricamento dati...</p> : <TabReport storico={storico} />)}
       {tab==='storico' && (
         <div>
-          {loadingStorico ? (
-            <p style={{color:'#64748b'}}>Caricamento...</p>
-          ) : storico.length===0 ? (
-            <p style={{color:'#64748b'}}>Nessuna chiusura registrata.</p>
-          ) : (
+          {loadingStorico ? <p style={{color:'#64748b'}}>Caricamento...</p>
+            : storico.length===0 ? <p style={{color:'#64748b'}}>Nessuna chiusura registrata.</p>
+            : (
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
               {storico.map((s,i) => (
                 <div key={i} style={{background:'#0f172a',border:'1px solid #1e293b',borderRadius:10,padding:'16px 20px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                  <div>
-                    <div style={{fontWeight:600,marginBottom:2}}>{s.data}</div>
-                    <div style={{color:'#64748b',fontSize:12}}>{s.operatore||'N/D'}</div>
-                  </div>
-                  <div style={{textAlign:'right'}}>
-                    <div style={{color:'#22c55e',fontWeight:700,fontSize:15}}>{fmtE(nv(s.chiusura_fiscale)+nv(s.fatturato)+nv(s.fatturato_art36))}</div>
-                    <div style={{color:'#64748b',fontSize:12}}>Totale vendite</div>
-                  </div>
+                  <div><div style={{fontWeight:600,marginBottom:2}}>{s.data}</div><div style={{color:'#64748b',fontSize:12}}>{s.operatore||'N/D'}</div></div>
+                  <div style={{textAlign:"right"}}><div style={{color:'#22c55e',fontWeight:700,fontSize:15}}>{fmtE(nv(s.chiusura_fiscale)+nv(s.fatturato)+nv(s.fatturato_art36))}</div><div style={{color:'#64748b',fontSize:12}}>Totale vendite</div></div>
                 </div>
               ))}
             </div>
-          )}
+            )}
         </div>
       )}
     </div>
