@@ -41,9 +41,7 @@ const Hint = ({children}) => (
   <div style={{color:'#64748b',fontSize:13,marginBottom:20,lineHeight:1.6,background:'rgba(148,163,184,0.06)',borderLeft:'3px solid #334155',padding:'8px 12px',borderRadius:'0 6px 6px 0'}}>{children}</div>
 );
 const Errore = ({testo}) => testo ? (
-  <div style={{padding:'12px 16px',borderRadius:8,marginTop:16,
-    background:'rgba(239,68,68,0.12)',border:'1px solid rgba(239,68,68,0.35)',
-    color:'#fca5a5',fontSize:14,fontWeight:500,lineHeight:1.5}}>
+  <div style={{padding:'12px 16px',borderRadius:8,marginTop:16,background:'rgba(239,68,68,0.12)',border:'1px solid rgba(239,68,68,0.35)',color:'#fca5a5',fontSize:14,fontWeight:500,lineHeight:1.5}}>
     ⚠️ {testo}
   </div>
 ) : null;
@@ -84,46 +82,28 @@ const Barra = ({step,total}) => (
     </div>
   </div>
 );
-
 // ── Wizard ────────────────────────────────────────────────────────────────────
 function WizardChiusura({ form, setForm, onSalva, saving, msg }) {
   const [step, setStep] = useState(0);
   const [errStep, setErrStep] = useState('');
   const TOTAL = 12;
   const set = (k,v) => { setForm(f => ({...f,[k]:v})); setErrStep(''); };
-
   const totV = nv(form.chiusura_fiscale)+nv(form.fatturato)+nv(form.fatturato_art36);
   const totI = nv(form.contanti)+nv(form.pos)+nv(form.satispay)+nv(form.bonifico)+nv(form.assegni)+nv(form.compass)+nv(form.stripe)+nv(form.enwon_pay)-nv(form.note_credito);
   const totU = nv(form.uscite_contante)+nv(form.uscite_bonifico)+nv(form.uscite_pos);
   const totF = TAGLIE_FC.reduce((s,t) => s+(nv(form.fondo_cassa[t.key])||0)*t.val, 0);
   const cdv  = Math.max(0, nv(form.contanti)-nv(form.uscite_contante)-totF);
   const diff = totI-totV;
-
   const avanti = () => {
     setErrStep('');
-    if (step === 7) {
-      if (Math.abs(diff) > 0.01) {
-        setErrStep(diff > 0
-          ? 'Gli incassi (' + fmtE(totI) + ') superano le vendite (' + fmtE(totV) + ') di ' + fmtE(Math.abs(diff)) + '.'
-          : 'Gli incassi (' + fmtE(totI) + ') sono inferiori alle vendite (' + fmtE(totV) + ') di ' + fmtE(Math.abs(diff)) + '.');
-        return;
-      }
-    }
-    if (step === 9 && totF === 0) {
-      setErrStep('Hai inserito un fondo cassa di € 0,00. Sei sicuro? Se è corretto clicca di nuovo Avanti.');
-      setStep(s => s+1); return;
-    }
-    setStep(s => s+1);
+    if (step===7 && Math.abs(diff)>0.01) { setErrStep(diff>0?'Gli incassi ('+fmtE(totI)+') superano le vendite ('+fmtE(totV)+') di '+fmtE(Math.abs(diff))+'.':'Gli incassi ('+fmtE(totI)+') sono inferiori alle vendite ('+fmtE(totV)+') di '+fmtE(Math.abs(diff))+'.'); return; }
+    if (step===9 && totF===0) { setErrStep('Hai inserito un fondo cassa di € 0,00. Sei sicuro? Se è corretto clicca di nuovo Avanti.'); setStep(s=>s+1); return; }
+    setStep(s=>s+1);
   };
-  const bk = () => { setStep(s => s-1); setErrStep(''); };
+  const bk = () => { setStep(s=>s-1); setErrStep(''); };
   const d = new Date(form.data+'T12:00:00');
   const dataStr = d.getDate().toString().padStart(2,'0')+' '+MESI[d.getMonth()]+' '+d.getFullYear();
-  const RR = ({label,val,color,bold}) => (
-    <div style={{display:'flex',justifyContent:'space-between',padding:'5px 0',borderBottom:'1px solid #1e293b'}}>
-      <span style={{color:'#94a3b8',fontSize:13}}>{label}</span>
-      <span style={{color:color||'#f1f5f9',fontWeight:bold?700:400,fontSize:13}}>{fmtE(val)}</span>
-    </div>
-  );
+  const RR = ({label,val,color,bold}) => (<div style={{display:'flex',justifyContent:'space-between',padding:'5px 0',borderBottom:'1px solid #1e293b'}}><span style={{color:'#94a3b8',fontSize:13}}>{label}</span><span style={{color:color||'#f1f5f9',fontWeight:bold?700:400,fontSize:13}}>{fmtE(val)}</span></div>);
   let body;
   if (step===0) { body=(<Card><Q>Vuoi inserire la chiusura cassa per il <b style={{color:'#60a5fa'}}>{dataStr}</b>?</Q><Hint>Se la data è corretta procedi. Altrimenti modificala qui sotto.</Hint><div style={{marginBottom:20}}><div style={{color:'#94a3b8',fontSize:11,marginBottom:5,textTransform:'uppercase',letterSpacing:0.5}}>Data chiusura</div><input type="date" value={form.data} onChange={e=>set('data',e.target.value)} style={{background:'#1e293b',border:'1px solid #334155',borderRadius:8,padding:'10px 14px',color:'#f1f5f9',fontSize:14}} /></div><Row><BtnP onClick={avanti}>✅ Sì, procedo →</BtnP></Row></Card>);
   } else if (step===1) { body=(<Card><Q>Inserisci la <b>chiusura fiscale</b> (scontrino Z).</Q><Hint>Il totale giornaliero del registratore fiscale. Se non hai emesso scontrini oggi, inserisci 0.</Hint><Euro label="Chiusura fiscale (scontrini)" val={form.chiusura_fiscale} onChange={v=>set('chiusura_fiscale',v)} /><Errore testo={errStep} /><Row><BtnS onClick={bk}>← Indietro</BtnS><BtnP onClick={avanti}>Avanti →</BtnP></Row></Card>);
@@ -137,17 +117,43 @@ function WizardChiusura({ form, setForm, onSalva, saving, msg }) {
   } else if (step===9) { body=(<Card><Q>Conta le <b>banconote e monete</b> nel cassetto.</Q><Hint>Inserisci le quantità per ogni taglio. Il totale viene calcolato automaticamente.</Hint><div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:12}}>{TAGLIE_FC.map(t=>(<div key={t.key} style={{background:'#1e293b',borderRadius:8,padding:'8px 10px'}}><div style={{color:'#64748b',fontSize:11,marginBottom:4}}>{t.label}</div><input type="number" min="0" placeholder="0" value={form.fondo_cassa[t.key]||''} onChange={e=>set('fondo_cassa',{...form.fondo_cassa,[t.key]:e.target.value})} style={{width:'100%',background:'transparent',border:'none',color:'#f1f5f9',fontSize:16,fontWeight:700,outline:'none'}} /></div>))}</div><div style={{display:'flex',justifyContent:'space-between',padding:'8px 12px',background:'#111827',borderRadius:8,marginBottom:8}}><span style={{color:'#94a3b8',fontSize:13}}>Totale fondo cassa</span><span style={{color:'#22c55e',fontWeight:700,fontSize:16}}>{fmtE(totF)}</span></div><Errore testo={errStep} /><Row><BtnS onClick={bk}>← Indietro</BtnS><BtnP onClick={avanti}>Avanti →</BtnP></Row></Card>);
   } else if (step===10) { body=(<Card><Q>Chi ha fatto la <b>chiusura cassa</b>?</Q><Hint>Inserisci il nome dell'operatore. Le note sono opzionali.</Hint><div style={{display:'flex',flexDirection:'column',gap:12}}><div><div style={{color:'#94a3b8',fontSize:11,marginBottom:5,textTransform:'uppercase',letterSpacing:0.5}}>Operatore</div><input placeholder="Il tuo nome" value={form.operatore} onChange={e=>set('operatore',e.target.value)} style={{width:'100%',background:'#1e293b',border:'1px solid #334155',borderRadius:8,padding:'10px 14px',color:'#f1f5f9',fontSize:14,boxSizing:'border-box'}} /></div><div><div style={{color:'#94a3b8',fontSize:11,marginBottom:5,textTransform:'uppercase',letterSpacing:0.5}}>Note (opzionale)</div><textarea placeholder="Anomalie, differenze di cassa, memo..." value={form.note} onChange={e=>set('note',e.target.value)} rows={3} style={{width:'100%',background:'#1e293b',border:'1px solid #334155',borderRadius:8,padding:'10px 14px',color:'#f1f5f9',fontSize:14,boxSizing:'border-box',resize:'vertical'}} /></div></div><Errore testo={errStep} /><Row><BtnS onClick={bk}>← Indietro</BtnS><BtnP onClick={avanti}>Vai al riepilogo →</BtnP></Row></Card>);
   } else { body=(<Card><Q>📋 Riepilogo — tutto corretto?</Q><Hint>Controlla i dati prima di salvare.</Hint>{msg&&!msg.ok&&(<div style={{padding:'10px 14px',borderRadius:8,marginBottom:16,background:'rgba(239,68,68,0.12)',border:'1px solid rgba(239,68,68,0.3)',color:'#fca5a5',fontSize:13,fontWeight:500}}>{msg.text}</div>)}<div style={{marginBottom:14}}><div style={{color:'#64748b',fontSize:11,textTransform:'uppercase',letterSpacing:1,marginBottom:6}}>Vendite</div><RR label="Chiusura fiscale" val={nv(form.chiusura_fiscale)} /><RR label="Fatturato (no Art.36)" val={nv(form.fatturato)} /><RR label="Vendite Art. 36" val={nv(form.fatturato_art36)} /><RR label="Totale vendite" val={totV} bold /></div><div style={{marginBottom:14}}><div style={{color:'#64748b',fontSize:11,textTransform:'uppercase',letterSpacing:1,marginBottom:6}}>Incassi</div><RR label="Contanti" val={nv(form.contanti)} /><RR label="POS / Carte" val={nv(form.pos)} />{nv(form.satispay)>0&&<RR label="Satispay" val={nv(form.satispay)} />}{nv(form.bonifico)>0&&<RR label="Bonifico" val={nv(form.bonifico)} />}{nv(form.assegni)>0&&<RR label="Assegni" val={nv(form.assegni)} />}{nv(form.compass)>0&&<RR label="Compass" val={nv(form.compass)} />}{nv(form.stripe)>0&&<RR label="Stripe" val={nv(form.stripe)} />}{nv(form.enwon_pay)>0&&<RR label="Enwon Pay" val={nv(form.enwon_pay)} />}{nv(form.note_credito)>0&&<RR label="Note credito / Resi" val={-nv(form.note_credito)} color="#f87171" />}<RR label="Totale incassato" val={totI} bold /><div style={{marginTop:8,padding:'8px 12px',borderRadius:8,background:Math.abs(diff)<0.01?'rgba(34,197,94,0.1)':'rgba(239,68,68,0.1)',color:Math.abs(diff)<0.01?'#22c55e':'#ef4444',fontSize:13,fontWeight:600}}>{Math.abs(diff)<0.01?'✅ Incassi e vendite coincidono':(diff>0?'⚠️ Incassi superiori di ':'⚠️ Incassi inferiori di ')+fmtE(Math.abs(diff))}</div></div><div style={{marginBottom:14}}><div style={{color:'#64748b',fontSize:11,textTransform:'uppercase',letterSpacing:1,marginBottom:6}}>Uscite e fondo cassa</div>{totU>0&&<RR label="Uscite totali" val={totU} color="#f87171" />}<RR label="Fondo cassa contato" val={totF} /><RR label="Contante da versare" val={cdv} color="#22c55e" bold /></div>{form.operatore&&<div style={{color:'#64748b',fontSize:13,marginBottom:4}}>Operatore: <b style={{color:'#f1f5f9'}}>{form.operatore}</b></div>}{form.note&&<div style={{color:'#64748b',fontSize:13,marginBottom:12}}>Note: <span style={{color:'#f1f5f9'}}>{form.note}</span></div>}<Row><BtnS onClick={bk}>← Modifica</BtnS><BtnP onClick={onSalva} disabled={saving}>{saving?'⏳ Salvataggio...':'💾 Salva chiusura'}</BtnP></Row></Card>); }
-
   return (<div style={{maxWidth:640,margin:'0 auto'}}><Barra step={step} total={TOTAL} />{body}</div>);
 }
 
-// ── REPORT ────────────────────────────────────────────────────────────────────
+// ── CSV Uscite ────────────────────────────────────────────────────────────────────
+function scaricaCSVUscite(chiusure, labelPeriodo) {
+  const righe = [['Data','Operatore','Uscite Contante (€)','Uscite Bonifico (€)','Uscite POS (€)','Totale Uscite (€)','Note']];
+  chiusure.forEach(s => {
+    const uc=parseFloat(s.uscite_contante)||0, ub=parseFloat(s.uscite_bonifico)||0, up=parseFloat(s.uscite_pos)||0;
+    const tot=uc+ub+up;
+    if(tot===0)return;
+    righe.push([s.data||'',s.operatore||'',uc.toFixed(2).replace('.',','),ub.toFixed(2).replace('.',','),up.toFixed(2).replace('.',','),tot.toFixed(2).replace('.',','),(s.note||'').replace(/"/g,"'")]);
+  });
+  if(righe.length===1){alert('Nessuna uscita nel periodo selezionato.');return;}
+  const csv=righe.map(r=>r.map(v=>'"'+v+'"').join(';')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='uscite_cassa_'+labelPeriodo+'.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+function scaricaCSVUsciteGiorno(s) {
+  const uc=parseFloat(s.uscite_contante)||0,ub=parseFloat(s.uscite_bonifico)||0,up=parseFloat(s.uscite_pos)||0,tot=uc+ub+up;
+  if(tot===0){alert('Nessuna uscita per questa giornata.');return;}
+  const csv=[['Data','Operatore','Uscite Contante (€)','Uscite Bonifico (€)','Uscite POS (€)','Totale Uscite (€)','Note'],[s.data||'',s.operatore||'',uc.toFixed(2).replace('.',','),ub.toFixed(2).replace('.',','),up.toFixed(2).replace('.',','),tot.toFixed(2).replace('.',','),(s.note||'').replace(/"/g,"'")]].map(r=>r.map(v=>'"'+v+'"').join(';')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='uscite_cassa_'+(s.data||'giorno')+'.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── Report components ───────────────────────────────────────────────────────────────
 function calcolaReport(chiusure, accantonato, costo_art36) {
   const acc=nv(accantonato), costoA36=nv(costo_art36);
   let fiscale_lordo=0,fatturato_lordo=0,art36_lordo=0,contanti_tot=0;
   let uscite_contante_tot=0,uscite_bonifico_tot=0,uscite_pos_tot=0,note_credito_tot=0;
-  let fondo_cassa_ultimo=0,pos_tot=0,satispay_tot=0,bonifico_tot=0;
-  let assegni_tot=0,compass_tot=0,stripe_tot=0,enwon_pay_tot=0;
+  let fondo_cassa_ultimo=0,pos_tot=0,satispay_tot=0,bonifico_tot=0,assegni_tot=0,compass_tot=0,stripe_tot=0,enwon_pay_tot=0;
   chiusure.forEach(s => {
     fiscale_lordo+=nv(s.chiusura_fiscale); fatturato_lordo+=nv(s.fatturato); art36_lordo+=nv(s.fatturato_art36);
     contanti_tot+=nv(s.contanti); uscite_contante_tot+=nv(s.uscite_contante);
@@ -174,15 +180,10 @@ function calcolaReport(chiusure, accantonato, costo_art36) {
     contante_da_versare,fondo_cassa_ultimo,note_credito_tot,bonifici_agenzie,
     compass_tot,stripe_tot,enwon_pay_tot,pos_tot,satispay_tot,bonifico_tot,assegni_tot};
 }
-
 function RigaReport({ label, valore, colore, bold, sub, nota }) {
   return (
-    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',
-      padding:sub?'4px 0 4px 16px':'7px 0',borderBottom:'1px solid #1e293b'}}>
-      <div>
-        <span style={{color:sub?'#64748b':'#94a3b8',fontSize:sub?12:13}}>{label}</span>
-        {nota&&<div style={{color:'#475569',fontSize:11,marginTop:2}}>{nota}</div>}
-      </div>
+    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',padding:sub?'4px 0 4px 16px':'7px 0',borderBottom:'1px solid #1e293b'}}>
+      <div><span style={{color:sub?'#64748b':'#94a3b8',fontSize:sub?12:13}}>{label}</span>{nota&&<div style={{color:'#475569',fontSize:11,marginTop:2}}>{nota}</div>}</div>
       <span style={{color:colore||'#f1f5f9',fontWeight:bold?700:400,fontSize:bold?14:13,whiteSpace:'nowrap',marginLeft:12}}>{fmtE(valore)}</span>
     </div>
   );
@@ -201,15 +202,12 @@ function SezioneReport({ titolo, emoji, children, highlight }) {
 function KpiCard({ label, valore, sub, colore, icon }) {
   return (
     <div style={{background:'#0f172a',border:'1px solid #1e293b',borderRadius:10,padding:'14px 18px',display:'flex',flexDirection:'column',gap:4}}>
-      <div style={{color:'#475569',fontSize:11,textTransform:'uppercase',letterSpacing:0.5,display:'flex',alignItems:'center',gap:5}}>
-        {icon&&<span>{icon}</span>}{label}
-      </div>
+      <div style={{color:'#475569',fontSize:11,textTransform:'uppercase',letterSpacing:0.5,display:'flex',alignItems:'center',gap:5}}>{icon&&<span>{icon}</span>}{label}</div>
       <div style={{color:colore||'#f1f5f9',fontWeight:700,fontSize:18}}>{fmtE(valore)}</div>
       {sub&&<div style={{color:'#475569',fontSize:11}}>{sub}</div>}
     </div>
   );
 }
-
 function TabReport({ storico }) {
   const oggi = new Date();
   const [mese,setMese]=useState(oggi.getMonth());
@@ -225,6 +223,7 @@ function TabReport({ storico }) {
   });
   const r=calcolaReport(chiusureFiltrate,accantonato,costoArt36);
   const anniDisp=[...new Set(storico.map(s=>s.data?new Date(s.data+'T12:00:00').getFullYear():null).filter(Boolean))].sort((a,b)=>b-a);
+  const labelPeriodo = periodo==='mese' ? MESI[mese]+'_'+anno : String(anno);
   return (
     <div style={{maxWidth:820,margin:'0 auto'}}>
       <div style={{display:'flex',gap:10,marginBottom:20,flexWrap:'wrap',alignItems:'center'}}>
@@ -235,9 +234,15 @@ function TabReport({ storico }) {
         <select value={anno} onChange={e=>setAnno(Number(e.target.value))} style={{background:'#1e293b',border:'1px solid #334155',borderRadius:8,padding:'6px 12px',color:'#f1f5f9',fontSize:13}}>
           {(anniDisp.length?anniDisp:[oggi.getFullYear()]).map(a=><option key={a} value={a}>{a}</option>)}
         </select>
-        <span style={{color:'#475569',fontSize:12,marginLeft:4}}>{chiusureFiltrate.length} chiusur{chiusureFiltrate.length===1?'a':'e'} nel periodo</span>
+        <span style={{color:'#475569',fontSize:12}}>{chiusureFiltrate.length} chiusur{chiusureFiltrate.length===1?'a':'e'} nel periodo</span>
+        <button onClick={()=>scaricaCSVUscite(chiusureFiltrate,labelPeriodo)}
+          style={{marginLeft:'auto',background:'rgba(34,197,94,0.1)',border:'1px solid rgba(34,197,94,0.25)',borderRadius:8,color:'#22c55e',cursor:'pointer',padding:'7px 16px',fontSize:13,fontWeight:500}}>
+          ⬇️ CSV Uscite
+        </button>
       </div>
-      {chiusureFiltrate.length===0?(<div style={{padding:'40px 20px',textAlign:'center',color:'#475569',fontSize:14}}>Nessuna chiusura trovata per il periodo selezionato.</div>):(
+      {chiusureFiltrate.length===0?(
+        <div style={{padding:'40px 20px',textAlign:'center',color:'#475569',fontSize:14}}>Nessuna chiusura trovata per il periodo selezionato.</div>
+      ):(
         <>
           <div style={{background:'rgba(245,158,11,0.06)',border:'1px solid rgba(245,158,11,0.2)',borderRadius:10,padding:'14px 20px',marginBottom:20,display:'flex',gap:20,flexWrap:'wrap',alignItems:'center'}}>
             <div style={{color:'#fbbf24',fontSize:13,fontWeight:600,minWidth:200}}>⚙️ Parametri periodo</div>
@@ -253,7 +258,7 @@ function TabReport({ storico }) {
             </div>
           </div>
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',gap:10,marginBottom:20}}>
-            <KpiCard icon="💵" label="Flusso contante da versare" valore={r.contante_da_versare} colore="#22c55e" sub={`Contanti ${fmtE(r.contanti_tot)} − uscite ${fmtE(r.uscite_contante_tot)} − acc. ${fmtE(r.accantonato)}`} />
+            <KpiCard icon="💵" label="Flusso contante da versare" valore={r.contante_da_versare} colore="#22c55e" sub={'Contanti '+fmtE(r.contanti_tot)+' − uscite '+fmtE(r.uscite_contante_tot)+' − acc. '+fmtE(r.accantonato)} />
             <KpiCard icon="🪙" label="Fondo cassa dichiarato" valore={r.fondo_cassa_ultimo} colore="#60a5fa" sub="Ultimo conteggio cassetto" />
             <KpiCard icon="🧾" label="Totale lordo maturato" valore={r.totale_lordo} colore="#f1f5f9" sub="Fiscale + Fatture + Art.36 IVA incl." />
             <KpiCard icon="📊" label="Totale netto maturato" valore={r.totale_netto} colore="#a78bfa" sub="IVA esclusa (art.36: solo su margine)" />
@@ -279,21 +284,17 @@ function TabReport({ storico }) {
           </SezioneReport>
           <SezioneReport emoji="🔄" titolo="Totale Art. 36 maturato (usato da privati)">
             <RigaReport label="Ricavi Art. 36 (IVA inclusa solo su margine)" valore={r.art36_lordo} bold />
-            <RigaReport label="  Investimento acquisti da privati" valore={r.costoA36} colore="#f87171" sub nota="Importo pagato ai privati per i dispositivi acquistati" />
+            <RigaReport label="  Investimento acquisti da privati" valore={r.costoA36} colore="#f87171" sub />
             <RigaReport label="  Margine lordo (ricavi − costi)" valore={r.margine_art36} colore="#fbbf24" sub />
             <RigaReport label="  IVA 22% sul solo margine" valore={r.iva_art36} colore="#fbbf24" sub />
             <RigaReport label="  Netto Art. 36 (ricavi − IVA su margine)" valore={r.art36_netto} colore="#a78bfa" sub bold />
           </SezioneReport>
           <SezioneReport emoji="📊" titolo="Riepilogo generale maturato" highlight>
             <RigaReport label="Totale lordo (fiscale + fatture + art.36)" valore={r.totale_lordo} bold />
-            <RigaReport label="  Fiscale" valore={r.fiscale_lordo} sub />
-            <RigaReport label="  Fatturato" valore={r.fatturato_lordo} sub />
-            <RigaReport label="  Art. 36" valore={r.art36_lordo} sub />
+            <RigaReport label="  Fiscale" valore={r.fiscale_lordo} sub /><RigaReport label="  Fatturato" valore={r.fatturato_lordo} sub /><RigaReport label="  Art. 36" valore={r.art36_lordo} sub />
             <div style={{height:4}} />
             <RigaReport label="IVA totale" valore={r.iva_totale} colore="#fbbf24" bold />
-            <RigaReport label="  IVA su fiscale" valore={r.fiscale_iva} sub />
-            <RigaReport label="  IVA su fatturato" valore={r.fatturato_iva} sub />
-            <RigaReport label="  IVA art.36 (solo sul margine)" valore={r.iva_art36} sub />
+            <RigaReport label="  IVA su fiscale" valore={r.fiscale_iva} sub /><RigaReport label="  IVA su fatturato" valore={r.fatturato_iva} sub /><RigaReport label="  IVA art.36 (solo sul margine)" valore={r.iva_art36} sub />
             <div style={{height:4}} />
             <RigaReport label="Totale netto maturato (IVA esclusa)" valore={r.totale_netto} colore="#a78bfa" bold />
           </SezioneReport>
@@ -302,17 +303,14 @@ function TabReport({ storico }) {
           </SezioneReport>
           <SezioneReport emoji="📤" titolo="Uscite di cassa">
             <RigaReport label="Uscite totali" valore={r.uscite_contante_tot+r.uscite_bonifico_tot+r.uscite_pos_tot} bold />
-            <RigaReport label="  Contante" valore={r.uscite_contante_tot} sub />
-            <RigaReport label="  Bonifico" valore={r.uscite_bonifico_tot} sub />
-            <RigaReport label="  POS" valore={r.uscite_pos_tot} sub />
+            <RigaReport label="  Contante" valore={r.uscite_contante_tot} sub /><RigaReport label="  Bonifico" valore={r.uscite_bonifico_tot} sub /><RigaReport label="  POS" valore={r.uscite_pos_tot} sub />
           </SezioneReport>
           <SezioneReport emoji="💳" titolo="Incassi per metodo di pagamento">
-            <RigaReport label="Contanti" valore={r.contanti_tot} />
-            <RigaReport label="POS / Carte" valore={r.pos_tot} />
+            <RigaReport label="Contanti" valore={r.contanti_tot} /><RigaReport label="POS / Carte" valore={r.pos_tot} />
             {r.satispay_tot>0&&<RigaReport label="Satispay" valore={r.satispay_tot} />}
             {r.bonifico_tot>0&&<RigaReport label="Bonifico (clienti diretti)" valore={r.bonifico_tot} />}
             {r.assegni_tot>0&&<RigaReport label="Assegni" valore={r.assegni_tot} />}
-            {r.bonifici_agenzie>0&&(<><RigaReport label="Bonifici agenzie (da incassare)" valore={r.bonifici_agenzie} colore="#fbbf24" bold nota="Importi attesi da Compass, Stripe, Enwon Pay" />{r.compass_tot>0&&<RigaReport label="  Compass" valore={r.compass_tot} sub />}{r.stripe_tot>0&&<RigaReport label="  Stripe" valore={r.stripe_tot} sub />}{r.enwon_pay_tot>0&&<RigaReport label="  Enwon Pay" valore={r.enwon_pay_tot} sub />}</>)}
+            {r.bonifici_agenzie>0&&(<><RigaReport label="Bonifici agenzie (da incassare)" valore={r.bonifici_agenzie} colore="#fbbf24" bold />{r.compass_tot>0&&<RigaReport label="  Compass" valore={r.compass_tot} sub />}{r.stripe_tot>0&&<RigaReport label="  Stripe" valore={r.stripe_tot} sub />}{r.enwon_pay_tot>0&&<RigaReport label="  Enwon Pay" valore={r.enwon_pay_tot} sub />}</>)}
             <RigaReport label="− Note di credito" valore={-r.note_credito_tot} colore="#f87171" />
           </SezioneReport>
         </>
@@ -328,80 +326,55 @@ function DettaglioChiusura({ s, onClose }) {
   const totV = nv(s.chiusura_fiscale)+nv(s.fatturato)+nv(s.fatturato_art36);
   const totI = nv(s.contanti)+nv(s.pos)+nv(s.satispay)+nv(s.bonifico)+nv(s.assegni)+nv(s.compass)+nv(s.stripe)+nv(s.enwon_pay)-nv(s.note_credito);
   const totU = nv(s.uscite_contante)+nv(s.uscite_bonifico)+nv(s.uscite_pos);
-  const fc_json = s.fondo_cassa;
   let totF = 0;
-  if (fc_json) {
-    try {
-      const obj = typeof fc_json === 'string' ? JSON.parse(fc_json) : fc_json;
-      totF = TAGLIE_FC.reduce((sum,t) => sum+(nv(obj[t.key])||0)*t.val, 0);
-    } catch(e) {}
-  }
+  if (s.fondo_cassa) { try { const obj=typeof s.fondo_cassa==='string'?JSON.parse(s.fondo_cassa):s.fondo_cassa; totF=TAGLIE_FC.reduce((sum,t)=>sum+(nv(obj[t.key])||0)*t.val,0); } catch(e){} }
   const cdv = Math.max(0, nv(s.contanti)-nv(s.uscite_contante)-totF);
   const diff = totI - totV;
-
   const R = ({label,val,colore,bold,sub}) => (
     <div style={{display:'flex',justifyContent:'space-between',padding:sub?'3px 0 3px 14px':'6px 0',borderBottom:'1px solid #1e293b'}}>
       <span style={{color:sub?'#64748b':'#94a3b8',fontSize:sub?12:13}}>{label}</span>
       <span style={{color:colore||'#f1f5f9',fontWeight:bold?700:400,fontSize:13,whiteSpace:'nowrap',marginLeft:8}}>{fmtE(val)}</span>
     </div>
   );
-  const Sez = ({title,emoji,children}) => (
+  const Sez = ({title,children}) => (
     <div style={{marginBottom:16}}>
-      <div style={{color:'#475569',fontSize:11,textTransform:'uppercase',letterSpacing:0.8,marginBottom:6,display:'flex',alignItems:'center',gap:6}}>
-        <span>{emoji}</span>{title}
-      </div>
+      <div style={{color:'#475569',fontSize:11,textTransform:'uppercase',letterSpacing:0.8,marginBottom:6}}>{title}</div>
       {children}
     </div>
   );
-
   return (
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',zIndex:1000,display:'flex',alignItems:'flex-start',justifyContent:'center',overflowY:'auto',padding:'40px 16px'}}
       onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
-      <div style={{background:'#0a0f1e',border:'1px solid #1e293b',borderRadius:16,width:'100%',maxWidth:580,padding:'28px 32px',position:'relative'}}>
-        {/* Header */}
+      <div style={{background:'#0a0f1e',border:'1px solid #1e293b',borderRadius:16,width:'100%',maxWidth:580,padding:'28px 32px'}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:24}}>
           <div>
             <div style={{color:'#f1f5f9',fontSize:20,fontWeight:700,marginBottom:4}}>{dataStr}</div>
             <div style={{color:'#64748b',fontSize:13}}>{s.operatore||'Operatore non specificato'}</div>
           </div>
-          <button onClick={onClose} style={{background:'rgba(255,255,255,0.05)',border:'1px solid #334155',borderRadius:8,color:'#94a3b8',cursor:'pointer',padding:'6px 12px',fontSize:13}}>
-            × Chiudi
-          </button>
+          <div style={{display:'flex',gap:8}}>
+            <button onClick={()=>scaricaCSVUsciteGiorno(s)}
+              style={{background:'rgba(34,197,94,0.1)',border:'1px solid rgba(34,197,94,0.25)',borderRadius:8,color:'#22c55e',cursor:'pointer',padding:'6px 12px',fontSize:12,fontWeight:500}}>
+              ⬇️ CSV Uscite
+            </button>
+            <button onClick={onClose}
+              style={{background:'rgba(255,255,255,0.05)',border:'1px solid #334155',borderRadius:8,color:'#94a3b8',cursor:'pointer',padding:'6px 12px',fontSize:13}}>
+              × Chiudi
+            </button>
+          </div>
         </div>
-
-        {/* KPI rapidi */}
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:24}}>
-          <div style={{background:'#0f172a',border:'1px solid #1e293b',borderRadius:10,padding:'12px 16px'}}>
-            <div style={{color:'#475569',fontSize:11,textTransform:'uppercase',letterSpacing:0.5,marginBottom:4}}>Totale vendite</div>
-            <div style={{color:'#f1f5f9',fontWeight:700,fontSize:20}}>{fmtE(totV)}</div>
-          </div>
-          <div style={{background:'#0f172a',border:'1px solid #1e293b',borderRadius:10,padding:'12px 16px'}}>
-            <div style={{color:'#475569',fontSize:11,textTransform:'uppercase',letterSpacing:0.5,marginBottom:4}}>Totale incassato</div>
-            <div style={{color:Math.abs(diff)<0.01?'#22c55e':'#f87171',fontWeight:700,fontSize:20}}>{fmtE(totI)}</div>
-            <div style={{color:Math.abs(diff)<0.01?'#22c55e':'#ef4444',fontSize:11,marginTop:2}}>
-              {Math.abs(diff)<0.01?'✅ Quadra':(diff>0?'⚠️ +':'⚠️ ')+fmtE(diff)}
-            </div>
-          </div>
-          <div style={{background:'#0f172a',border:'1px solid #1e293b',borderRadius:10,padding:'12px 16px'}}>
-            <div style={{color:'#475569',fontSize:11,textTransform:'uppercase',letterSpacing:0.5,marginBottom:4}}>Contante da versare</div>
-            <div style={{color:'#22c55e',fontWeight:700,fontSize:20}}>{fmtE(cdv)}</div>
-          </div>
-          <div style={{background:'#0f172a',border:'1px solid #1e293b',borderRadius:10,padding:'12px 16px'}}>
-            <div style={{color:'#475569',fontSize:11,textTransform:'uppercase',letterSpacing:0.5,marginBottom:4}}>Fondo cassa</div>
-            <div style={{color:'#60a5fa',fontWeight:700,fontSize:20}}>{fmtE(totF)}</div>
-          </div>
+          <div style={{background:'#0f172a',border:'1px solid #1e293b',borderRadius:10,padding:'12px 16px'}}><div style={{color:'#475569',fontSize:11,textTransform:'uppercase',letterSpacing:0.5,marginBottom:4}}>Totale vendite</div><div style={{color:'#f1f5f9',fontWeight:700,fontSize:20}}>{fmtE(totV)}</div></div>
+          <div style={{background:'#0f172a',border:'1px solid #1e293b',borderRadius:10,padding:'12px 16px'}}><div style={{color:'#475569',fontSize:11,textTransform:'uppercase',letterSpacing:0.5,marginBottom:4}}>Totale incassato</div><div style={{color:Math.abs(diff)<0.01?'#22c55e':'#f87171',fontWeight:700,fontSize:20}}>{fmtE(totI)}</div><div style={{color:Math.abs(diff)<0.01?'#22c55e':'#ef4444',fontSize:11,marginTop:2}}>{Math.abs(diff)<0.01?'✅ Quadra':(diff>0?'⚠️ +':'⚠️ ')+fmtE(diff)}</div></div>
+          <div style={{background:'#0f172a',border:'1px solid #1e293b',borderRadius:10,padding:'12px 16px'}}><div style={{color:'#475569',fontSize:11,textTransform:'uppercase',letterSpacing:0.5,marginBottom:4}}>Contante da versare</div><div style={{color:'#22c55e',fontWeight:700,fontSize:20}}>{fmtE(cdv)}</div></div>
+          <div style={{background:'#0f172a',border:'1px solid #1e293b',borderRadius:10,padding:'12px 16px'}}><div style={{color:'#475569',fontSize:11,textTransform:'uppercase',letterSpacing:0.5,marginBottom:4}}>Fondo cassa</div><div style={{color:'#60a5fa',fontWeight:700,fontSize:20}}>{fmtE(totF)}</div></div>
         </div>
-
-        {/* Vendite */}
-        <Sez title="Vendite" emoji="💸">
+        <Sez title="Vendite">
           <R label="Chiusura fiscale (scontrini)" val={nv(s.chiusura_fiscale)} />
           <R label="Fatturato (fatture, no Art.36)" val={nv(s.fatturato)} />
           <R label="Vendite Art. 36" val={nv(s.fatturato_art36)} />
           <R label="Totale vendite" val={totV} bold colore="#f1f5f9" />
         </Sez>
-
-        {/* Incassi */}
-        <Sez title="Incassi" emoji="💳">
+        <Sez title="Incassi">
           <R label="Contanti" val={nv(s.contanti)} />
           <R label="POS / Carte" val={nv(s.pos)} />
           {nv(s.satispay)>0&&<R label="Satispay" val={nv(s.satispay)} sub />}
@@ -413,43 +386,20 @@ function DettaglioChiusura({ s, onClose }) {
           {nv(s.note_credito)>0&&<R label="− Note credito / Resi" val={-nv(s.note_credito)} colore="#f87171" />}
           <R label="Totale incassato" val={totI} bold colore={Math.abs(diff)<0.01?'#22c55e':'#f87171'} />
         </Sez>
-
-        {/* Uscite */}
         {totU>0&&(
-          <Sez title="Uscite di cassa" emoji="📤">
+          <Sez title="Uscite di cassa">
             {nv(s.uscite_contante)>0&&<R label="Uscite contante" val={nv(s.uscite_contante)} colore="#f87171" />}
             {nv(s.uscite_bonifico)>0&&<R label="Uscite bonifico" val={nv(s.uscite_bonifico)} colore="#f87171" />}
             {nv(s.uscite_pos)>0&&<R label="Uscite POS" val={nv(s.uscite_pos)} colore="#f87171" />}
             <R label="Totale uscite" val={totU} bold colore="#f87171" />
           </Sez>
         )}
-
-        {/* Fondo cassa */}
-        <Sez title="Fondo cassa contato" emoji="🪙">
-          {(() => {
-            try {
-              const obj = typeof fc_json==='string'?JSON.parse(fc_json):fc_json;
-              const tagli = TAGLIE_FC.filter(t=>nv(obj[t.key])>0);
-              if(tagli.length===0)return <div style={{color:'#475569',fontSize:13,padding:'6px 0'}}>Nessun taglio inserito</div>;
-              return tagli.map(t=>(
-                <div key={t.key} style={{display:'flex',justifyContent:'space-between',padding:'3px 0',borderBottom:'1px solid #1e293b'}}>
-                  <span style={{color:'#94a3b8',fontSize:13}}>{nv(obj[t.key])} × {t.label}</span>
-                  <span style={{color:'#f1f5f9',fontSize:13}}>{fmtE(nv(obj[t.key])*t.val)}</span>
-                </div>
-              ));
-            } catch(e){return null;}
-          })()}
+        <Sez title="Fondo cassa contato">
+          {(()=>{ try { const obj=typeof s.fondo_cassa==='string'?JSON.parse(s.fondo_cassa):s.fondo_cassa; const tagli=TAGLIE_FC.filter(t=>nv(obj[t.key])>0); if(!tagli.length)return <div style={{color:'#475569',fontSize:13,padding:'6px 0'}}>Nessun taglio inserito</div>; return tagli.map(t=>(<div key={t.key} style={{display:'flex',justifyContent:'space-between',padding:'3px 0',borderBottom:'1px solid #1e293b'}}><span style={{color:'#94a3b8',fontSize:13}}>{nv(obj[t.key])} × {t.label}</span><span style={{color:'#f1f5f9',fontSize:13}}>{fmtE(nv(obj[t.key])*t.val)}</span></div>)); } catch(e){return null;} })()}
           <R label="Totale fondo cassa" val={totF} bold colore="#60a5fa" />
           <R label="Contante da versare" val={cdv} bold colore="#22c55e" />
         </Sez>
-
-        {/* Note */}
-        {s.note&&(
-          <div style={{background:'rgba(148,163,184,0.06)',border:'1px solid #1e293b',borderRadius:8,padding:'12px 16px',marginTop:8}}>
-            <div style={{color:'#475569',fontSize:11,textTransform:'uppercase',letterSpacing:0.5,marginBottom:6}}>📝 Note</div>
-            <div style={{color:'#94a3b8',fontSize:13,lineHeight:1.6}}>{s.note}</div>
-          </div>
-        )}
+        {s.note&&(<div style={{background:'rgba(148,163,184,0.06)',border:'1px solid #1e293b',borderRadius:8,padding:'12px 16px',marginTop:8}}><div style={{color:'#475569',fontSize:11,textTransform:'uppercase',letterSpacing:0.5,marginBottom:6}}>Note</div><div style={{color:'#94a3b8',fontSize:13,lineHeight:1.6}}>{s.note}</div></div>)}
       </div>
     </div>
   );
@@ -467,46 +417,24 @@ export default function Cassa() {
 
   const caricaStorico = useCallback(async () => {
     setLoadingStorico(true);
-    try {
-      const r = await fetch(`${API}/cassa`);
-      const d = await r.json();
-      setStorico(Array.isArray(d) ? d : []);
-    } catch(e) { setStorico([]); }
+    try { const r=await fetch(`${API}/cassa`); const d=await r.json(); setStorico(Array.isArray(d)?d:[]); } catch(e) { setStorico([]); }
     setLoadingStorico(false);
   }, []);
 
-  useEffect(() => {
-    if (tab === 'storico' || tab === 'report') caricaStorico();
-  }, [tab, caricaStorico]);
+  useEffect(() => { if (tab==='storico'||tab==='report') caricaStorico(); }, [tab, caricaStorico]);
 
   const salva = async () => {
     setSaving(true); setMsg(null);
     try {
-      const r = await fetch(`${API}/cassa`, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify(form),
-      });
-      const d = await r.json();
-      if (r.ok) {
-        setMsg({ok:true, text:'✅ Chiusura salvata correttamente!'});
-        setForm(EMPTY());
-        setTab('storico');
-      } else {
-        setMsg({ok:false, text: r.status===409
-          ? '❌ Esiste già una chiusura per questa data. Torna al passo 1 e modifica la data.'
-          : '❌ ' + (d.error||'Errore durante il salvataggio. Riprova.')});
-      }
-    } catch(e) {
-      setMsg({ok:false, text:'❌ Errore di rete: '+e.message});
-    }
+      const r=await fetch(`${API}/cassa`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(form)});
+      const d=await r.json();
+      if(r.ok){setMsg({ok:true,text:'✅ Chiusura salvata correttamente!'});setForm(EMPTY());setTab('storico');}
+      else{setMsg({ok:false,text:r.status===409?'❌ Esiste già una chiusura per questa data.':'❌ '+(d.error||'Errore durante il salvataggio.')});}
+    } catch(e){setMsg({ok:false,text:'❌ Errore di rete: '+e.message});}
     setSaving(false);
   };
 
-  const TS = (active) => ({
-    padding:'8px 20px',borderRadius:8,border:'none',cursor:'pointer',fontWeight:500,fontSize:13,
-    background:active?'#3b82f6':'transparent',color:active?'#fff':'#64748b',
-  });
+  const TS = (active) => ({padding:'8px 20px',borderRadius:8,border:'none',cursor:'pointer',fontWeight:500,fontSize:13,background:active?'#3b82f6':'transparent',color:active?'#fff':'#64748b'});
 
   return (
     <div style={{padding:'24px 32px',minHeight:'100vh',background:'#0a0f1e',color:'#f1f5f9'}}>
@@ -525,39 +453,27 @@ export default function Cassa() {
         <button style={TS(tab==='report')} onClick={()=>setTab('report')}>📊 Report</button>
         <button style={TS(tab==='storico')} onClick={()=>setTab('storico')}>📋 Storico</button>
       </div>
-      {msg && msg.ok && (
-        <div style={{padding:'12px 16px',borderRadius:8,marginBottom:20,background:'rgba(34,197,94,0.1)',color:'#22c55e',fontSize:14,fontWeight:500}}>
-          {msg.text}
-        </div>
-      )}
-      {tab==='wizard' && (
-        <WizardChiusura form={form} setForm={setForm} onSalva={salva} saving={saving} msg={msg} />
-      )}
-      {tab==='report' && (
-        loadingStorico
-          ? <p style={{color:'#64748b'}}>Caricamento dati...</p>
-          : <TabReport storico={storico} />
-      )}
-      {tab==='storico' && (
+      {msg&&msg.ok&&(<div style={{padding:'12px 16px',borderRadius:8,marginBottom:20,background:'rgba(34,197,94,0.1)',color:'#22c55e',fontSize:14,fontWeight:500}}>{msg.text}</div>)}
+      {tab==='wizard'&&(<WizardChiusura form={form} setForm={setForm} onSalva={salva} saving={saving} msg={msg} />)}
+      {tab==='report'&&(loadingStorico?<p style={{color:'#64748b'}}>Caricamento dati...</p>:<TabReport storico={storico} />)}
+      {tab==='storico'&&(
         <div>
-          {loadingStorico ? (
-            <p style={{color:'#64748b'}}>Caricamento...</p>
-          ) : storico.length===0 ? (
-            <p style={{color:'#64748b'}}>Nessuna chiusura registrata.</p>
-          ) : (
+          {loadingStorico?(<p style={{color:'#64748b'}}>Caricamento...</p>):storico.length===0?(<p style={{color:'#64748b'}}>Nessuna chiusura registrata.</p>):(
             <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              <div style={{display:'flex',justifyContent:'flex-end',marginBottom:4}}>
+                <button onClick={()=>scaricaCSVUscite(storico,'storico_completo')}
+                  style={{background:'rgba(34,197,94,0.1)',border:'1px solid rgba(34,197,94,0.25)',borderRadius:8,color:'#22c55e',cursor:'pointer',padding:'7px 16px',fontSize:13,fontWeight:500}}>
+                  ⬇️ CSV Uscite (tutto lo storico)
+                </button>
+              </div>
               {storico.map((s,i) => {
-                const totV = nv(s.chiusura_fiscale)+nv(s.fatturato)+nv(s.fatturato_art36);
-                const totI = nv(s.contanti)+nv(s.pos)+nv(s.satispay)+nv(s.bonifico)+nv(s.assegni)+nv(s.compass)+nv(s.stripe)+nv(s.enwon_pay)-nv(s.note_credito);
-                const diff = totI - totV;
-                const d = new Date(s.data+'T12:00:00');
-                const dataStr = d.getDate().toString().padStart(2,'0')+' '+MESI[d.getMonth()]+' '+d.getFullYear();
+                const totV=nv(s.chiusura_fiscale)+nv(s.fatturato)+nv(s.fatturato_art36);
+                const totI=nv(s.contanti)+nv(s.pos)+nv(s.satispay)+nv(s.bonifico)+nv(s.assegni)+nv(s.compass)+nv(s.stripe)+nv(s.enwon_pay)-nv(s.note_credito);
+                const diff=totI-totV;
+                const d=new Date(s.data+'T12:00:00');
                 return (
-                  <div key={i}
-                    onClick={()=>setChiusuraDettaglio(s)}
-                    style={{background:'#0f172a',border:'1px solid #1e293b',borderRadius:10,padding:'14px 20px',
-                      display:'flex',justifyContent:'space-between',alignItems:'center',
-                      cursor:'pointer',transition:'border-color 0.15s',}}
+                  <div key={i} onClick={()=>setChiusuraDettaglio(s)}
+                    style={{background:'#0f172a',border:'1px solid #1e293b',borderRadius:10,padding:'14px 20px',display:'flex',justifyContent:'space-between',alignItems:'center',cursor:'pointer',transition:'border-color 0.15s'}}
                     onMouseEnter={e=>e.currentTarget.style.borderColor='#3b82f6'}
                     onMouseLeave={e=>e.currentTarget.style.borderColor='#1e293b'}>
                     <div style={{display:'flex',alignItems:'center',gap:14}}>
@@ -566,7 +482,7 @@ export default function Cassa() {
                         <div style={{color:'#475569',fontSize:10}}>{MESI[d.getMonth()].slice(0,3).toUpperCase()}</div>
                       </div>
                       <div>
-                        <div style={{fontWeight:600,fontSize:14,marginBottom:2,color:'#f1f5f9'}}>{dataStr}</div>
+                        <div style={{fontWeight:600,fontSize:14,marginBottom:2,color:'#f1f5f9'}}>{s.data}</div>
                         <div style={{color:'#64748b',fontSize:12}}>{s.operatore||'N/D'}</div>
                       </div>
                     </div>
