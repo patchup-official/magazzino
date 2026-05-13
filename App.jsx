@@ -11,6 +11,7 @@ import Clienti from './pages/Clienti'
 import ImportExport from './pages/ImportExport'
 import Storico from './pages/Storico'
 import Protezione from './pages/Protezione'
+import PrenotazioneOrdini from './pages/PrenotazioneOrdini'
 import FirmaRemota from './pages/FirmaRemota'
 import Toast from './components/Toast'
 
@@ -47,12 +48,14 @@ export default function App() {
     acquisto: 'Acquisto dispositivo', riparazioni: 'Riparazioni',
     storico: 'Storico acquisti', clienti: 'Clienti',
     importexport: 'Import / Export', protezione: 'Protezione Dispositivo',
+      prenotazioni: 'Prenotazione Ordini',
   }
 
   const pages = {
     dashboard: Dashboard, magazzino: Magazzino, servizi: Servizi,
     acquisto: AcquistoPlugin, riparazioni: Riparazioni,
     storico: Storico, clienti: Clienti,
+      prenotazioni: PrenotazioneOrdini,
     importexport: ImportExport, protezione: Protezione,
   }
   const PageComponent = pages[currentPage] || Dashboard
