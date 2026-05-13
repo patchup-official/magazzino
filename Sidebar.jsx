@@ -14,6 +14,7 @@ export default function Sidebar({ currentPage, onNavigate, onCreaNuovo }) {
   const navPlugin = [
     { id:'acquisto',   icon:'◈',  label:'Acquisto dispositivo' },
     { id:'protezione', icon:'🛡️', label:'Protezione' },
+    { id:'prenotazioni', icon:'📦', label:'Prenotazione Ordini' },
   ]
   const navSystem = [
     { id:'importexport',  icon:'⇅', label:'Import / Export' },
