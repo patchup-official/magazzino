@@ -7,7 +7,10 @@ router.get('/', (req, res) => {
   let sql = 'SELECT p.*, c.nome as cliente_nome_db, c.cognome as cliente_cognome_db FROM prenotazioni_ordini p LEFT JOIN clienti c ON p.cliente_id = c.id WHERE 1=1';
   const params = [];
   if (stato) { sql += ' AND p.stato = ?'; params.push(stato); }
-  if (search) { sql += ' AND (p.cliente_nome LIKE ? OR p.brand LIKE ? OR p.modello LIKE ? OR p.ricambio LIKE ?)'; const s = '%'+search+'%'; params.push(s,s,s,s); }
+  if (search) {
+    sql += ' AND (p.cliente_nome LIKE ? OR p.brand LIKE ? OR p.modello LIKE ? OR p.ricambio LIKE ?)';
+    const s = '%'+search+'%'; params.push(s,s,s,s);
+  }
   sql += ' ORDER BY p.created_at DESC';
   res.json(query(sql, params));
 });
@@ -39,8 +42,36 @@ router.patch('/:id', (req, res) => {
   const oggi = new Date().toISOString().split('T')[0];
   if (stato === 'ordinato' && !d_ord) d_ord = oggi;
   if (stato === 'arrivato' && !d_arr) d_arr = oggi;
-  run('UPDATE prenotazioni_ordini SET cliente_id=?,cliente_nome=?,cliente_telefono=?,cliente_email=?,brand=?,modello=?,colore_variante=?,tipo_riparazione=?,ricambio=?,in_store=?,note_dispositivo=?,fornitore_id=?,fornitore_nome=?,stato=?,data_inserimento=?,data_ordine=?,data_arrivo=?,caparra_attiva=?,caparra_importo=?,caparra_totale=?,caparra_metodo=?,caparra_note=?,note_generali=?,updated_at=datetime('now') WHERE id=?',
-    [cliente_id!==undefined?cliente_id:ex.cliente_id,cliente_nome||ex.cliente_nome,cliente_telefono!==undefined?cliente_telefono:ex.cliente_telefono,cliente_email!==undefined?cliente_email:ex.cliente_email,brand||ex.brand,modello||ex.modello,colore_variante!==undefined?colore_variante:ex.colore_variante,tipo_riparazione!==undefined?tipo_riparazione:ex.tipo_riparazione,ricambio!==undefined?ricambio:ex.ricambio,in_store!==undefined?(in_store?1:0):ex.in_store,note_dispositivo!==undefined?note_dispositivo:ex.note_dispositivo,fornitore_id!==undefined?fornitore_id:ex.fornitore_id,fornitore_nome!==undefined?fornitore_nome:ex.fornitore_nome,stato||ex.stato,data_inserimento||ex.data_inserimento,d_ord,d_arr,caparra_attiva!==undefined?(caparra_attiva?1:0):ex.caparra_attiva,caparra_importo!==undefined?caparra_importo:ex.caparra_importo,caparra_totale!==undefined?caparra_totale:ex.caparra_totale,caparra_metodo!==undefined?caparra_metodo:ex.caparra_metodo,caparra_note!==undefined?caparra_note:ex.caparra_note,note_generali!==undefined?note_generali:ex.note_generali,req.params.id]);
+  run(`UPDATE prenotazioni_ordini SET
+    cliente_id=?,cliente_nome=?,cliente_telefono=?,cliente_email=?,
+    brand=?,modello=?,colore_variante=?,tipo_riparazione=?,ricambio=?,
+    in_store=?,note_dispositivo=?,fornitore_id=?,fornitore_nome=?,
+    stato=?,data_inserimento=?,data_ordine=?,data_arrivo=?,
+    caparra_attiva=?,caparra_importo=?,caparra_totale=?,caparra_metodo=?,caparra_note=?,
+    note_generali=?,updated_at=datetime('now')
+    WHERE id=?`,
+    [cliente_id!==undefined?cliente_id:ex.cliente_id,
+    cliente_nome||ex.cliente_nome,
+    cliente_telefono!==undefined?cliente_telefono:ex.cliente_telefono,
+    cliente_email!==undefined?cliente_email:ex.cliente_email,
+    brand||ex.brand,modello||ex.modello,
+    colore_variante!==undefined?colore_variante:ex.colore_variante,
+    tipo_riparazione!==undefined?tipo_riparazione:ex.tipo_riparazione,
+    ricambio!==undefined?ricambio:ex.ricambio,
+    in_store!==undefined?(in_store?1:0):ex.in_store,
+    note_dispositivo!==undefined?note_dispositivo:ex.note_dispositivo,
+    fornitore_id!==undefined?fornitore_id:ex.fornitore_id,
+    fornitore_nome!==undefined?fornitore_nome:ex.fornitore_nome,
+    stato||ex.stato,
+    data_inserimento||ex.data_inserimento,
+    d_ord,d_arr,
+    caparra_attiva!==undefined?(caparra_attiva?1:0):ex.caparra_attiva,
+    caparra_importo!==undefined?caparra_importo:ex.caparra_importo,
+    caparra_totale!==undefined?caparra_totale:ex.caparra_totale,
+    caparra_metodo!==undefined?caparra_metodo:ex.caparra_metodo,
+    caparra_note!==undefined?caparra_note:ex.caparra_note,
+    note_generali!==undefined?note_generali:ex.note_generali,
+    req.params.id]);
   res.json(get('SELECT * FROM prenotazioni_ordini WHERE id = ?', [req.params.id]));
 });
 
