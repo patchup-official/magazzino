@@ -189,7 +189,7 @@ function Step2({ cliente, onNext, onBack, BASE }) {
           {filtered.map(d => (
             <div key={d.id} onClick={() => setSelected(d)} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', borderBottom:'1px solid rgba(255,255,255,0.05)', cursor:'pointer', background: selected?.id===d.id ? 'rgba(34,197,94,0.1)' : 'transparent' }}>
               <div style={{ width:34, height:34, borderRadius:8, background:'rgba(139,92,246,0.15)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, flexShrink:0 }}>📱</div>
-              <div style={{ flex:1, minWidth:0 }}><div style={{ fontSize:13, fontWeight:500, color:'#e2e8f0' }}>{d.brand} {d.modello}{d.colore_storage?` - ${d.colore_storage}":''}</div><div style={{ fontSize:11, color:'#475569' }}>{d.imei?`IMEI: ${d.imei}`:'Nessun IMEI'}</div></div>
+              <div style={{ flex:1, minWidth:0 }}><div style={{ fontSize:13, fontWeight:500, color:'#e2e8f0' }}>{d.brand} {d.modello}{d.colore_storage?` - ${d.colore_storage}`:''}</div><div style={{ fontSize:11, color:'#475569' }}>{d.imei?`IMEI: ${d.imei}`:'Nessun IMEI'}</div></div>
               {selected?.id===d.id && <span style={{ color:'#22c55e' }}>ok</span>}
             </div>
           ))}
