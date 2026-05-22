@@ -1,11 +1,5 @@
 # render.yaml — Magazzino v3.0
-# Posiziona nella ROOT del repository
-
-databases:
-  - name: magazzino-db
-    databaseName: magazzino
-    user: magazzino_user
-    plan: free
+# Usa il database valutazione-display-db già esistente
 
 services:
 
@@ -19,16 +13,15 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: DATABASE_URL
-        fromDatabase:
-          name: magazzino-db
-          property: connectionString
-      - key: JWT_SECRET
-        generateValue: true
       - key: FRONTEND_URL
         value: https://magazzino-frontend.onrender.com
+      - key: JWT_SECRET
+        generateValue: true
       - key: SUPER_ADMIN_USERNAME
         value: superadmin
+      # DATABASE_URL va impostata manualmente nel dashboard Render
+      # usando la Internal URL di valutazione-display-db:
+      # postgresql://valutazione_display_db_user:4CVFD4SyuKuoJsn7Y3aRr6nqgl2WbW0s@dpg-d71qj4f5gffc7381fn50-a/valutazione_display_db
 
   # ── FRONTEND ─────────────────────────────────────────────────────────────
   - type: web
