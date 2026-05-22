@@ -1,68 +1,311 @@
-const express=require('express'),cors=require('cors'),path=require('path'),fs=require('fs'),crypto=require('crypto');
-const app=express(),PORT=process.env.PORT||3001;
-const allowedOrigins=['http://localhost:5173','http://localhost:3000',process.env.FRONTEND_URL].filter(Boolean);
-app.use(cors({origin:(o,cb)=>{if(!o||allowedOrigins.includes(o))return cb(null,true);cb(new Error('CORS: '+o));},credentials:true}));
-app.use(express.json());
-const DB_DIR=process.env.DB_DIR||path.join(__dirname,'db'),DB_PATH=path.join(DB_DIR,'magazzino.sqlite'),SCHEMA_PATH=path.join(__dirname,'db','schema.sql');
-if(!fs.existsSync(DB_DIR))fs.mkdirSync(DB_DIR,{recursive:true});
+// server.js — Magazzino v3.0 PostgreSQL + Auth
+// SOSTITUISCE backend/server.js
 
-async function initDB(){
-const SQL=await require('sql.js')();
-let db=fs.existsSync(DB_PATH)?new SQL.Database(fs.readFileSync(DB_PATH)):new SQL.Database();
-db.run(fs.readFileSync(SCHEMA_PATH,'utf-8'));
-try{db.run('ALTER TABLE products ADD COLUMN barcode TEXT')}catch(e){}
-try{db.run('ALTER TABLE products ADD COLUMN fornitore_id TEXT')}catch(e){}
-try{db.run('ALTER TABLE products ADD COLUMN note TEXT')}catch(e){}
-try{db.run(`CREATE TABLE IF NOT EXISTS servizi(id TEXT PRIMARY KEY,cliente TEXT NOT NULL,telefono TEXT,dispositivo TEXT NOT NULL,tipo_servizio TEXT NOT NULL,nome_servizio TEXT NOT NULL,descrizione TEXT,priorita TEXT DEFAULT 'normale',prezzo REAL NOT NULL,note TEXT,data_richiesta TEXT DEFAULT(date('now')),data_consegna_prevista TEXT,stato TEXT DEFAULT 'in_corso',created_at TEXT DEFAULT(datetime('now')))`)}catch(e){}
-try{db.run(`CREATE TABLE IF NOT EXISTS clienti(id TEXT PRIMARY KEY,tipo TEXT NOT NULL DEFAULT 'persona_fisica',nome TEXT NOT NULL,cognome TEXT,ragione_soc TEXT,codice_fisc TEXT,piva TEXT,telefono TEXT,email TEXT,indirizzo TEXT,cap TEXT,citta TEXT,note TEXT,created_at TEXT DEFAULT(datetime('now')))`);db.run(`CREATE INDEX IF NOT EXISTS idx_clienti_nome ON clienti(nome)`);db.run(`CREATE INDEX IF NOT EXISTS idx_clienti_tel ON clienti(telefono)`)}catch(e){}
-try{db.run(`CREATE TABLE IF NOT EXISTS piani_protezione(id TEXT PRIMARY KEY,nome TEXT NOT NULL,prezzo REAL NOT NULL,durata_mesi INTEGER NOT NULL,coperture TEXT NOT NULL,consigliato INTEGER DEFAULT 0,attivo INTEGER DEFAULT 1,created_at TEXT DEFAULT(datetime('now')))`);const piani=db.prepare('SELECT COUNT(*) as n FROM piani_protezione').getAsObject();if(!piani.n)db.run(`INSERT INTO piani_protezione(id,nome,prezzo,durata_mesi,coperture,consigliato)VALUES('piano_base','Base',7.90,6,'["Garanzia estesa","Rottura schermo"]',0),('piano_premium','Premium',12.90,12,'["Garanzia estesa","Danni accidentali","Rottura schermo","Sostituzione pezzi"]',1),('piano_elite','Elite',19.90,24,'["Garanzia estesa","Danni accidentali","Rottura schermo","Sostituzione pezzi","Furto e smarrimento","Assistenza prioritaria"]',0)`)}catch(e){}
-try{db.run(`CREATE TABLE IF NOT EXISTS protezioni(id TEXT PRIMARY KEY,certificato TEXT UNIQUE NOT NULL,cliente_id TEXT,cliente_nome TEXT NOT NULL,cliente_email TEXT,cliente_tel TEXT,tipo_dispositivo TEXT NOT NULL,brand TEXT NOT NULL,modello TEXT NOT NULL,colore_storage TEXT,seriale TEXT,imei TEXT,piano_id TEXT NOT NULL,piano_nome TEXT NOT NULL,durata_mesi INTEGER NOT NULL,coperture TEXT NOT NULL,prezzo REAL NOT NULL,data_inizio TEXT DEFAULT(date('now')),data_scadenza TEXT NOT NULL,stato TEXT DEFAULT 'attiva',note TEXT,riparazione_id TEXT,created_at TEXT DEFAULT(datetime('now')))`);db.run(`CREATE INDEX IF NOT EXISTS idx_protezioni_cliente ON protezioni(cliente_nome)`);db.run(`CREATE INDEX IF NOT EXISTS idx_protezioni_stato ON protezioni(stato)`)}catch(e){}
-try{db.run(`CREATE TABLE IF NOT EXISTS display_ordini(id TEXT PRIMARY KEY,numero TEXT UNIQUE NOT NULL,fornitore_id TEXT,fornitore_nome TEXT,fornitore_email TEXT,fornitore_tel TEXT,stato TEXT DEFAULT 'aperto',totale REAL DEFAULT 0,note TEXT,pdf_generato_at TEXT,inviato_at TEXT,pagato_at TEXT,created_at TEXT DEFAULT(datetime('now')))`);db.run(`CREATE TABLE IF NOT EXISTS display_ordini_items(id TEXT PRIMARY KEY,ordine_id TEXT NOT NULL,brand TEXT NOT NULL,modello TEXT NOT NULL,quantita INTEGER DEFAULT 1,prezzo_unitario REAL NOT NULL,prezzo_offerta REAL NOT NULL,note TEXT,created_at TEXT DEFAULT(datetime('now')),UNIQUE(ordine_id,brand,modello))`)}catch(e){}
-try{db.run(`CREATE TABLE IF NOT EXISTS display_listino(id TEXT PRIMARY KEY,upload_id TEXT NOT NULL,brand TEXT NOT NULL,modello TEXT NOT NULL,codice TEXT,prezzo_acquisto REAL NOT NULL,note TEXT,attivo INTEGER DEFAULT 0,created_at TEXT DEFAULT(datetime('now')))`);db.run(`CREATE INDEX IF NOT EXISTS idx_display_brand ON display_listino(brand)`);db.run(`CREATE INDEX IF NOT EXISTS idx_display_modello ON display_listino(modello)`);db.run(`CREATE INDEX IF NOT EXISTS idx_display_attivo ON display_listino(attivo)`);db.run(`CREATE TABLE IF NOT EXISTS display_uploads(id TEXT PRIMARY KEY,filename TEXT NOT NULL,righe INTEGER DEFAULT 0,attivo INTEGER DEFAULT 0,created_at TEXT DEFAULT(datetime('now')))`);db.run(`CREATE TABLE IF NOT EXISTS display_settings(chiave TEXT PRIMARY KEY,valore TEXT NOT NULL)`);const ms=db.prepare("SELECT chiave FROM display_settings WHERE chiave='margine_percentuale'").getAsObject();if(!ms.chiave)db.run(`INSERT INTO display_settings(chiave,valore)VALUES('margine_percentuale','30')`)}catch(e){}
-try{db.run("ALTER TABLE repairs ADD COLUMN ora_inizio TEXT")}catch(e){}
-try{db.run("ALTER TABLE repairs ADD COLUMN durata_minuti INTEGER")}catch(e){}
-try{db.run("ALTER TABLE servizi ADD COLUMN ora_inizio TEXT")}catch(e){}
-try{db.run("ALTER TABLE servizi ADD COLUMN durata_minuti INTEGER")}catch(e){}
-try{db.run(`CREATE TABLE IF NOT EXISTS promemoria(id TEXT PRIMARY KEY,titolo TEXT NOT NULL,nota TEXT DEFAULT '',data TEXT NOT NULL,ora TEXT,ricorrenza TEXT,created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`)}catch(e){}
-try{db.run(`CREATE TABLE IF NOT EXISTS prenotazioni_ordini(id TEXT PRIMARY KEY,cliente_id TEXT,cliente_nome TEXT NOT NULL,cliente_telefono TEXT,cliente_email TEXT,brand TEXT NOT NULL,modello TEXT NOT NULL,colore_variante TEXT,tipo_riparazione TEXT,ricambio TEXT,in_store INTEGER DEFAULT 1,note_dispositivo TEXT,fornitore_id TEXT,fornitore_nome TEXT,stato TEXT DEFAULT 'da_ordinare',data_inserimento TEXT,data_ordine TEXT,data_arrivo TEXT,caparra_attiva INTEGER DEFAULT 0,caparra_importo REAL,caparra_totale REAL,caparra_metodo TEXT,caparra_note TEXT,note_generali TEXT,created_at TEXT DEFAULT(datetime('now')),updated_at TEXT DEFAULT(datetime('now')))`);db.run(`CREATE INDEX IF NOT EXISTS idx_prenord_stato ON prenotazioni_ordini(stato)`);db.run(`CREATE INDEX IF NOT EXISTS idx_prenord_cliente ON prenotazioni_ordini(cliente_nome)`)}catch(e){}
-app.locals.saveDB=()=>fs.writeFileSync(DB_PATH,Buffer.from(db.export()));
-app.locals.query=(sql,params=[])=>{const s=db.prepare(sql);s.bind(params);const r=[];while(s.step())r.push(s.getAsObject());s.free();return r;};
-app.locals.run=(sql,params=[])=>{db.run(sql,params);app.locals.saveDB();};
-app.locals.get=(sql,params=[])=>{const r=app.locals.query(sql,params);return r[0]||null;};
-app.locals.uid=()=>crypto.randomBytes(8).toString('hex');
-app.locals.saveDB();
-console.log('DB ok:',DB_PATH);
+const express  = require('express')
+const cors     = require('cors')
+const { Pool } = require('pg')
+const fs       = require('fs')
+const path     = require('path')
+const crypto   = require('crypto')
+
+const app  = express()
+const PORT = process.env.PORT || 3001
+
+// ── CORS ──────────────────────────────────────────────────────────────────
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  process.env.FRONTEND_URL,
+].filter(Boolean)
+
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin || allowedOrigins.includes(origin)) return cb(null, true)
+    cb(new Error('CORS non consentito: ' + origin))
+  },
+  credentials: true,
+}))
+app.use(express.json())
+
+// ── POSTGRESQL ────────────────────────────────────────────────────────────
+const pgPool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
+})
+
+app.locals.pgPool = pgPool
+
+// ── HELPERS compatibili con le route esistenti ────────────────────────────
+// Le route usano query/run/get sincroni con placeholder "?"
+// Questi helper li rendono compatibili con PostgreSQL (async, placeholder "$N")
+
+function convertPlaceholders(sql) {
+  // Converte "?" in "$1", "$2", ... per PostgreSQL
+  let i = 0
+  return sql.replace(/\?/g, () => `$${++i}`)
 }
 
-initDB().then(()=>{
-app.use('/products',require('./routes/products'));
-app.use('/devices',require('./routes/devices'));
-app.use('/repairs',require('./routes/repairs'));
-app.use('/purchases',require('./routes/purchases'));
-app.use('/imei',require('./routes/imei'));
-app.use('/valutazione',require('./routes/valutazione'));
-app.use('/fornitori',require('./routes/fornitori'));
-app.use('/interventi',require('./routes/interventi'));
-app.use('/ricambi',require('./routes/ricambi'));
-app.use('/servizi',require('./routes/servizi'));
-app.use('/clienti',require('./routes/clienti'));
-app.use('/importexport',require('./routes/importexport'));
-app.use('/protezioni',require('./routes/protezioni'));
-app.use('/piani',require('./routes/piani'));
-const valDisplay=require('./routes/valutazione_display_route');
-app.use('/valutazione-display',valDisplay.router);
-const displayOrdini=require('./routes/display_ordini_route');
-const cassaRoute=require('./routes/cassa_route');
-const storicoDispRoute=require('./routes/storico_dispositivi_route');
-app.use('/display-ordini',displayOrdini.router);
-app.use('/storico-dispositivi',storicoDispRoute.router);
-app.use('/cassa',cassaRoute.router);
-app.use('/promemoria',require('./routes/promemoria'));
-const prenotazioniOrdini=require('./routes/prenotazioni_ordini_route');
-app.use('/prenotazioni-ordini',prenotazioniOrdini.router);
-const fonedayRoute=require('./routes/foneday_route');
-app.use('/foneday',fonedayRoute.router);
-app.get('/health',(req,res)=>res.json({status:'ok',version:'2.8.0',products:app.locals.get('SELECT COUNT(*) as n FROM products')?.n||0,devices:app.locals.get('SELECT COUNT(*) as n FROM devices')?.n||0,repairs:app.locals.get('SELECT COUNT(*) as n FROM repairs')?.n||0,clienti:app.locals.get('SELECT COUNT(*) as n FROM clienti')?.n||0,protezioni:app.locals.get('SELECT COUNT(*) as n FROM protezioni')?.n||0,display:app.locals.get('SELECT COUNT(*) as n FROM display_listino WHERE attivo=1')?.n||0,prenotazioni_ordini:app.locals.get('SELECT COUNT(*) as n FROM prenotazioni_ordini')?.n||0}));
-app.use((err,req,res,next)=>{console.error(err.message);res.status(err.status||500).json({error:err.message});});
-app.listen(PORT,'0.0.0.0',()=>console.log('Magazzino API v2.8 port '+PORT));
-}).catch(err=>{console.error(err);process.exit(1);});
+// Versione async dei 3 helper — wrappate in Promise per le route esistenti
+app.locals.query = async (sql, params = []) => {
+  const { rows } = await pgPool.query(convertPlaceholders(sql), params)
+  return rows
+}
+app.locals.run = async (sql, params = []) => {
+  await pgPool.query(convertPlaceholders(sql), params)
+}
+app.locals.get = async (sql, params = []) => {
+  const { rows } = await pgPool.query(convertPlaceholders(sql), params)
+  return rows[0] || null
+}
+app.locals.uid = () => crypto.randomUUID()
+
+// ── INIT DB ───────────────────────────────────────────────────────────────
+async function initDB() {
+  const client = await pgPool.connect()
+  try {
+    // Schema base magazzino (tabelle esistenti convertite in PostgreSQL)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS repairs (
+        id          TEXT PRIMARY KEY,
+        cliente     TEXT NOT NULL,
+        tel         TEXT,
+        brand       TEXT,
+        modello     TEXT NOT NULL,
+        problema    TEXT,
+        priorita    TEXT CHECK(priorita IN ('normale','alta','urgente')) DEFAULT 'normale',
+        costo       NUMERIC DEFAULT 0,
+        data_stimata TEXT,
+        progress    INTEGER DEFAULT 0,
+        stato       TEXT CHECK(stato IN ('aperta','completata')) DEFAULT 'aperta',
+        note        TEXT,
+        store_id    TEXT,
+        created_at  TIMESTAMPTZ DEFAULT now()
+      );
+      CREATE TABLE IF NOT EXISTS purchases (
+        id          TEXT PRIMARY KEY,
+        brand       TEXT NOT NULL,
+        modello     TEXT NOT NULL,
+        storage     TEXT,
+        colore      TEXT,
+        imei        TEXT,
+        condizione  TEXT,
+        prezzo      NUMERIC NOT NULL,
+        tipo_pag    TEXT CHECK(tipo_pag IN ('cash','voucher')) DEFAULT 'cash',
+        cliente     TEXT NOT NULL,
+        tel         TEXT,
+        device_id   TEXT,
+        store_id    TEXT,
+        created_at  TIMESTAMPTZ DEFAULT now()
+      );
+      CREATE TABLE IF NOT EXISTS products (
+        id          TEXT PRIMARY KEY,
+        nome        TEXT NOT NULL,
+        categoria   TEXT NOT NULL,
+        qty         INTEGER DEFAULT 0,
+        prezzo_acq  NUMERIC DEFAULT 0,
+        prezzo_vend NUMERIC DEFAULT 0,
+        barcode     TEXT UNIQUE,
+        fornitore_id TEXT,
+        note        TEXT,
+        store_id    TEXT,
+        created_at  TIMESTAMPTZ DEFAULT now()
+      );
+      CREATE TABLE IF NOT EXISTS devices (
+        id          TEXT PRIMARY KEY,
+        brand       TEXT NOT NULL,
+        modello     TEXT NOT NULL,
+        storage     TEXT,
+        colore      TEXT,
+        imei        TEXT UNIQUE,
+        condizione  TEXT CHECK(condizione IN ('A','B','C')),
+        stato       TEXT CHECK(stato IN ('in_stock','venduto','in_riparazione','da_testare')) DEFAULT 'in_stock',
+        provenienza TEXT CHECK(provenienza IN ('fornitore','privato')) DEFAULT 'fornitore',
+        prezzo_acq  NUMERIC DEFAULT 0,
+        prezzo_vend NUMERIC DEFAULT 0,
+        cliente_nome TEXT,
+        cliente_tel TEXT,
+        note        TEXT,
+        store_id    TEXT,
+        created_at  TIMESTAMPTZ DEFAULT now()
+      );
+      CREATE TABLE IF NOT EXISTS fornitori (
+        id          TEXT PRIMARY KEY,
+        nome        TEXT NOT NULL,
+        contatto    TEXT,
+        email       TEXT,
+        telefono    TEXT,
+        piva        TEXT,
+        indirizzo   TEXT,
+        note        TEXT,
+        created_at  TIMESTAMPTZ DEFAULT now()
+      );
+      CREATE TABLE IF NOT EXISTS interventi (
+        id          TEXT PRIMARY KEY,
+        device_id   TEXT NOT NULL,
+        tipo        TEXT NOT NULL,
+        descrizione TEXT,
+        costo       NUMERIC DEFAULT 0,
+        fornitore_id TEXT,
+        eseguito_da TEXT,
+        data        TEXT DEFAULT (now()::date::text),
+        note        TEXT,
+        store_id    TEXT,
+        created_at  TIMESTAMPTZ DEFAULT now()
+      );
+      CREATE TABLE IF NOT EXISTS ricambi (
+        id          TEXT PRIMARY KEY,
+        nome        TEXT NOT NULL,
+        categoria   TEXT,
+        compatibile TEXT,
+        fornitore_id TEXT,
+        qty         INTEGER DEFAULT 0,
+        qty_minima  INTEGER DEFAULT 1,
+        prezzo_acq  NUMERIC DEFAULT 0,
+        barcode     TEXT UNIQUE,
+        note        TEXT,
+        store_id    TEXT,
+        created_at  TIMESTAMPTZ DEFAULT now()
+      );
+      CREATE TABLE IF NOT EXISTS servizi (
+        id                   TEXT PRIMARY KEY,
+        cliente              TEXT NOT NULL,
+        telefono             TEXT,
+        dispositivo          TEXT NOT NULL,
+        tipo_servizio        TEXT NOT NULL,
+        nome_servizio        TEXT NOT NULL,
+        descrizione          TEXT,
+        priorita             TEXT DEFAULT 'normale',
+        prezzo               NUMERIC NOT NULL,
+        note                 TEXT,
+        data_richiesta       TEXT DEFAULT (now()::date::text),
+        data_consegna_prevista TEXT,
+        stato                TEXT DEFAULT 'in_corso',
+        store_id             TEXT,
+        created_at           TIMESTAMPTZ DEFAULT now()
+      );
+      CREATE TABLE IF NOT EXISTS clienti (
+        id          TEXT PRIMARY KEY,
+        tipo        TEXT NOT NULL DEFAULT 'persona_fisica',
+        nome        TEXT NOT NULL,
+        cognome     TEXT,
+        ragione_soc TEXT,
+        codice_fisc TEXT,
+        piva        TEXT,
+        telefono    TEXT,
+        email       TEXT,
+        indirizzo   TEXT,
+        cap         TEXT,
+        citta       TEXT,
+        note        TEXT,
+        store_id    TEXT,
+        created_at  TIMESTAMPTZ DEFAULT now()
+      );
+
+      -- Indici frequenti
+      CREATE INDEX IF NOT EXISTS idx_repairs_stato      ON repairs(stato);
+      CREATE INDEX IF NOT EXISTS idx_repairs_priorita   ON repairs(priorita);
+      CREATE INDEX IF NOT EXISTS idx_devices_brand      ON devices(brand);
+      CREATE INDEX IF NOT EXISTS idx_devices_stato      ON devices(stato);
+      CREATE INDEX IF NOT EXISTS idx_clienti_nome       ON clienti(nome);
+      CREATE INDEX IF NOT EXISTS idx_clienti_tel        ON clienti(telefono);
+      CREATE INDEX IF NOT EXISTS idx_interventi_device  ON interventi(device_id);
+    `)
+
+    // Schema auth (stores, users, sessions)
+    const authSchema = path.join(__dirname, 'db', 'schema_auth.sql')
+    if (fs.existsSync(authSchema)) {
+      await client.query(fs.readFileSync(authSchema, 'utf-8'))
+    }
+
+    console.log('✅ Database PostgreSQL inizializzato')
+  } catch (err) {
+    console.error('❌ Errore init DB:', err.message)
+    throw err
+  } finally {
+    client.release()
+  }
+}
+
+// ── AVVIO ─────────────────────────────────────────────────────────────────
+async function startServer() {
+  await initDB()
+
+  const { verifyToken, injectStoreFilter } = require('./middleware/auth')
+
+  // Route auth (pubbliche)
+  app.use('/auth', require('./routes/auth'))
+
+  // Route admin — solo SUPER_ADMIN (middleware interno)
+  app.use('/admin', require('./routes/admin'))
+
+  // Route store — ADMIN + SUPER_ADMIN (middleware interno)
+  app.use('/store', require('./routes/store'))
+
+  // Route esistenti protette con JWT + filtro store
+  app.use('/products',    verifyToken, injectStoreFilter, require('./routes/products'))
+  app.use('/devices',     verifyToken, injectStoreFilter, require('./routes/devices'))
+  app.use('/repairs',     verifyToken, injectStoreFilter, require('./routes/repairs'))
+  app.use('/purchases',   verifyToken, injectStoreFilter, require('./routes/purchases'))
+  app.use('/servizi',     verifyToken, injectStoreFilter, require('./routes/servizi'))
+  app.use('/clienti',     verifyToken, injectStoreFilter, require('./routes/clienti'))
+  app.use('/fornitori',   verifyToken, require('./routes/fornitori'))
+  app.use('/interventi',  verifyToken, require('./routes/interventi'))
+  app.use('/ricambi',     verifyToken, require('./routes/ricambi'))
+  app.use('/imei',        verifyToken, require('./routes/imei'))
+  app.use('/valutazione', verifyToken, require('./routes/valutazione'))
+  app.use('/importexport',verifyToken, require('./routes/importexport'))
+
+  // Route opzionali (se esistono)
+  const optRoutes = [
+    ['/cassa',               'cassa_route'],
+    ['/display-ordini',      'display_ordini_route'],
+    ['/foneday',             'foneday_route'],
+    ['/piani',               'piani'],
+    ['/prenotazioni-ordini', 'prenotazioni_ordini_route'],
+    ['/promemoria',          'promemoria'],
+    ['/protezioni',          'protezioni'],
+    ['/storico-dispositivi', 'storico_dispositivi_route'],
+    ['/valutazione-display', 'valutazione_display_route'],
+  ]
+  for (const [mount, file] of optRoutes) {
+    const routePath = path.join(__dirname, 'routes', file + '.js')
+    if (fs.existsSync(routePath)) {
+      app.use(mount, verifyToken, require(routePath))
+    }
+  }
+
+  // Health check
+  app.get('/health', async (req, res) => {
+    try {
+      const r = await pgPool.query(`
+        SELECT
+          (SELECT COUNT(*) FROM products)  AS products,
+          (SELECT COUNT(*) FROM devices)   AS devices,
+          (SELECT COUNT(*) FROM repairs)   AS repairs,
+          (SELECT COUNT(*) FROM stores)    AS stores,
+          (SELECT COUNT(*) FROM users)     AS users
+      `)
+      res.json({ status: 'ok', version: '3.0.0', db: 'postgresql', ...r.rows[0] })
+    } catch (err) {
+      res.status(500).json({ status: 'error', message: err.message })
+    }
+  })
+
+  // Error handler globale
+  app.use((err, req, res, next) => {
+    console.error(err.message)
+    res.status(err.status || 500).json({ error: err.message })
+  })
+
+  app.listen(PORT, '0.0.0.0', () =>
+    console.log(`🚀 Magazzino API v3.0 → port ${PORT} | DB: PostgreSQL`)
+  )
+}
+
+startServer().catch(err => {
+  console.error('❌ Errore avvio server:', err)
+  process.exit(1)
+})
