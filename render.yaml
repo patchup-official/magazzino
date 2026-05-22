@@ -1,6 +1,12 @@
 # render.yaml — Magazzino v3.0
 # Posiziona nella ROOT del repository
 
+databases:
+  - name: magazzino-db
+    databaseName: magazzino
+    user: magazzino_user
+    plan: free
+
 services:
 
   # ── BACKEND ──────────────────────────────────────────────────────────────
@@ -13,18 +19,16 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: FRONTEND_URL
-        value: https://magazzino-frontend.onrender.com   # aggiorna dopo deploy
       - key: DATABASE_URL
         fromDatabase:
           name: magazzino-db
           property: connectionString
       - key: JWT_SECRET
-        generateValue: true          # Render genera automaticamente un secret sicuro
+        generateValue: true
+      - key: FRONTEND_URL
+        value: https://magazzino-frontend.onrender.com
       - key: SUPER_ADMIN_USERNAME
-        value: superadmin            # cambia se vuoi un username diverso
-      # SUPER_ADMIN_PASSWORD va impostata manualmente nel dashboard Render
-      # dopo il primo deploy, poi esegui: node db/seed-superadmin.js
+        value: superadmin
 
   # ── FRONTEND ─────────────────────────────────────────────────────────────
   - type: web
@@ -40,10 +44,3 @@ services:
       - type: rewrite
         source: /*
         destination: /index.html
-
-# ── DATABASE POSTGRESQL ───────────────────────────────────────────────────
-databases:
-  - name: magazzino-db
-    databaseName: magazzino
-    user: magazzino_user
-    plan: free                       # piano gratuito Render (90 giorni, poi $7/mese)
