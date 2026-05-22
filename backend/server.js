@@ -1,4 +1,4 @@
-// server.js — Magazzino v3.0 PostgreSQL + Auth
+// server.js — Magazzino v3.0 PostgreSQL + Auth — build 154106
 const express  = require('express')
 const cors     = require('cors')
 const { Pool } = require('pg')
