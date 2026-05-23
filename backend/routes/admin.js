@@ -17,12 +17,21 @@ router.get('/stores', async (req, res) => {
 })
 
 router.post('/stores', async (req, res) => {
-  const { name, city, code } = req.body
-  if (!name || !city || !code) return res.status(400).json({ error: 'name, city e code obbligatori' })
+  const { name, city } = req.body
+  if (!name || !city) return res.status(400).json({ error: 'name e city obbligatori' })
   try {
-    const result = await req.app.locals.pgPool.query(
+    const db = req.app.locals.pgPool
+    // Genera codice automatico: prime 2 lettere nome store + contatore
+    const prefix = name.trim().replace(/[^a-zA-Z]/g, '').substring(0, 2).toUpperCase() || 'ST'
+    const count = await db.query('SELECT COUNT(*) FROM mg_stores')
+    const num = String(parseInt(count.rows[0].count) + 1).padStart(2, '0')
+    let code = prefix + num
+    // Assicura unicità
+    const exists = await db.query('SELECT id FROM mg_stores WHERE code = $1', [code])
+    if (exists.rows.length) code = prefix + String(Date.now()).slice(-3)
+    const result = await db.query(
       `INSERT INTO mg_stores (name, city, code) VALUES ($1, $2, $3) RETURNING *`,
-      [name.trim(), city.trim(), code.toUpperCase().trim()]
+      [name.trim(), city.trim(), code]
     )
     res.status(201).json(result.rows[0])
   } catch (err) {
