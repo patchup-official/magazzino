@@ -1,4 +1,4 @@
-// server.js — Magazzino v3.0 PostgreSQL + Auth — build 154106
+// server.js — Magazzino v3.0 PostgreSQL + Auth
 const express  = require('express')
 const cors     = require('cors')
 const { Pool } = require('pg')
@@ -17,6 +17,7 @@ if (!process.env.DATABASE_URL) {
   console.log('⚠️  DATABASE_URL non in env, uso connessione di fallback')
 }
 
+// ── CORS ──────────────────────────────────────────────────────────────────
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
@@ -32,6 +33,7 @@ app.use(cors({
 }))
 app.use(express.json())
 
+// ── POSTGRESQL ────────────────────────────────────────────────────────────
 const pgPool = new Pool({
   connectionString: DATABASE_URL,
   ssl: { rejectUnauthorized: false },
@@ -42,6 +44,7 @@ const pgPool = new Pool({
 
 app.locals.pgPool = pgPool
 
+// ── HELPERS ───────────────────────────────────────────────────────────────
 function convertPlaceholders(sql) {
   let i = 0
   return sql.replace(/\?/g, () => `$${++i}`)
@@ -60,6 +63,13 @@ app.locals.get = async (sql, params = []) => {
 }
 app.locals.uid = () => crypto.randomUUID()
 
+// Helper: alcune route vecchie esportano { router } invece di router
+function loadRoute(file) {
+  const mod = require(file)
+  return mod.router || mod.default || mod
+}
+
+// ── INIT DB ───────────────────────────────────────────────────────────────
 async function initDB() {
   let attempts = 0
   while (attempts < 5) {
@@ -138,6 +148,7 @@ async function initDB() {
           CREATE INDEX IF NOT EXISTS idx_clienti_tel       ON clienti(telefono);
           CREATE INDEX IF NOT EXISTS idx_interventi_device ON interventi(device_id);
         `)
+        // Schema auth (mg_stores, mg_users, mg_sessions)
         const authSchema = path.join(__dirname, 'db', 'schema_auth.sql')
         if (fs.existsSync(authSchema)) {
           await client.query(fs.readFileSync(authSchema, 'utf-8'))
@@ -149,59 +160,79 @@ async function initDB() {
       return
     } catch (err) {
       attempts++
-      console.error(`⚠️  Tentativo ${attempts}/5 connessione DB fallito: ${err.message}`)
+      console.error(`⚠️  Tentativo ${attempts}/5: ${err.message}`)
       if (attempts >= 5) throw err
       await new Promise(r => setTimeout(r, 3000))
     }
   }
 }
 
+// ── AVVIO ─────────────────────────────────────────────────────────────────
 async function startServer() {
   await initDB()
+
   const { verifyToken, injectStoreFilter } = require('./middleware/auth')
+
+  // Route auth (pubbliche)
   app.use('/auth',  require('./routes/auth'))
   app.use('/admin', require('./routes/admin'))
   app.use('/store', require('./routes/store'))
-  app.use('/products',     verifyToken, injectStoreFilter, require('./routes/products'))
-  app.use('/devices',      verifyToken, injectStoreFilter, require('./routes/devices'))
-  app.use('/repairs',      verifyToken, injectStoreFilter, require('./routes/repairs'))
-  app.use('/purchases',    verifyToken, injectStoreFilter, require('./routes/purchases'))
-  app.use('/servizi',      verifyToken, injectStoreFilter, require('./routes/servizi'))
-  app.use('/clienti',      verifyToken, injectStoreFilter, require('./routes/clienti'))
-  app.use('/fornitori',    verifyToken, require('./routes/fornitori'))
-  app.use('/interventi',   verifyToken, require('./routes/interventi'))
-  app.use('/ricambi',      verifyToken, require('./routes/ricambi'))
-  app.use('/imei',         verifyToken, require('./routes/imei'))
-  app.use('/valutazione',  verifyToken, require('./routes/valutazione'))
-  app.use('/importexport', verifyToken, require('./routes/importexport'))
+
+  // Route principali — usa loadRoute per gestire sia { router } che router
+  app.use('/products',     verifyToken, injectStoreFilter, loadRoute('./routes/products'))
+  app.use('/devices',      verifyToken, injectStoreFilter, loadRoute('./routes/devices'))
+  app.use('/repairs',      verifyToken, injectStoreFilter, loadRoute('./routes/repairs'))
+  app.use('/purchases',    verifyToken, injectStoreFilter, loadRoute('./routes/purchases'))
+  app.use('/servizi',      verifyToken, injectStoreFilter, loadRoute('./routes/servizi'))
+  app.use('/clienti',      verifyToken, injectStoreFilter, loadRoute('./routes/clienti'))
+  app.use('/fornitori',    verifyToken, loadRoute('./routes/fornitori'))
+  app.use('/interventi',   verifyToken, loadRoute('./routes/interventi'))
+  app.use('/ricambi',      verifyToken, loadRoute('./routes/ricambi'))
+  app.use('/imei',         verifyToken, loadRoute('./routes/imei'))
+  app.use('/valutazione',  verifyToken, loadRoute('./routes/valutazione'))
+  app.use('/importexport', verifyToken, loadRoute('./routes/importexport'))
+
+  // Route opzionali
   const optRoutes = [
-    ['/cassa','cassa_route'],['/display-ordini','display_ordini_route'],
-    ['/foneday','foneday_route'],['/piani','piani'],
-    ['/prenotazioni-ordini','prenotazioni_ordini_route'],['/promemoria','promemoria'],
-    ['/protezioni','protezioni'],['/storico-dispositivi','storico_dispositivi_route'],
-    ['/valutazione-display','valutazione_display_route'],
+    ['/cassa',               'cassa_route'],
+    ['/display-ordini',      'display_ordini_route'],
+    ['/foneday',             'foneday_route'],
+    ['/piani',               'piani'],
+    ['/prenotazioni-ordini', 'prenotazioni_ordini_route'],
+    ['/promemoria',          'promemoria'],
+    ['/protezioni',          'protezioni'],
+    ['/storico-dispositivi', 'storico_dispositivi_route'],
+    ['/valutazione-display', 'valutazione_display_route'],
   ]
   for (const [mount, file] of optRoutes) {
-    const p = path.join(__dirname, 'routes', file + '.js')
-    if (fs.existsSync(p)) app.use(mount, verifyToken, require(p))
+    const routePath = path.join(__dirname, 'routes', file + '.js')
+    if (fs.existsSync(routePath)) {
+      app.use(mount, verifyToken, loadRoute(routePath))
+    }
   }
+
+  // Health check
   app.get('/health', async (req, res) => {
     try {
-      const r = await pgPool.query(`SELECT
-        (SELECT COUNT(*) FROM products) AS products,
-        (SELECT COUNT(*) FROM devices)  AS devices,
-        (SELECT COUNT(*) FROM repairs)  AS repairs,
-        (SELECT COUNT(*) FROM stores)   AS stores,
-        (SELECT COUNT(*) FROM users)    AS users`)
+      const r = await pgPool.query(`
+        SELECT
+          (SELECT COUNT(*) FROM products)   AS products,
+          (SELECT COUNT(*) FROM devices)    AS devices,
+          (SELECT COUNT(*) FROM repairs)    AS repairs,
+          (SELECT COUNT(*) FROM mg_stores)  AS stores,
+          (SELECT COUNT(*) FROM mg_users)   AS users
+      `)
       res.json({ status: 'ok', version: '3.0.0', db: 'postgresql', ...r.rows[0] })
     } catch (err) {
       res.status(500).json({ status: 'error', message: err.message })
     }
   })
+
   app.use((err, req, res, next) => {
     console.error(err.message)
     res.status(err.status || 500).json({ error: err.message })
   })
+
   app.listen(PORT, '0.0.0.0', () =>
     console.log(`🚀 Magazzino API v3.0 → port ${PORT} | DB: PostgreSQL`)
   )
